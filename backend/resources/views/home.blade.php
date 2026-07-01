@@ -5,47 +5,160 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>الحساب</title>
     <style>
+        :root {
+            --bg: #eef3f8;
+            --panel: #ffffff;
+            --line: #d9e2ec;
+            --text: #0f172a;
+            --muted: #64748b;
+            --primary: #0f766e;
+            --primary-soft: #dff5f1;
+            --accent: #1d4ed8;
+            --shadow: 0 18px 46px rgba(15, 23, 42, 0.08);
+        }
+        * { box-sizing: border-box; }
+        html { color-scheme: light; }
         body {
             margin: 0;
+            min-height: 100vh;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: #f5f7fb;
-            color: #102033;
+            background:
+                radial-gradient(circle at top right, rgba(15, 118, 110, 0.06), transparent 34%),
+                linear-gradient(180deg, #f7fafc 0%, var(--bg) 100%);
+            color: var(--text);
             direction: rtl;
             text-align: right;
         }
         .wrap {
-            max-width: 900px;
+            max-width: 1100px;
             margin: 0 auto;
-            padding: 32px 20px;
+            padding: 34px 20px 40px;
         }
-        .card {
-            background: #fff;
-            border: 1px solid #d8e2ef;
+        .top {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 22px;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .mark {
+            width: 48px;
+            height: 48px;
             border-radius: 16px;
-            padding: 24px;
+            display: grid;
+            place-items: center;
+            color: #fff;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, #10b981 100%);
+            box-shadow: 0 12px 30px rgba(15, 118, 110, 0.24);
         }
-        .muted { color: #5f7186; }
+        .muted { color: var(--muted); line-height: 1.7; }
         .btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             padding: 12px 16px;
-            border-radius: 12px;
-            border: 1px solid #d8e2ef;
+            border-radius: 14px;
+            border: 1px solid var(--line);
             text-decoration: none;
-            color: #102033;
+            color: var(--text);
             background: #fff;
             cursor: pointer;
+            font: inherit;
+            font-weight: 700;
+            transition: 140ms ease;
         }
-        .top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06); }
+        .btn.primary {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+            box-shadow: 0 12px 26px rgba(15, 118, 110, 0.20);
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin: 20px 0;
+        }
+        .card,
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+        }
+        .card {
+            padding: 22px;
+        }
+        .card h2 {
+            margin: 0 0 8px;
+            font-size: 22px;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+        }
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .panel {
+            padding: 20px;
+        }
+        .panel h3 {
+            margin: 0 0 8px;
+            font-size: 18px;
+        }
+        .list {
+            display: grid;
+            gap: 12px;
+            margin-top: 14px;
+        }
+        .item {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            padding: 14px 16px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: #fbfdff;
+        }
+        .item strong { display: block; margin-bottom: 4px; }
+        .item span { color: var(--muted); font-size: 13px; }
+        @media (max-width: 920px) {
+            .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 640px) {
+            .grid { grid-template-columns: 1fr; }
+            .wrap { padding: 18px 14px 24px; }
+        }
     </style>
 </head>
 <body>
     <div class="wrap">
-        <div class="top" style="margin-bottom:16px;">
-            <div>
-                <h1>أهلًا {{ auth()->user()->name }}</h1>
-                <div class="muted">{{ auth()->user()->email }}</div>
+        <div class="top">
+            <div class="brand">
+                <div class="mark">R</div>
+                <div>
+                    <h1 style="margin:0;">أهلًا {{ auth()->user()->name }}</h1>
+                    <div class="muted">{{ auth()->user()->email }}</div>
+                </div>
             </div>
             <form method="post" action="{{ route('auth.logout') }}">
                 @csrf
@@ -54,11 +167,34 @@
         </div>
 
         <div class="card">
-            <h2>حسابك جاهز</h2>
-            <p class="muted">يمكنك الآن استخدام النظام بحساب البريد الإلكتروني وكلمة المرور. إذا كنت أدمن، ستجد لوحة الإدارة متاحة من نفس الحساب.</p>
+            <div class="pill">الحساب نشط</div>
+            <h2>حسابك جاهز للاستخدام</h2>
+            <p class="muted">هذا المساحة مخصصة للحسابات العادية داخل النظام. إذا كان حسابك إداريًا، فستظهر لك لوحة الإدارة كاملة من نفس الدخول.</p>
+
             @if (auth()->user()->isAdmin())
-                <p><a class="btn" href="{{ route('admin.dashboard') }}">الدخول إلى لوحة الإدارة</a></p>
+                <div class="actions">
+                    <a class="btn primary" href="{{ route('admin.dashboard') }}">الدخول إلى لوحة الإدارة</a>
+                </div>
             @endif
+        </div>
+
+        <div class="grid">
+            <div class="panel">
+                <h3>الوصول السريع</h3>
+                <div class="muted">واجهة مبسطة للحسابات العادية مع مظهر أوضح وأقل ازدحامًا.</div>
+            </div>
+            <div class="panel">
+                <h3>مناسب للجوال</h3>
+                <div class="muted">توزيع البطاقات صار مرنًا حتى يظل الشكل نظيفًا على الشاشات الصغيرة.</div>
+            </div>
+            <div class="panel">
+                <h3>لغة عربية واضحة</h3>
+                <div class="muted">العناوين والنصوص كلها الآن أكثر اتساقًا مع اتجاه القراءة العربي.</div>
+            </div>
+            <div class="panel">
+                <h3>جاهز للتوسعة</h3>
+                <div class="muted">تستطيع لاحقًا إضافة تفاصيل الرحلات أو التنبيهات داخل هذه الصفحة بسهولة.</div>
+            </div>
         </div>
     </div>
 </body>
