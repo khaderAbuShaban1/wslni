@@ -33,6 +33,6 @@ class SettingsController extends Controller
             ['value' => $data['commission_percent']]
         );
 
-        return back()->with('status', 'Commission updated successfully.');
+        return back()->with('status', 'تم تحديث نسبة العمولة بنجاح.');
     }
 }

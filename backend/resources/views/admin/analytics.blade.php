@@ -1,18 +1,18 @@
-@extends('admin.layout', ['title' => 'Analytics'])
+@extends('admin.layout', ['title' => 'الإحصائيات'])
 
 @section('content')
     <div class="header">
         <div>
-            <h1>Analytics</h1>
-            <p class="subtitle">Track revenue, trip volume, and the platform take rate over time.</p>
+            <h1>الإحصائيات</h1>
+            <p class="subtitle">راقب الإيرادات، حجم الرحلات، ونسبة المنصة عبر الزمن.</p>
         </div>
     </div>
 
     <section class="summary">
-        <div class="metric"><div class="label">Completed rides</div><div class="value">{{ $completedRides }}</div><div class="hint">Closed trips</div></div>
-        <div class="metric"><div class="label">Gross fare</div><div class="value">{{ number_format((float) $grossRevenue, 2) }} USD</div><div class="hint">Before commission</div></div>
-        <div class="metric"><div class="label">Platform revenue</div><div class="value">{{ number_format((float) $platformRevenue, 2) }} USD</div><div class="hint">At {{ $commission }}%</div></div>
-        <div class="metric"><div class="label">Avg fare</div><div class="value">{{ number_format((float) $averageFare, 2) }} USD</div><div class="hint">Per completed ride</div></div>
+        <div class="metric"><div class="label">الرحلات المكتملة</div><div class="value">{{ $completedRides }}</div><div class="hint">رحلات مغلقة</div></div>
+        <div class="metric"><div class="label">إجمالي الأجرة</div><div class="value">{{ number_format((float) $grossRevenue, 2) }} ₪</div><div class="hint">قبل العمولة</div></div>
+        <div class="metric"><div class="label">إيراد المنصة</div><div class="value">{{ number_format((float) $platformRevenue, 2) }} ₪</div><div class="hint">عند نسبة {{ $commission }}%</div></div>
+        <div class="metric"><div class="label">متوسط الأجرة</div><div class="value">{{ number_format((float) $averageFare, 2) }} ₪</div><div class="hint">لكل رحلة مكتملة</div></div>
     </section>
 
     <section class="panels">
@@ -20,20 +20,20 @@
             <div class="panel-header">
                 <div class="panel-title">
                     <div>
-                        <h2>Monthly performance</h2>
-                        <p>Recent completed rides and platform revenue by month.</p>
+                        <h2>الأداء الشهري</h2>
+                        <p>الرحلات المكتملة والإيراد حسب الشهر.</p>
                     </div>
                 </div>
             </div>
             @if ($monthly->isEmpty())
-                <div class="empty">No completed rides yet.</div>
+                <div class="empty">لا توجد رحلات مكتملة بعد.</div>
             @else
                 <table>
                     <thead>
                         <tr>
-                            <th>Month</th>
-                            <th>Rides</th>
-                            <th>Revenue</th>
+                            <th>الشهر</th>
+                            <th>الرحلات</th>
+                            <th>الإيراد</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -41,7 +41,7 @@
                             <tr>
                                 <td>{{ $row->month }}</td>
                                 <td>{{ $row->rides }}</td>
-                                <td>{{ number_format((float) $row->revenue, 2) }} USD</td>
+                                <td>{{ number_format((float) $row->revenue, 2) }} ₪</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -54,23 +54,23 @@
                 <div class="panel-header">
                     <div class="panel-title">
                         <div>
-                            <h2>Operational notes</h2>
-                            <p>Quick reminders for the finance view.</p>
+                            <h2>ملاحظات تشغيلية</h2>
+                            <p>تذكيرات سريعة لعرض المالية.</p>
                         </div>
                     </div>
                 </div>
                 <div class="list">
                     <div class="list-item">
-                        <div><strong>Commission source</strong><small>Stored in admin settings</small></div>
+                        <div><strong>مصدر العمولة</strong><small>محفوظ في إعدادات الإدارة</small></div>
                         <span class="status-badge">{{ $commission }}%</span>
                     </div>
                     <div class="list-item">
-                        <div><strong>Average distance</strong><small>On completed trips</small></div>
-                        <span class="status-badge">{{ number_format((float) $averageDistance, 2) }} km</span>
+                        <div><strong>متوسط المسافة</strong><small>على الرحلات المكتملة</small></div>
+                        <span class="status-badge">{{ number_format((float) $averageDistance, 2) }} كم</span>
                     </div>
                     <div class="list-item">
-                        <div><strong>Revenue model</strong><small>Platform fee from ride totals</small></div>
-                        <span class="status-badge">Dynamic</span>
+                        <div><strong>نموذج الإيراد</strong><small>رسوم منصة من إجمالي الرحلة</small></div>
+                        <span class="status-badge">ديناميكي</span>
                     </div>
                 </div>
             </div>

@@ -1,23 +1,23 @@
-@extends('admin.layout', ['title' => 'Trips'])
+@extends('admin.layout', ['title' => 'الرحلات'])
 
 @section('content')
     <div class="header">
         <div>
-            <h1>Trips</h1>
-            <p class="subtitle">Track active trips, inspect completed rides, and update their state directly.</p>
+            <h1>الرحلات</h1>
+            <p class="subtitle">راقب الرحلات النشطة، وراجع الرحلات المكتملة، وحدّث الحالة مباشرة.</p>
         </div>
         <div class="topline">
-            @foreach (['all' => 'All', 'requested' => 'Requested', 'accepted' => 'Accepted', 'in_progress' => 'In progress', 'completed' => 'Completed'] as $key => $label)
+            @foreach (['all' => 'الكل', 'requested' => 'مطلوبة', 'accepted' => 'مقبولة', 'in_progress' => 'قيد التنفيذ', 'completed' => 'مكتملة'] as $key => $label)
                 <a class="pill {{ $status === $key ? 'active' : '' }}" href="{{ route('admin.rides.index', ['status' => $key, 'search' => $search]) }}">{{ $label }}</a>
             @endforeach
         </div>
     </div>
 
     <section class="summary">
-        <div class="metric"><div class="label">Requested</div><div class="value">{{ $requestedCount }}</div><div class="hint">Waiting for assignment</div></div>
-        <div class="metric"><div class="label">In progress</div><div class="value">{{ $inProgressCount }}</div><div class="hint">Currently moving</div></div>
-        <div class="metric"><div class="label">Completed</div><div class="value">{{ $completedCount }}</div><div class="hint">Successfully closed</div></div>
-        <div class="metric"><div class="label">Current filter</div><div class="value">{{ strtoupper($status) }}</div><div class="hint">Scope of the list</div></div>
+        <div class="metric"><div class="label">مطلوبة</div><div class="value">{{ $requestedCount }}</div><div class="hint">بانتظار التوزيع</div></div>
+        <div class="metric"><div class="label">قيد التنفيذ</div><div class="value">{{ $inProgressCount }}</div><div class="hint">تتحرك الآن</div></div>
+        <div class="metric"><div class="label">مكتملة</div><div class="value">{{ $completedCount }}</div><div class="hint">أغلقت بنجاح</div></div>
+        <div class="metric"><div class="label">الفلتر الحالي</div><div class="value">{{ strtoupper($status) }}</div><div class="hint">نطاق القائمة</div></div>
     </section>
 
     <div class="panel">
@@ -25,66 +25,76 @@
             <form class="controls" method="get" action="{{ route('admin.rides.index') }}">
                 <input type="hidden" name="status" value="{{ $status }}">
                 <label class="search">
-                    <span>⌕</span>
-                    <input type="search" name="search" value="{{ $search }}" placeholder="Search address or customer">
+                    <span>بحث</span>
+                    <input type="search" name="search" value="{{ $search }}" placeholder="ابحث عن عنوان أو اسم راكب">
                 </label>
-                <button class="btn primary" type="submit">Filter</button>
-                <a class="btn" href="{{ route('admin.rides.index') }}">Reset</a>
+                <button class="btn primary" type="submit">تصفية</button>
+                <a class="btn" href="{{ route('admin.rides.index') }}">إعادة ضبط</a>
             </form>
         </div>
 
         @if ($rides->isEmpty())
-            <div class="empty">No trips found.</div>
+            <div class="empty">لا توجد رحلات.</div>
         @else
             <table>
                 <thead>
                     <tr>
-                        <th>Ride</th>
-                        <th>Route</th>
-                        <th>Status</th>
-                        <th>Numbers</th>
-                        <th>Quick update</th>
+                        <th>الراكب</th>
+                        <th>المسار</th>
+                        <th>الحالة</th>
+                        <th>الأرقام</th>
+                        <th>تحديث سريع</th>
                     </tr>
                 </thead>
                 <tbody>
+                    @php
+                        $statusLabels = [
+                            'requested' => 'مطلوبة',
+                            'accepted' => 'مقبولة',
+                            'arrived' => 'وصل',
+                            'in_progress' => 'قيد التنفيذ',
+                            'completed' => 'مكتملة',
+                            'cancelled' => 'ملغاة',
+                        ];
+                    @endphp
                     @foreach ($rides as $ride)
                         <tr>
                             <td>
-                                <strong>{{ $ride->customer?->name ?? 'Unknown' }}</strong>
-                                <div class="muted">{{ $ride->driver?->name ?? 'Unassigned' }}</div>
+                                <strong>{{ $ride->customer?->name ?? 'غير معروف' }}</strong>
+                                <div class="muted">{{ $ride->driver?->name ?? 'غير مسندة' }}</div>
                             </td>
                             <td>
                                 <strong>{{ $ride->pickup_address }}</strong>
-                                <div class="muted">to {{ $ride->dropoff_address }}</div>
+                                <div class="muted">إلى {{ $ride->dropoff_address }}</div>
                             </td>
-                            <td><span class="status {{ $ride->status }}">{{ $ride->status }}</span></td>
+                            <td><span class="status {{ $ride->status }}">{{ $statusLabels[$ride->status] ?? $ride->status }}</span></td>
                             <td>
-                                <div>Fare: {{ $ride->actual_fare ?? $ride->fare_estimate ?? 'Pending' }}</div>
-                                <div class="muted">Distance: {{ $ride->distance_km ?? 'N/A' }} km</div>
+                                <div>الأجرة: {{ number_format((float) ($ride->actual_fare ?? $ride->fare_estimate ?? 0), 2) }} ₪</div>
+                                <div class="muted">المسافة: {{ $ride->distance_km ?? 'غير متوفر' }} كم</div>
                             </td>
                             <td>
                                 <form method="post" action="{{ route('admin.rides.status', $ride) }}" class="form-grid" style="grid-template-columns: 1fr 1fr; align-items:end;">
                                     @csrf
                                     @method('patch')
                                     <div class="form-row">
-                                        <label>Status</label>
+                                        <label>الحالة</label>
                                         <select name="status" class="select">
                                             @foreach (['requested', 'accepted', 'arrived', 'in_progress', 'completed', 'cancelled'] as $option)
-                                                <option value="{{ $option }}" @selected($ride->status === $option)>{{ $option }}</option>
+                                                <option value="{{ $option }}" @selected($ride->status === $option)>{{ $statusLabels[$option] ?? $option }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="form-row">
-                                        <label>Fare</label>
+                                        <label>الأجرة</label>
                                         <input class="input" name="actual_fare" type="number" step="0.01" min="0" value="{{ $ride->actual_fare ?? $ride->fare_estimate }}">
                                     </div>
                                     <div class="form-row">
-                                        <label>Distance km</label>
+                                        <label>المسافة كم</label>
                                         <input class="input" name="distance_km" type="number" step="0.01" min="0" value="{{ $ride->distance_km }}">
                                     </div>
                                     <div class="form-row">
                                         <label>&nbsp;</label>
-                                        <button class="btn primary" type="submit">Save</button>
+                                        <button class="btn primary" type="submit">حفظ</button>
                                     </div>
                                 </form>
                             </td>

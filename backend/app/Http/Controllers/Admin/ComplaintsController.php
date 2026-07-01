@@ -34,7 +34,7 @@ class ComplaintsController extends Controller
 
         Complaint::create($data + ['status' => 'open']);
 
-        return back()->with('status', 'Complaint added.');
+        return back()->with('status', 'تمت إضافة الشكوى.');
     }
 
     public function resolve(Request $request, Complaint $complaint): RedirectResponse
@@ -49,6 +49,6 @@ class ComplaintsController extends Controller
             'resolved_at' => now(),
         ]);
 
-        return back()->with('status', 'Complaint resolved.');
+        return back()->with('status', 'تم حل الشكوى.');
     }
 }

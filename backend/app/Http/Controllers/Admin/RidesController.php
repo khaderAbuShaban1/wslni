@@ -62,6 +62,6 @@ class RidesController extends Controller
             'completed_at' => $data['status'] === 'completed' ? now() : $rideRequest->completed_at,
         ])->save();
 
-        return back()->with('status', 'Ride updated.');
+        return back()->with('status', 'تم تحديث الرحلة بنجاح.');
     }
 }

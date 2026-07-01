@@ -8,13 +8,30 @@ use App\Http\Controllers\Admin\OffersController;
 use App\Http\Controllers\Admin\RidersController;
 use App\Http\Controllers\Admin\RidesController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Auth\AuthController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return redirect('/admin');
+    return view('auth.login');
 });
 
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('auth.login');
+    Route::post('/login', [AuthController::class, 'login'])->name('auth.login.store');
+});
+
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('auth.logout');
+
+Route::get('/home', function () {
+    if (Auth::check() && Auth::user()->isAdmin()) {
+        return redirect()->route('admin.dashboard');
+    }
+
+    return view('home');
+})->middleware('auth')->name('home');
+
+Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/drivers', [DriversController::class, 'index'])->name('drivers.index');

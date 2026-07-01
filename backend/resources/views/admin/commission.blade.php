@@ -1,26 +1,26 @@
-@extends('admin.layout', ['title' => 'Commission'])
+@extends('admin.layout', ['title' => 'العمولة'])
 
 @section('content')
     <div class="header">
         <div>
-            <h1>Commission</h1>
-            <p class="subtitle">Set the platform fee percentage and keep the revenue model clear.</p>
+            <h1>العمولة</h1>
+            <p class="subtitle">اضبط نسبة عمولة المنصة واحفظ نموذج الإيراد بشكل واضح.</p>
         </div>
     </div>
 
     <section class="summary">
-        <div class="metric"><div class="label">Current commission</div><div class="value">{{ $commission }}%</div><div class="hint">Used for new ride calculations</div></div>
-        <div class="metric"><div class="label">Completed rides</div><div class="value">{{ $completedRides }}</div><div class="hint">Revenue base</div></div>
-        <div class="metric"><div class="label">Platform revenue</div><div class="value">{{ number_format((float) $totalRevenue, 2) }} USD</div><div class="hint">Based on stored ride fees</div></div>
-        <div class="metric"><div class="label">Rule</div><div class="value">0-100%</div><div class="hint">Validation enforced</div></div>
+        <div class="metric"><div class="label">نسبة العمولة الحالية</div><div class="value">{{ $commission }}%</div><div class="hint">تُستخدم للحسابات الجديدة</div></div>
+        <div class="metric"><div class="label">الرحلات المكتملة</div><div class="value">{{ $completedRides }}</div><div class="hint">قاعدة الإيراد</div></div>
+        <div class="metric"><div class="label">إيراد المنصة</div><div class="value">{{ number_format((float) $totalRevenue, 2) }} ₪</div><div class="hint">بحسب الرسوم المخزنة</div></div>
+        <div class="metric"><div class="label">النطاق</div><div class="value">0 - 100%</div><div class="hint">التحقق مفعل</div></div>
     </section>
 
     <div class="panel">
         <div class="panel-header">
             <div class="panel-title">
                 <div>
-                    <h2>Update commission</h2>
-                    <p>Change the platform share without touching code.</p>
+                    <h2>تحديث العمولة</h2>
+                    <p>غيّر حصة المنصة دون لمس الكود.</p>
                 </div>
             </div>
         </div>
@@ -28,11 +28,11 @@
             <form method="post" action="{{ route('admin.commission.update') }}" class="form-grid">
                 @csrf
                 <div class="form-row">
-                    <label>Commission percent</label>
+                    <label>نسبة العمولة</label>
                     <input class="input" type="number" step="0.01" min="0" max="100" name="commission_percent" value="{{ $commission }}">
                 </div>
                 <div class="form-row" style="align-self:end;">
-                    <button class="btn primary" type="submit">Save commission</button>
+                    <button class="btn primary" type="submit">حفظ العمولة</button>
                 </div>
             </form>
         </div>

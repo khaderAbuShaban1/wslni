@@ -40,13 +40,13 @@ class RidersController extends Controller
     {
         $user->update(['account_status' => 'suspended']);
 
-        return back()->with('status', 'Rider suspended.');
+        return back()->with('status', 'تم إيقاف الراكب مؤقتًا.');
     }
 
     public function activate(User $user): RedirectResponse
     {
         $user->update(['account_status' => 'active']);
 
-        return back()->with('status', 'Rider activated.');
+        return back()->with('status', 'تم تفعيل الراكب.');
     }
 }

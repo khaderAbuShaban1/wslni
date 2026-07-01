@@ -1,18 +1,18 @@
-@extends('admin.layout', ['title' => 'Complaints'])
+@extends('admin.layout', ['title' => 'الشكاوى'])
 
 @section('content')
     <div class="header">
         <div>
-            <h1>Complaints</h1>
-            <p class="subtitle">Handle support cases, attach them to rides, and resolve them cleanly.</p>
+            <h1>الشكاوى</h1>
+            <p class="subtitle">سجّل بلاغات الدعم واربطها برحلة أو راكب ثم حلّها عند الانتهاء.</p>
         </div>
     </div>
 
     <section class="summary">
-        <div class="metric"><div class="label">Open</div><div class="value">{{ $openCount }}</div><div class="hint">Need attention</div></div>
-        <div class="metric"><div class="label">Resolved</div><div class="value">{{ $resolvedCount }}</div><div class="hint">Closed cases</div></div>
-        <div class="metric"><div class="label">Recent rides</div><div class="value">{{ $rides->count() }}</div><div class="hint">Available to attach</div></div>
-        <div class="metric"><div class="label">Customers</div><div class="value">{{ $users->count() }}</div><div class="hint">Available reporters</div></div>
+        <div class="metric"><div class="label">مفتوحة</div><div class="value">{{ $openCount }}</div><div class="hint">تحتاج متابعة</div></div>
+        <div class="metric"><div class="label">مغلقة</div><div class="value">{{ $resolvedCount }}</div><div class="hint">تم حلها</div></div>
+        <div class="metric"><div class="label">الرحلات الحديثة</div><div class="value">{{ $rides->count() }}</div><div class="hint">متاحة للربط</div></div>
+        <div class="metric"><div class="label">الركاب</div><div class="value">{{ $users->count() }}</div><div class="hint">مقدمو البلاغات المحتملون</div></div>
     </section>
 
     <section class="panels">
@@ -20,8 +20,8 @@
             <div class="panel-header">
                 <div class="panel-title">
                     <div>
-                        <h2>Log a complaint</h2>
-                        <p>Record a support case and tie it to a rider or trip.</p>
+                        <h2>إضافة شكوى</h2>
+                        <p>سجّل الحالة واربطها براكب أو رحلة.</p>
                     </div>
                 </div>
             </div>
@@ -29,7 +29,7 @@
                 <form method="post" action="{{ route('admin.complaints.store') }}" class="form-grid">
                     @csrf
                     <div class="form-row">
-                        <label>Customer</label>
+                        <label>الراكب</label>
                         <select class="select" name="user_id">
                             @foreach ($users as $user)
                                 <option value="{{ $user->id }}">{{ $user->name }}</option>
@@ -37,24 +37,24 @@
                         </select>
                     </div>
                     <div class="form-row">
-                        <label>Ride (optional)</label>
+                        <label>الرحلة (اختياري)</label>
                         <select class="select" name="ride_request_id">
-                            <option value="">None</option>
+                            <option value="">بدون</option>
                             @foreach ($rides as $ride)
                                 <option value="{{ $ride->id }}">#{{ $ride->id }} - {{ $ride->pickup_address }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div class="form-row">
-                        <label>Category</label>
-                        <input class="input" name="category" placeholder="Payment, behavior, delay, safety">
+                        <label>الفئة</label>
+                        <input class="input" name="category" placeholder="الدفع، السلوك، التأخير، الأمان">
                     </div>
                     <div class="form-row">
-                        <label>Message</label>
-                        <textarea class="textarea" name="message" rows="3" placeholder="Write the complaint details"></textarea>
+                        <label>الرسالة</label>
+                        <textarea class="textarea" name="message" rows="3" placeholder="اكتب تفاصيل الشكوى"></textarea>
                     </div>
                     <div class="form-row" style="align-self:end;">
-                        <button class="btn primary" type="submit">Save complaint</button>
+                        <button class="btn primary" type="submit">حفظ الشكوى</button>
                     </div>
                 </form>
             </div>
@@ -64,13 +64,13 @@
             <div class="panel-header">
                 <div class="panel-title">
                     <div>
-                        <h2>Open cases</h2>
-                        <p>Resolve or review complaints from the current queue.</p>
+                        <h2>البلاغات المفتوحة</h2>
+                        <p>راجع الشكاوى وحلّها من هنا.</p>
                     </div>
                 </div>
             </div>
             @if ($complaints->isEmpty())
-                <div class="empty">No complaints yet.</div>
+                <div class="empty">لا توجد شكاوى بعد.</div>
             @else
                 <div class="list">
                     @foreach ($complaints as $complaint)
@@ -78,9 +78,9 @@
                             <div style="flex: 1;">
                                 <strong>{{ $complaint->category }} · {{ $complaint->user?->name }}</strong>
                                 <small>{{ $complaint->message }}</small>
-                                <div class="muted" style="margin-top: 6px;">Status: <span class="status {{ $complaint->status }}">{{ $complaint->status }}</span></div>
+                                <div class="muted" style="margin-top: 6px;">الحالة: <span class="status {{ $complaint->status }}">{{ $complaint->status === 'resolved' ? 'مغلقة' : 'مفتوحة' }}</span></div>
                                 @if ($complaint->rideRequest)
-                                    <div class="muted">Ride #{{ $complaint->rideRequest->id }} · {{ $complaint->rideRequest->pickup_address }}</div>
+                                    <div class="muted">الرحلة #{{ $complaint->rideRequest->id }} · {{ $complaint->rideRequest->pickup_address }}</div>
                                 @endif
                             </div>
                             <div style="min-width: 260px;">
@@ -88,11 +88,11 @@
                                     <form method="post" action="{{ route('admin.complaints.resolve', $complaint) }}" class="form-row">
                                         @csrf
                                         @method('patch')
-                                        <textarea class="textarea" name="resolution_note" rows="3" placeholder="Resolution note"></textarea>
-                                        <button class="btn primary" type="submit">Resolve</button>
+                                        <textarea class="textarea" name="resolution_note" rows="3" placeholder="ملاحظة الحل"></textarea>
+                                        <button class="btn primary" type="submit">حل الشكوى</button>
                                     </form>
                                 @else
-                                    <div class="muted">Resolved at {{ optional($complaint->resolved_at)->format('M d, H:i') }}</div>
+                                    <div class="muted">تم الحل في {{ optional($complaint->resolved_at)->format('M d, H:i') }}</div>
                                 @endif
                             </div>
                         </div>

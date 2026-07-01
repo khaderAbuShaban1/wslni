@@ -1,23 +1,23 @@
-@extends('admin.layout', ['title' => 'Riders'])
+@extends('admin.layout', ['title' => 'الركاب'])
 
 @section('content')
     <div class="header">
         <div>
-            <h1>Riders</h1>
-            <p class="subtitle">Review customer accounts and suspend or activate them when needed.</p>
+            <h1>الركاب</h1>
+            <p class="subtitle">راجع حسابات العملاء وأوقف أو فعّل الحساب عند الحاجة.</p>
         </div>
         <div class="topline">
-            @foreach (['all' => 'All', 'active' => 'Active', 'suspended' => 'Suspended'] as $key => $label)
+            @foreach (['all' => 'الكل', 'active' => 'نشط', 'suspended' => 'موقوف'] as $key => $label)
                 <a class="pill {{ $status === $key ? 'active' : '' }}" href="{{ route('admin.riders.index', ['status' => $key, 'search' => $search]) }}">{{ $label }}</a>
             @endforeach
         </div>
     </div>
 
     <section class="summary">
-        <div class="metric"><div class="label">Active</div><div class="value">{{ $activeCount }}</div><div class="hint">Ready to book</div></div>
-        <div class="metric"><div class="label">Suspended</div><div class="value">{{ $suspendedCount }}</div><div class="hint">Temporarily blocked</div></div>
-        <div class="metric"><div class="label">Total riders</div><div class="value">{{ $riders->count() }}</div><div class="hint">Visible in current view</div></div>
-        <div class="metric"><div class="label">Status filter</div><div class="value">{{ strtoupper($status) }}</div><div class="hint">Current scope</div></div>
+        <div class="metric"><div class="label">نشط</div><div class="value">{{ $activeCount }}</div><div class="hint">جاهز للحجز</div></div>
+        <div class="metric"><div class="label">موقوف</div><div class="value">{{ $suspendedCount }}</div><div class="hint">موقوف مؤقتًا</div></div>
+        <div class="metric"><div class="label">إجمالي الركاب</div><div class="value">{{ $riders->count() }}</div><div class="hint">في العرض الحالي</div></div>
+        <div class="metric"><div class="label">الفلتر</div><div class="value">{{ strtoupper($status) }}</div><div class="hint">النطاق الحالي</div></div>
     </section>
 
     <div class="panel">
@@ -25,24 +25,24 @@
             <form class="controls" method="get" action="{{ route('admin.riders.index') }}">
                 <input type="hidden" name="status" value="{{ $status }}">
                 <label class="search">
-                    <span>⌕</span>
-                    <input type="search" name="search" value="{{ $search }}" placeholder="Search name or email">
+                    <span>بحث</span>
+                    <input type="search" name="search" value="{{ $search }}" placeholder="ابحث بالاسم أو البريد الإلكتروني">
                 </label>
-                <button class="btn primary" type="submit">Filter</button>
-                <a class="btn" href="{{ route('admin.riders.index') }}">Reset</a>
+                <button class="btn primary" type="submit">تصفية</button>
+                <a class="btn" href="{{ route('admin.riders.index') }}">إعادة ضبط</a>
             </form>
         </div>
 
         @if ($riders->isEmpty())
-            <div class="empty">No riders found.</div>
+            <div class="empty">لا يوجد ركاب.</div>
         @else
             <table>
                 <thead>
                     <tr>
-                        <th>Rider</th>
-                        <th>Contact</th>
-                        <th>Status</th>
-                        <th>Actions</th>
+                        <th>الراكب</th>
+                        <th>بيانات التواصل</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -50,24 +50,24 @@
                         <tr>
                             <td>
                                 <strong>{{ $rider->name }}</strong>
-                                <div class="muted">Registered {{ $rider->created_at->format('M d, Y') }}</div>
+                                <div class="muted">سُجّل في {{ $rider->created_at->format('M d, Y') }}</div>
                             </td>
                             <td>
                                 <div>{{ $rider->email }}</div>
-                                <div class="muted">{{ $rider->phone ?? 'No phone' }}</div>
+                                <div class="muted">{{ $rider->phone ?? 'لا يوجد رقم' }}</div>
                             </td>
-                            <td><span class="status {{ $rider->account_status }}">{{ $rider->account_status }}</span></td>
+                            <td><span class="status {{ $rider->account_status }}">{{ $rider->account_status === 'active' ? 'نشط' : 'موقوف' }}</span></td>
                             <td>
                                 <div class="table-actions">
                                     <form method="post" action="{{ route('admin.riders.activate', $rider) }}">
                                         @csrf
                                         @method('patch')
-                                        <button class="btn blue" type="submit">Activate</button>
+                                        <button class="btn blue" type="submit">تفعيل</button>
                                     </form>
                                     <form method="post" action="{{ route('admin.riders.suspend', $rider) }}">
                                         @csrf
                                         @method('patch')
-                                        <button class="btn danger" type="submit">Suspend</button>
+                                        <button class="btn danger" type="submit">إيقاف</button>
                                     </form>
                                 </div>
                             </td>

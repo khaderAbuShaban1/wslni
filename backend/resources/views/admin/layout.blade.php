@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title ?? 'Ride Admin Panel' }}</title>
+    <title>{{ $title ?? 'لوحة الإدارة' }}</title>
     <style>
         :root {
             --bg: #f5f7fb;
@@ -28,6 +28,8 @@
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             background: var(--bg);
             color: var(--text);
+            direction: rtl;
+            text-align: right;
         }
         a { color: inherit; }
         .shell {
@@ -86,6 +88,19 @@
             margin-top: 4px;
             color: #94a3b8;
         }
+        .userbox {
+            margin-top: 22px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+            display: grid;
+            gap: 12px;
+        }
+        .userline {
+            display: grid;
+            gap: 4px;
+        }
+        .userline strong { color: #fff; }
+        .userline span { color: #94a3b8; font-size: 13px; }
         .main {
             padding: 28px 20px 40px;
             min-width: 0;
@@ -306,21 +321,33 @@
             <div class="brand">
                 <div class="brand-mark">R</div>
                 <div>
-                    <strong>Ride Admin</strong>
-                    <span>Operations panel</span>
-                </div>
+                <strong>لوحة إدارة الرحلات</strong>
+                <span>لوحة العمليات</span>
             </div>
+        </div>
 
             <nav class="nav">
-                <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">Dashboard<small>Overview, live queue, earnings</small></a>
-                <a href="{{ route('admin.drivers.index') }}" class="{{ request()->routeIs('admin.drivers.*') ? 'active' : '' }}">Drivers<small>Approvals, online status, ratings</small></a>
-                <a href="{{ route('admin.riders.index') }}" class="{{ request()->routeIs('admin.riders.*') ? 'active' : '' }}">Riders<small>Accounts, status, recent activity</small></a>
-                <a href="{{ route('admin.rides.index') }}" class="{{ request()->routeIs('admin.rides.*') ? 'active' : '' }}">Trips<small>Live monitoring and statuses</small></a>
-                <a href="{{ route('admin.commission.edit') }}" class="{{ request()->routeIs('admin.commission.*') ? 'active' : '' }}">Commission<small>Platform fee settings</small></a>
-                <a href="{{ route('admin.complaints.index') }}" class="{{ request()->routeIs('admin.complaints.*') ? 'active' : '' }}">Complaints<small>Support cases and resolution</small></a>
-                <a href="{{ route('admin.offers.index') }}" class="{{ request()->routeIs('admin.offers.*') ? 'active' : '' }}">Offers<small>Promo codes and campaigns</small></a>
-                <a href="{{ route('admin.analytics.index') }}" class="{{ request()->routeIs('admin.analytics.*') ? 'active' : '' }}">Analytics<small>Revenue and performance</small></a>
+                <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">الرئيسية<small>نظرة عامة، الطلبات المباشرة، والأرباح</small></a>
+                <a href="{{ route('admin.drivers.index') }}" class="{{ request()->routeIs('admin.drivers.*') ? 'active' : '' }}">السائقون<small>الموافقات، الحالة، والتقييمات</small></a>
+                <a href="{{ route('admin.riders.index') }}" class="{{ request()->routeIs('admin.riders.*') ? 'active' : '' }}">الركاب<small>الحسابات، الحالة، والنشاط الأخير</small></a>
+                <a href="{{ route('admin.rides.index') }}" class="{{ request()->routeIs('admin.rides.*') ? 'active' : '' }}">الرحلات<small>مراقبة مباشرة وحالات الرحلة</small></a>
+                <a href="{{ route('admin.commission.edit') }}" class="{{ request()->routeIs('admin.commission.*') ? 'active' : '' }}">العمولة<small>إعدادات نسبة المنصة</small></a>
+                <a href="{{ route('admin.complaints.index') }}" class="{{ request()->routeIs('admin.complaints.*') ? 'active' : '' }}">الشكاوى<small>بلاغات الدعم وحلّها</small></a>
+                <a href="{{ route('admin.offers.index') }}" class="{{ request()->routeIs('admin.offers.*') ? 'active' : '' }}">العروض<small>أكواد الخصم والحملات</small></a>
+                <a href="{{ route('admin.analytics.index') }}" class="{{ request()->routeIs('admin.analytics.*') ? 'active' : '' }}">الإحصائيات<small>الإيرادات والأداء</small></a>
             </nav>
+            @auth
+                <div class="userbox">
+                    <div class="userline">
+                        <strong>{{ auth()->user()->name }}</strong>
+                        <span>{{ auth()->user()->email }}</span>
+                    </div>
+                    <form method="post" action="{{ route('auth.logout') }}">
+                        @csrf
+                        <button class="btn" type="submit" style="width:100%;">تسجيل الخروج</button>
+                    </form>
+                </div>
+            @endauth
         </aside>
         <main class="main">
             <div class="wrap">

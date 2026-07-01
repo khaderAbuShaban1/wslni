@@ -47,7 +47,7 @@ class DriversController extends Controller
             'rejection_reason' => null,
         ]);
 
-        return back()->with('status', 'Driver approved successfully.');
+        return back()->with('status', 'تمت موافقة السائق بنجاح.');
     }
 
     public function reject(Request $request, DriverProfile $driverProfile): RedirectResponse
@@ -58,7 +58,7 @@ class DriversController extends Controller
             'rejection_reason' => $request->string('reason')->toString() ?: 'Rejected by admin review.',
         ]);
 
-        return back()->with('status', 'Driver rejected successfully.');
+        return back()->with('status', 'تم رفض السائق بنجاح.');
     }
 
     public function toggleOnline(DriverProfile $driverProfile): RedirectResponse
@@ -67,6 +67,6 @@ class DriversController extends Controller
             'is_online' => ! $driverProfile->is_online,
         ]);
 
-        return back()->with('status', 'Driver online status updated.');
+        return back()->with('status', 'تم تحديث حالة السائق بنجاح.');
     }
 }

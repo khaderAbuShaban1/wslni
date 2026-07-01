@@ -30,7 +30,7 @@ class OffersController extends Controller
 
         Promotion::create($data + ['is_active' => true]);
 
-        return back()->with('status', 'Offer created.');
+        return back()->with('status', 'تم إنشاء العرض.');
     }
 
     public function toggle(Promotion $promotion): RedirectResponse
@@ -39,6 +39,6 @@ class OffersController extends Controller
             'is_active' => ! $promotion->is_active,
         ]);
 
-        return back()->with('status', 'Offer status updated.');
+        return back()->with('status', 'تم تحديث حالة العرض.');
     }
 }

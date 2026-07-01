@@ -14,6 +14,7 @@ class ExampleTest extends TestCase
     {
         $response = $this->get('/');
 
-        $response->assertRedirect('/admin');
+        $response->assertOk();
+        $response->assertSee('تسجيل الدخول');
     }
 }
