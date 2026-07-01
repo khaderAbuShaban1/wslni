@@ -34,3 +34,7 @@ flutter run
 - شاشتان Flutter عمليتان بدل شاشة العداد الافتراضية
 - اختبارات Flutter محدثة للتأكد من تحميل الشاشات الجديدة
 
+
+## Project Status
+
+This repository is under active development.
