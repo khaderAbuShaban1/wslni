@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RideRequest extends Model
 {
@@ -54,5 +55,10 @@ class RideRequest extends Model
     public function driver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'driver_id');
+    }
+
+    public function offers(): HasMany
+    {
+        return $this->hasMany(RideOffer::class);
     }
 }

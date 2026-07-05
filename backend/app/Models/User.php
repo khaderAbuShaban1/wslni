@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
@@ -22,10 +23,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'phone',
-        'role',
-        'account_status',
-    ];
+            'phone',
+            'role',
+            'account_status',
+        ];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -33,9 +34,11 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $hidden = [
-        'password',
-        'remember_token',
-    ];
+            'password',
+            'remember_token',
+            'email_otp_code',
+            'email_otp_expires_at',
+        ];
 
     /**
      * Get the attributes that should be cast.
@@ -46,6 +49,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'email_otp_expires_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -53,6 +57,11 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
+    }
+
+    public function driverProfile(): HasOne
+    {
+        return $this->hasOne(DriverProfile::class);
     }
 
     public function isActive(): bool
