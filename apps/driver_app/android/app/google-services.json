@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "507815627313",
+    "firebase_url": "https://wslni-527a2-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "wslni-527a2",
+    "storage_bucket": "wslni-527a2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:507815627313:android:ecb457f100c22c52fce310",
+        "android_client_info": {
+          "package_name": "com.wslni.customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRs-Z8vvQOkhpMP81XmUAXTrgSHRpx76o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:507815627313:android:752fec5a724f48ddfce310",
+        "android_client_info": {
+          "package_name": "com.wslni.driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRs-Z8vvQOkhpMP81XmUAXTrgSHRpx76o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

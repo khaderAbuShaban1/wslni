@@ -1,10 +1,14 @@
 import '../models/ride_model.dart';
 import 'api_client.dart';
+import 'realtime_ride_service.dart';
 
 class RideService {
-  RideService({ApiClient? api}) : _api = api ?? ApiClient();
+  RideService({ApiClient? api, RealtimeRideService? realtime})
+    : _api = api ?? ApiClient(),
+      _realtime = realtime ?? RealtimeRideService();
 
   final ApiClient _api;
+  final RealtimeRideService _realtime;
 
   Future<RideDraft> createRide({
     required int customerId,
@@ -18,7 +22,9 @@ class RideService {
     });
     final ride = result['ride'];
     if (ride is Map<String, dynamic>) {
-      return RideDraft.fromJson(ride);
+      final draft = RideDraft.fromJson(ride);
+      await _realtime.publishRide(ride: draft, customerId: customerId);
+      return draft;
     }
     return createDraft(pickup: pickup, destination: destination);
   }
@@ -31,6 +37,7 @@ class RideService {
       rideName: 'طلب جديد',
       price: 'بانتظار العرض',
       eta: 'بانتظار السائق',
+      status: 'open',
     );
   }
 }

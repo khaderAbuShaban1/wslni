@@ -24,7 +24,7 @@ class _CustomerShellState extends State<CustomerShell> {
   Widget build(BuildContext context) {
     final pages = [
       HomeScreen(user: _user, onOpenTrips: () => setState(() => _index = 1)),
-      const TripHistoryScreen(showBack: false),
+      TripHistoryScreen(user: _user, showBack: false),
       const WalletScreen(showBack: false),
       ProfileScreen(
         user: _user,

@@ -8,7 +8,6 @@ import '../widgets/custom_textfield.dart';
 import '../widgets/empty_state_card.dart';
 import '../widgets/premium_card.dart';
 import '../widgets/section_header.dart';
-import 'driver_offers_screen.dart';
 import 'notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -48,16 +47,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() => _requesting = true);
     try {
-      final draft = await _rideService.createRide(
+      await _rideService.createRide(
         customerId: widget.user.id,
         pickup: pickup,
         destination: dropoff,
       );
 
       if (!mounted) return;
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => DriverOffersScreen(draft: draft)),
-      );
+      _showMessage('تم إرسال الطلب ونقله إلى رحلاتي.');
+      widget.onOpenTrips();
     } catch (_) {
       _showMessage('تعذر إرسال الطلب. تأكد أن الخادم يعمل على 8000.');
     } finally {

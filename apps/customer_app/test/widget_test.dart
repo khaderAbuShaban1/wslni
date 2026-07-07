@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:customer_app/main.dart';
+import 'package:customer_app/app.dart';
 
 void main() {
   testWidgets('renders premium customer app splash', (

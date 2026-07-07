@@ -1,13 +1,4 @@
-import 'dart:convert';
-import 'dart:io';
-
-class ApiException implements Exception {
-  ApiException(this.message, this.statusCode, this.body);
-
-  final String message;
-  final int statusCode;
-  final Map<String, dynamic> body;
-}
+﻿part of '../main.dart';
 
 class ApiClient {
   ApiClient({String? baseUrl})
@@ -15,28 +6,15 @@ class ApiClient {
 
   final String baseUrl;
 
-  Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body) {
-    return _send('POST', path, body);
-  }
-
-  Future<Map<String, dynamic>> patch(String path, Map<String, dynamic> body) {
-    return _send('PATCH', path, body);
-  }
-
-  Future<Map<String, dynamic>> _send(
-    String method,
+  Future<Map<String, dynamic>> post(
     String path,
     Map<String, dynamic> body,
   ) async {
     final client = HttpClient();
-    final uri = Uri.parse('$baseUrl/$path');
-    final request = method == 'PATCH'
-        ? await client.patchUrl(uri)
-        : await client.postUrl(uri);
+    final request = await client.postUrl(Uri.parse('$baseUrl/$path'));
     request.headers.contentType = ContentType.json;
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
     request.write(jsonEncode(body));
-
     final response = await request.close();
     final text = await response.transform(utf8.decoder).join();
     client.close();
@@ -45,7 +23,24 @@ class ApiClient {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(_message(decoded), response.statusCode, decoded);
     }
+
     return decoded;
+  }
+
+  Future<List<dynamic>> getList(String path) async {
+    final client = HttpClient();
+    final request = await client.getUrl(Uri.parse('$baseUrl/$path'));
+    request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+    final response = await request.close();
+    final text = await response.transform(utf8.decoder).join();
+    client.close();
+
+    final decoded = jsonDecode(text);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException('تعذر تحميل البيانات.', response.statusCode, {});
+    }
+    if (decoded is List) return decoded;
+    return [];
   }
 
   Map<String, dynamic> _decode(String text) {
@@ -67,4 +62,12 @@ class ApiClient {
     }
     return decoded['message']?.toString() ?? 'حدث خطأ غير متوقع.';
   }
+}
+
+class ApiException implements Exception {
+  ApiException(this.message, this.statusCode, this.body);
+
+  final String message;
+  final int statusCode;
+  final Map<String, dynamic> body;
 }
