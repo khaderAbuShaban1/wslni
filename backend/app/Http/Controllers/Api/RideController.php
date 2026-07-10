@@ -9,8 +9,10 @@ use App\Models\RideRequest;
 
 class RideController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $customerId = $request->query('customer_id');
+
         return response()->json(
             RideRequest::query()
                 ->with([
@@ -18,6 +20,7 @@ class RideController extends Controller
                     'offers.driver:id,name,phone',
                 ])
                 ->where('status', 'requested')
+                ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))
                 ->latest()
                 ->get()
         );

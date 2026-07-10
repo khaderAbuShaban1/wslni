@@ -49,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await _rideService.createRide(
         customerId: widget.user.id,
+        customerName: widget.user.name,
         pickup: pickup,
         destination: dropoff,
       );

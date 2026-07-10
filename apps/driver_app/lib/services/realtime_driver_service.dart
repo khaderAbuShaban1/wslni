@@ -21,7 +21,7 @@ class RealtimeDriverService {
       for (final raw in value.values) {
         if (raw is! Map) continue;
         final status = raw['status']?.toString() ?? 'open';
-        if (status != 'open') continue;
+        if (status != 'open' && status != 'requested') continue;
         rides.add(
           RideRequestItem(
             id: int.tryParse(raw['id']?.toString() ?? '') ?? 0,

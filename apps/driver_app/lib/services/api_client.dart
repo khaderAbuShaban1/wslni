@@ -1,8 +1,19 @@
-﻿part of '../main.dart';
+part of '../main.dart';
+
+const _apiBaseUrlOverride = String.fromEnvironment('API_BASE_URL');
+
+String _resolveBaseUrl(String? baseUrl) {
+  if (baseUrl != null && baseUrl.isNotEmpty) return baseUrl;
+  if (_apiBaseUrlOverride.isNotEmpty) return _apiBaseUrlOverride;
+  return 'http://10.0.0.11:8000/api';
+}
+
+HttpClient _createHttpClient() {
+  return HttpClient()..connectionTimeout = const Duration(seconds: 8);
+}
 
 class ApiClient {
-  ApiClient({String? baseUrl})
-    : baseUrl = baseUrl ?? 'http://10.0.0.3:8000/api';
+  ApiClient({String? baseUrl}) : baseUrl = _resolveBaseUrl(baseUrl);
 
   final String baseUrl;
 
@@ -10,7 +21,7 @@ class ApiClient {
     String path,
     Map<String, dynamic> body,
   ) async {
-    final client = HttpClient();
+    final client = _createHttpClient();
     final request = await client.postUrl(Uri.parse('$baseUrl/$path'));
     request.headers.contentType = ContentType.json;
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
@@ -28,7 +39,7 @@ class ApiClient {
   }
 
   Future<List<dynamic>> getList(String path) async {
-    final client = HttpClient();
+    final client = _createHttpClient();
     final request = await client.getUrl(Uri.parse('$baseUrl/$path'));
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
     final response = await request.close();

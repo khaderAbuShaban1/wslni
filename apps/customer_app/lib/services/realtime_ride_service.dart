@@ -17,15 +17,17 @@ class RealtimeRideService {
   Future<void> publishRide({
     required RideDraft ride,
     required int customerId,
+    required String customerName,
   }) async {
     if (!isEnabled || ride.id == 0) return;
 
     await _ridesRef.child(ride.id.toString()).set({
       'id': ride.id,
       'customer_id': customerId,
+      'customer_name': customerName,
       'pickup_address': ride.pickup,
       'dropoff_address': ride.destination,
-      'status': 'open',
+      'status': _firebaseStatus(ride.status),
       'created_at': ServerValue.timestamp,
     });
   }
@@ -52,7 +54,7 @@ class RealtimeRideService {
             rideName: 'طلب رحلة',
             price: 'بانتظار العرض',
             eta: 'بانتظار السائق',
-            status: raw['status']?.toString() ?? 'open',
+            status: _firebaseStatus(raw['status']?.toString() ?? 'open'),
             offersCount: _countOffers(raw['offers']),
           ),
         );
@@ -91,5 +93,12 @@ class RealtimeRideService {
     if (value is Map) return value.length;
     if (value is List) return value.length;
     return 0;
+  }
+
+  String _firebaseStatus(String status) {
+    return switch (status) {
+      'requested' => 'open',
+      _ => status,
+    };
   }
 }

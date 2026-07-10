@@ -3,56 +3,112 @@ import 'package:flutter/material.dart';
 import '../models/ride_model.dart';
 import '../models/user_model.dart';
 import '../services/realtime_ride_service.dart';
+import '../services/ride_service.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/empty_state_card.dart';
 import '../widgets/premium_card.dart';
 import 'driver_offers_screen.dart';
 
-class TripHistoryScreen extends StatelessWidget {
+class TripHistoryScreen extends StatefulWidget {
   TripHistoryScreen({
     required this.user,
     this.showBack = true,
+    RideService? rideService,
     RealtimeRideService? realtimeService,
     super.key,
-  }) : realtimeService = realtimeService ?? RealtimeRideService();
+  }) : rideService = rideService ?? RideService(),
+       realtimeService = realtimeService ?? RealtimeRideService();
 
   final AppUser user;
   final bool showBack;
+  final RideService rideService;
   final RealtimeRideService realtimeService;
+
+  @override
+  State<TripHistoryScreen> createState() => _TripHistoryScreenState();
+}
+
+class _TripHistoryScreenState extends State<TripHistoryScreen> {
+  late Future<List<RideDraft>> _databaseRides;
+  late Stream<List<RideDraft>> _realtimeRides;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRides();
+  }
+
+  @override
+  void didUpdateWidget(covariant TripHistoryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.user.id != widget.user.id) {
+      _loadRides();
+    }
+  }
+
+  void _loadRides() {
+    _databaseRides = widget.rideService.listCustomerRides(widget.user.id);
+    _realtimeRides = widget.realtimeService.watchCustomerRides(widget.user.id);
+  }
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
       title: 'سجل الرحلات',
-      showBack: showBack,
-      child: StreamBuilder<List<RideDraft>>(
-        stream: realtimeService.watchCustomerRides(user.id),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      showBack: widget.showBack,
+      child: FutureBuilder<List<RideDraft>>(
+        future: _databaseRides,
+        builder: (context, databaseSnapshot) {
+          final databaseRides = databaseSnapshot.data ?? const <RideDraft>[];
+
+          if (databaseSnapshot.connectionState == ConnectionState.waiting &&
+              databaseRides.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final rides = snapshot.data ?? const <RideDraft>[];
-          if (rides.isEmpty) {
-            return const EmptyStateCard(
-              icon: Icons.receipt_long_outlined,
-              title: 'لا توجد رحلات بعد',
-              message: 'لما تعمل طلب رحلة، سيظهر هنا بحالة بانتظار العروض.',
-            );
-          }
+          return StreamBuilder<List<RideDraft>>(
+            stream: _realtimeRides,
+            builder: (context, realtimeSnapshot) {
+              final realtimeRides =
+                  realtimeSnapshot.data ?? const <RideDraft>[];
+              final rides = _mergeRides(databaseRides, realtimeRides);
 
-          return Column(
-            children: [
-              for (final ride in rides) ...[
-                _CustomerRideCard(ride: ride),
-                const SizedBox(height: 12),
-              ],
-            ],
+              if (rides.isEmpty) {
+                return const EmptyStateCard(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'لا توجد رحلات بعد',
+                  message: 'لما تعمل طلب رحلة، سيظهر هنا بحالة بانتظار العروض.',
+                );
+              }
+
+              return Column(
+                children: [
+                  for (final ride in rides) ...[
+                    _CustomerRideCard(ride: ride),
+                    const SizedBox(height: 12),
+                  ],
+                ],
+              );
+            },
           );
         },
       ),
     );
+  }
+
+  List<RideDraft> _mergeRides(
+    List<RideDraft> databaseRides,
+    List<RideDraft> realtimeRides,
+  ) {
+    final byId = <int, RideDraft>{};
+    for (final ride in databaseRides) {
+      byId[ride.id] = ride;
+    }
+    for (final ride in realtimeRides) {
+      byId[ride.id] = ride;
+    }
+    return byId.values.toList()..sort((a, b) => b.id.compareTo(a.id));
   }
 }
 

@@ -1,4 +1,4 @@
-﻿part of '../main.dart';
+part of '../main.dart';
 
 class RequestsPage extends StatefulWidget {
   const RequestsPage({required this.user, super.key});
@@ -20,15 +20,13 @@ class _RequestsPageState extends State<RequestsPage> {
   @override
   void initState() {
     super.initState();
+    _future = _load();
     if (_realtime.isEnabled) {
-      _future = Future.value(const []);
       _rideStream = _realtime.watchOpenRides();
-    } else {
-      _future = _load();
-      _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-        if (mounted) _refresh(silent: true);
-      });
     }
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) _refresh(silent: true);
+    });
   }
 
   @override
@@ -48,7 +46,12 @@ class _RequestsPageState extends State<RequestsPage> {
   }
 
   void _refresh({bool silent = false}) {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+      if (_realtime.isEnabled) {
+        _rideStream = _realtime.watchOpenRides();
+      }
+    });
     if (!silent) {
       ScaffoldMessenger.of(
         context,
@@ -159,45 +162,16 @@ class _RequestsPageState extends State<RequestsPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_rideStream != null) {
-      return StreamBuilder<List<RideRequestItem>>(
-        stream: _rideStream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: TextButton.icon(
-                onPressed: () => setState(() {
-                  _rideStream = _realtime.watchOpenRides();
-                }),
-                icon: const Icon(Icons.refresh),
-                label: const Text('تعذر تحميل الطلبات، حاول مرة أخرى'),
-              ),
-            );
-          }
-          return _RequestsList(
-            rides: snapshot.data ?? const [],
-            onRefresh: () => setState(() {
-              _rideStream = _realtime.watchOpenRides();
-            }),
-            onOffer: _openOfferSheet,
-          );
-        },
-      );
-    }
-
     return FutureBuilder<List<RideRequestItem>>(
       future: _future,
       initialData: _lastRides,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting &&
+      builder: (context, databaseSnapshot) {
+        if (databaseSnapshot.connectionState == ConnectionState.waiting &&
             _lastRides.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (snapshot.hasError) {
+        if (databaseSnapshot.hasError && _rideStream == null) {
           return Center(
             child: TextButton.icon(
               onPressed: () => _refresh(),
@@ -207,14 +181,59 @@ class _RequestsPageState extends State<RequestsPage> {
           );
         }
 
-        return _RequestsList(
-          rides: snapshot.data ?? const [],
-          onRefresh: () => _refresh(),
-          onPullRefresh: () async => _refresh(silent: true),
-          onOffer: _openOfferSheet,
+        final databaseRides =
+            databaseSnapshot.data ?? const <RideRequestItem>[];
+
+        if (_rideStream == null) {
+          return _RequestsList(
+            rides: databaseRides,
+            onRefresh: () => _refresh(),
+            onPullRefresh: () async => _refresh(silent: true),
+            onOffer: _openOfferSheet,
+          );
+        }
+
+        return StreamBuilder<List<RideRequestItem>>(
+          stream: _rideStream,
+          initialData: databaseRides,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                databaseRides.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError && databaseRides.isEmpty) {
+              return Center(
+                child: TextButton.icon(
+                  onPressed: () => _refresh(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('تعذر تحميل الطلبات، حاول مرة أخرى'),
+                ),
+              );
+            }
+            return _RequestsList(
+              rides: _mergeRides(databaseRides, snapshot.data ?? const []),
+              onRefresh: () => _refresh(),
+              onPullRefresh: () async => _refresh(silent: true),
+              onOffer: _openOfferSheet,
+            );
+          },
         );
       },
     );
+  }
+
+  List<RideRequestItem> _mergeRides(
+    List<RideRequestItem> databaseRides,
+    List<RideRequestItem> realtimeRides,
+  ) {
+    final byId = <int, RideRequestItem>{};
+    for (final ride in databaseRides) {
+      byId[ride.id] = ride;
+    }
+    for (final ride in realtimeRides) {
+      byId[ride.id] = ride;
+    }
+    return byId.values.toList()..sort((a, b) => b.id.compareTo(a.id));
   }
 }
 

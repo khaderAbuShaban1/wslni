@@ -6,7 +6,7 @@ const _apiBaseUrlOverride = String.fromEnvironment('API_BASE_URL');
 String _resolveBaseUrl(String? baseUrl) {
   if (baseUrl != null && baseUrl.isNotEmpty) return baseUrl;
   if (_apiBaseUrlOverride.isNotEmpty) return _apiBaseUrlOverride;
-  return 'http://10.0.0.3:8000/api';
+  return 'http://10.0.0.11:8000/api';
 }
 
 HttpClient _createHttpClient() {
@@ -41,6 +41,27 @@ class ApiClient {
       throw ApiException(_message(decoded), response.statusCode, decoded);
     }
     return decoded;
+  }
+
+  Future<List<dynamic>> getList(String path) async {
+    final client = _createHttpClient();
+    final uri = Uri.parse('$baseUrl/$path');
+    final request = await client.getUrl(uri);
+    request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+
+    final response = await request.close();
+    final text = await response.transform(utf8.decoder).join();
+    client.close();
+
+    final decoded = text.isEmpty ? null : jsonDecode(text);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final body = decoded is Map<String, dynamic>
+          ? decoded
+          : <String, dynamic>{};
+      throw ApiException(_message(body), response.statusCode, body);
+    }
+    if (decoded is List) return decoded;
+    return const [];
   }
 
   Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body) {

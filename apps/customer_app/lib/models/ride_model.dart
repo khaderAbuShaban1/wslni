@@ -34,6 +34,7 @@ class RideDraft {
 
   String get statusLabel {
     return switch (status) {
+      'requested' => 'بانتظار العروض',
       'open' => 'بانتظار العروض',
       'accepted' => 'تم اختيار سائق',
       'in_progress' => 'الرحلة قيد التنفيذ',
