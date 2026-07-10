@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\CustomerWalletController;
 use App\Http\Controllers\Api\DriverController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\RideOfferController;
@@ -24,3 +25,5 @@ Route::get('drivers/available', [DriverController::class, 'available']);
 Route::patch('drivers/{driver}/status', [DriverController::class, 'updateStatus']);
 Route::get('customers/me', [CustomerController::class, 'me']);
 Route::patch('customers/{customer}', [CustomerController::class, 'update']);
+Route::get('customers/{customer}/wallet', [CustomerWalletController::class, 'show']);
+Route::post('customers/{customer}/wallet/deposits', [CustomerWalletController::class, 'storeDeposit']);

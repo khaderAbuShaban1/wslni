@@ -8,17 +8,17 @@ use App\Models\DriverProfile;
 use App\Models\Promotion;
 use App\Models\RideRequest;
 use App\Models\User;
+use App\Models\WalletDeposit;
+use App\Models\WalletPaymentAccount;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
         $admin = User::updateOrCreate(
@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('123123123'),
                 'role' => 'admin',
                 'account_status' => 'active',
+                'wallet_balance' => 0,
                 'email_verified_at' => now(),
             ]
         );
@@ -38,30 +39,73 @@ class DatabaseSeeder extends Seeder
             ['value' => '15']
         );
 
+        $bankAccount = WalletPaymentAccount::updateOrCreate(
+            ['name' => 'بنك فلسطين'],
+            [
+                'type' => 'bank',
+                'account_holder_name' => 'Wslni',
+                'account_number' => '123456789',
+                'phone_number' => null,
+                'instructions' => 'حوّل المبلغ إلى الحساب البنكي ثم ارفع صورة الإشعار من المحفظة.',
+                'is_active' => true,
+                'sort_order' => 1,
+            ]
+        );
+
+        $jawwalPayAccount = WalletPaymentAccount::updateOrCreate(
+            ['name' => 'جوال Pay'],
+            [
+                'type' => 'mobile_wallet',
+                'account_holder_name' => 'Wslni',
+                'account_number' => null,
+                'phone_number' => '0599480926',
+                'instructions' => 'حوّل المبلغ إلى رقم المحفظة ثم ارفع صورة الإشعار.',
+                'is_active' => true,
+                'sort_order' => 2,
+            ]
+        );
+
+        $palPayAccount = WalletPaymentAccount::updateOrCreate(
+            ['name' => 'PalPay'],
+            [
+                'type' => 'mobile_wallet',
+                'account_holder_name' => 'Wslni',
+                'account_number' => null,
+                'phone_number' => '0599480926',
+                'instructions' => 'استخدم رقم المحفظة الظاهر ثم أرفق إشعار الدفع للمراجعة.',
+                'is_active' => true,
+                'sort_order' => 3,
+            ]
+        );
+
         $customers = collect([
             [
                 'name' => 'ليان عوض',
                 'email' => 'lian.awad@example.com',
                 'phone' => '0597001001',
                 'status' => 'active',
+                'wallet_balance' => 120.00,
             ],
             [
                 'name' => 'آدم المصري',
                 'email' => 'adam.masri@example.com',
                 'phone' => '0597001002',
                 'status' => 'active',
+                'wallet_balance' => 0.00,
             ],
             [
                 'name' => 'نور الشامي',
                 'email' => 'noor.shami@example.com',
                 'phone' => '0597001003',
                 'status' => 'suspended',
+                'wallet_balance' => 0.00,
             ],
             [
                 'name' => 'رنا أبو شقرة',
                 'email' => 'rana.abushaqra@example.com',
                 'phone' => '0597001004',
                 'status' => 'active',
+                'wallet_balance' => 40.00,
             ],
         ])->map(function (array $customer) {
             return User::updateOrCreate(
@@ -72,6 +116,7 @@ class DatabaseSeeder extends Seeder
                     'password' => Hash::make('123123123'),
                     'role' => 'customer',
                     'account_status' => $customer['status'],
+                    'wallet_balance' => $customer['wallet_balance'],
                     'email_verified_at' => now(),
                 ]
             );
@@ -120,6 +165,7 @@ class DatabaseSeeder extends Seeder
                     'password' => Hash::make('123123123'),
                     'role' => 'driver',
                     'account_status' => 'active',
+                    'wallet_balance' => 0,
                     'email_verified_at' => now(),
                 ]
             );
@@ -331,5 +377,101 @@ class DatabaseSeeder extends Seeder
                 'notes' => 'مخصص للرحلات القصيرة داخل المدينة.',
             ]
         );
+
+        $bankReceiptPath = $this->storeDemoReceipt('demo-bank-palestine.svg', $bankAccount->name, 'REF-2026-001', '120.00');
+        $jawwalPayReceiptPath = $this->storeDemoReceipt('demo-jawwal-pay.svg', $jawwalPayAccount->name, 'REF-2026-002', '75.00');
+        $palPayReceiptPath = $this->storeDemoReceipt('demo-palpay.svg', $palPayAccount->name, 'REF-2026-003', '40.00');
+        $rejectedReceiptPath = $this->storeDemoReceipt('demo-rejected-bank.svg', $bankAccount->name, 'REF-2026-004', '25.00');
+
+        WalletDeposit::updateOrCreate(
+            ['reference_number' => 'REF-2026-001'],
+            [
+                'user_id' => $customers[0]->id,
+                'wallet_payment_account_id' => $bankAccount->id,
+                'amount' => 120.00,
+                'bank_name' => $bankAccount->name,
+                'receipt_path' => $bankReceiptPath,
+                'status' => 'approved',
+                'note' => 'إيداع بنكي أولي مع صورة إشعار تجريبية.',
+                'reviewed_by' => $admin->id,
+                'reviewed_at' => now()->subDays(2),
+                'wallet_credited_at' => now()->subDays(2),
+            ]
+        );
+
+        WalletDeposit::updateOrCreate(
+            ['reference_number' => 'REF-2026-002'],
+            [
+                'user_id' => $customers[1]->id,
+                'wallet_payment_account_id' => $jawwalPayAccount->id,
+                'amount' => 75.00,
+                'bank_name' => $jawwalPayAccount->name,
+                'receipt_path' => $jawwalPayReceiptPath,
+                'status' => 'pending',
+                'note' => 'إشعار جوال Pay بانتظار الاعتماد.',
+                'reviewed_by' => null,
+                'reviewed_at' => null,
+                'wallet_credited_at' => null,
+            ]
+        );
+
+        WalletDeposit::updateOrCreate(
+            ['reference_number' => 'REF-2026-003'],
+            [
+                'user_id' => $customers[3]->id,
+                'wallet_payment_account_id' => $palPayAccount->id,
+                'amount' => 40.00,
+                'bank_name' => $palPayAccount->name,
+                'receipt_path' => $palPayReceiptPath,
+                'status' => 'approved',
+                'note' => 'تم اعتماد إشعار PalPay يدويًا.',
+                'reviewed_by' => $admin->id,
+                'reviewed_at' => now()->subDay(),
+                'wallet_credited_at' => now()->subDay(),
+            ]
+        );
+
+        WalletDeposit::updateOrCreate(
+            ['reference_number' => 'REF-2026-004'],
+            [
+                'user_id' => $customers[2]->id,
+                'wallet_payment_account_id' => $bankAccount->id,
+                'amount' => 25.00,
+                'bank_name' => $bankAccount->name,
+                'receipt_path' => $rejectedReceiptPath,
+                'status' => 'rejected',
+                'note' => 'إشعار تجريبي مرفوض لعرض حالة الرفض.',
+                'reviewed_by' => $admin->id,
+                'reviewed_at' => now()->subHours(6),
+                'wallet_credited_at' => null,
+            ]
+        );
+    }
+
+    private function storeDemoReceipt(string $filename, string $method, string $reference, string $amount): string
+    {
+        $path = "wallet-deposits/{$filename}";
+        $safeMethod = htmlspecialchars($method, ENT_XML1 | ENT_COMPAT, 'UTF-8');
+        $safeReference = htmlspecialchars($reference, ENT_XML1 | ENT_COMPAT, 'UTF-8');
+        $safeAmount = htmlspecialchars($amount, ENT_XML1 | ENT_COMPAT, 'UTF-8');
+
+        Storage::disk('public')->put($path, <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560">
+  <rect width="900" height="560" fill="#f8fbfd"/>
+  <rect x="55" y="55" width="790" height="450" rx="28" fill="#ffffff" stroke="#d9e2ec" stroke-width="4"/>
+  <circle cx="760" cy="145" r="54" fill="#dff5f1"/>
+  <text x="760" y="157" fill="#0f766e" font-size="34" font-family="Arial, sans-serif" font-weight="700" text-anchor="middle">W</text>
+  <text x="110" y="135" fill="#0f172a" font-size="34" font-family="Arial, sans-serif" font-weight="700">Wslni Deposit Notice</text>
+  <text x="110" y="185" fill="#64748b" font-size="22" font-family="Arial, sans-serif">Payment Method</text>
+  <text x="110" y="220" fill="#0f172a" font-size="28" font-family="Arial, sans-serif" font-weight="700">{$safeMethod}</text>
+  <text x="110" y="285" fill="#64748b" font-size="22" font-family="Arial, sans-serif">Reference Number</text>
+  <text x="110" y="320" fill="#0f172a" font-size="28" font-family="Arial, sans-serif" font-weight="700">{$safeReference}</text>
+  <text x="110" y="385" fill="#64748b" font-size="22" font-family="Arial, sans-serif">Amount</text>
+  <text x="110" y="425" fill="#0f766e" font-size="42" font-family="Arial, sans-serif" font-weight="700">{$safeAmount} NIS</text>
+  <text x="110" y="470" fill="#64748b" font-size="18" font-family="Arial, sans-serif">Demo receipt generated by the database seeder.</text>
+</svg>
+SVG);
+
+        return $path;
     }
 }

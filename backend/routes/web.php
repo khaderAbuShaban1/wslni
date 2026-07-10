@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\OffersController;
 use App\Http\Controllers\Admin\RidersController;
 use App\Http\Controllers\Admin\RidesController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\WalletsController;
 use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -45,6 +46,16 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
 
     Route::get('/rides', [RidesController::class, 'index'])->name('rides.index');
     Route::patch('/rides/{rideRequest}/status', [RidesController::class, 'updateStatus'])->name('rides.status');
+
+    Route::get('/wallets', [WalletsController::class, 'index'])->name('wallets.index');
+    Route::post('/wallets', [WalletsController::class, 'store'])->name('wallets.store');
+    Route::patch('/wallets/{walletDeposit}/approve', [WalletsController::class, 'approve'])->name('wallets.approve');
+    Route::patch('/wallets/{walletDeposit}/reject', [WalletsController::class, 'reject'])->name('wallets.reject');
+    Route::get('/wallet-payment-accounts', [WalletsController::class, 'paymentAccounts'])->name('wallet-payment-accounts.index');
+    Route::post('/wallet-payment-accounts', [WalletsController::class, 'storePaymentAccount'])->name('wallet-payment-accounts.store');
+    Route::get('/wallet-payment-accounts/{walletPaymentAccount}/invoice', [WalletsController::class, 'paymentAccountInvoice'])->name('wallet-payment-accounts.invoice');
+    Route::patch('/wallet-payment-accounts/{walletPaymentAccount}', [WalletsController::class, 'updatePaymentAccount'])->name('wallet-payment-accounts.update');
+    Route::patch('/wallet-payment-accounts/{walletPaymentAccount}/toggle', [WalletsController::class, 'togglePaymentAccount'])->name('wallet-payment-accounts.toggle');
 
     Route::get('/commission', [SettingsController::class, 'edit'])->name('commission.edit');
     Route::post('/commission', [SettingsController::class, 'update'])->name('commission.update');

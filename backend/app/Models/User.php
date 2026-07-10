@@ -23,10 +23,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-            'phone',
-            'role',
-            'account_status',
-        ];
+        'phone',
+        'role',
+        'account_status',
+        'wallet_balance',
+    ];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -34,11 +35,11 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $hidden = [
-            'password',
-            'remember_token',
-            'email_otp_code',
-            'email_otp_expires_at',
-        ];
+        'password',
+        'remember_token',
+        'email_otp_code',
+        'email_otp_expires_at',
+    ];
 
     /**
      * Get the attributes that should be cast.
@@ -51,6 +52,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'email_otp_expires_at' => 'datetime',
             'password' => 'hashed',
+            'wallet_balance' => 'decimal:2',
         ];
     }
 

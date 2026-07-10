@@ -489,6 +489,8 @@
                 <a href="{{ route('admin.drivers.index') }}" class="{{ request()->routeIs('admin.drivers.*') ? 'active' : '' }}">السائقون<small>الموافقات، الحالة، والتقييمات</small></a>
                 <a href="{{ route('admin.riders.index') }}" class="{{ request()->routeIs('admin.riders.*') ? 'active' : '' }}">الركاب<small>الحسابات، الحالة، والنشاط الأخير</small></a>
                 <a href="{{ route('admin.rides.index') }}" class="{{ request()->routeIs('admin.rides.*') ? 'active' : '' }}">الرحلات<small>مراقبة مباشرة وحالات الرحلات</small></a>
+                <a href="{{ route('admin.wallets.index') }}" class="{{ request()->routeIs('admin.wallets.*') ? 'active' : '' }}">المحافظ<small>إشعارات الإيداع ورصيد المستخدمين</small></a>
+                <a href="{{ route('admin.wallet-payment-accounts.index') }}" class="{{ request()->routeIs('admin.wallet-payment-accounts.*') ? 'active' : '' }}">حسابات التحويل<small>الحسابات التي يحول عليها الكستمر</small></a>
                 <a href="{{ route('admin.commission.edit') }}" class="{{ request()->routeIs('admin.commission.*') ? 'active' : '' }}">العمولة<small>إعداد نسبة المنصة</small></a>
                 <a href="{{ route('admin.complaints.index') }}" class="{{ request()->routeIs('admin.complaints.*') ? 'active' : '' }}">الشكاوى<small>بلاغات الدعم والمتابعة</small></a>
                 <a href="{{ route('admin.offers.index') }}" class="{{ request()->routeIs('admin.offers.*') ? 'active' : '' }}">العروض<small>أكواد الخصم والحملات</small></a>
