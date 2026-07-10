@@ -18,6 +18,7 @@ class RealtimeRideService {
     required RideDraft ride,
     required int customerId,
     required String customerName,
+    required String customerPhone,
   }) async {
     if (!isEnabled || ride.id == 0) return;
 
@@ -25,6 +26,7 @@ class RealtimeRideService {
       'id': ride.id,
       'customer_id': customerId,
       'customer_name': customerName,
+      'customer_phone': customerPhone,
       'pickup_address': ride.pickup,
       'dropoff_address': ride.destination,
       'status': _firebaseStatus(ride.status),
@@ -75,8 +77,16 @@ class RealtimeRideService {
       final offers = <DriverOffer>[];
       for (final raw in value.values) {
         if (raw is! Map) continue;
+        final status = raw['status']?.toString() ?? 'pending';
+        if (status == 'rejected' || status == 'cancelled') continue;
         offers.add(
           DriverOffer(
+            id:
+                int.tryParse(
+                  raw['offer_id']?.toString() ?? raw['id']?.toString() ?? '',
+                ) ??
+                0,
+            driverId: int.tryParse(raw['driver_id']?.toString() ?? '') ?? 0,
             name: raw['driver_name']?.toString() ?? 'سائق',
             rating: raw['rating']?.toString() ?? '5.0',
             car: raw['vehicle']?.toString() ?? 'سيارة',
@@ -86,6 +96,23 @@ class RealtimeRideService {
         );
       }
       return offers;
+    });
+  }
+
+  Future<void> acceptOffer({
+    required RideDraft ride,
+    required DriverOffer offer,
+  }) async {
+    if (!isEnabled || ride.id == 0 || offer.driverId == 0) return;
+
+    await _ridesRef.child(ride.id.toString()).update({
+      'status': 'accepted',
+      'driver_id': offer.driverId,
+      'accepted_offer_id': offer.id,
+      'accepted_at': ServerValue.timestamp,
+    });
+    await _ridesRef.child('${ride.id}/offers/${offer.driverId}').update({
+      'status': 'accepted',
     });
   }
 

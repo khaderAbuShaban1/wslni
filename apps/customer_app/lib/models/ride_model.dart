@@ -37,6 +37,7 @@ class RideDraft {
       'requested' => 'بانتظار العروض',
       'open' => 'بانتظار العروض',
       'accepted' => 'تم اختيار سائق',
+      'arrived' => 'السائق وصل إليك',
       'in_progress' => 'الرحلة قيد التنفيذ',
       'completed' => 'مكتملة',
       'cancelled' => 'ملغية',

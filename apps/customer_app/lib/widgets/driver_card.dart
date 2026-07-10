@@ -10,12 +10,14 @@ class DriverCard extends StatelessWidget {
     required this.offer,
     required this.selectedRide,
     required this.onChoose,
+    this.choosing = false,
     super.key,
   });
 
   final DriverOffer offer;
   final String selectedRide;
-  final VoidCallback onChoose;
+  final VoidCallback? onChoose;
+  final bool choosing;
 
   @override
   Widget build(BuildContext context) {
@@ -66,8 +68,8 @@ class DriverCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           CustomButton(
-            label: 'اختيار العرض',
-            icon: Icons.check_rounded,
+            label: choosing ? 'جاري قبول العرض...' : 'اختيار العرض',
+            icon: choosing ? Icons.hourglass_top_rounded : Icons.check_rounded,
             onPressed: onChoose,
           ),
         ],

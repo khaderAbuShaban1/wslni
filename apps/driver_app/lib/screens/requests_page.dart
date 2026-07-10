@@ -59,7 +59,7 @@ class _RequestsPageState extends State<RequestsPage> {
     }
   }
 
-  Future<void> _sendOffer(
+  Future<bool> _sendOffer(
     RideRequestItem ride,
     String price,
     String notes,
@@ -68,24 +68,44 @@ class _RequestsPageState extends State<RequestsPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('اكتب سعر العرض أولًا')));
-      return;
+      return false;
     }
-    await _api.post('rides/${ride.id}/offers', {
-      'driver_id': widget.user.id,
-      'price': price,
-      'notes': notes.isEmpty ? null : notes,
-    });
-    await _realtime.sendOffer(
-      ride: ride,
-      driver: widget.user,
-      price: price,
-      notes: notes,
-    );
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('تم إرسال عرضك للزبون')));
-    _refresh();
+    try {
+      final result = await _api.post('rides/${ride.id}/offers', {
+        'driver_id': widget.user.id,
+        'price': price,
+        'notes': notes.isEmpty ? null : notes,
+      });
+      final offer = result['offer'];
+      final offerMap = offer is Map ? offer : const {};
+      await _realtime.sendOffer(
+        ride: ride,
+        driver: widget.user,
+        offerId: int.tryParse(offerMap['id']?.toString() ?? '') ?? 0,
+        price: price,
+        notes: notes,
+      );
+      if (!mounted) return false;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تم إرسال عرضك للزبون')));
+      _refresh();
+      return true;
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+      return false;
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر إرسال العرض. حاول مرة أخرى.')),
+        );
+      }
+      return false;
+    }
   }
 
   void _openOfferSheet(RideRequestItem ride) {
@@ -148,8 +168,12 @@ class _RequestsPageState extends State<RequestsPage> {
                 ),
               ),
               onPressed: () async {
-                await _sendOffer(ride, price.text.trim(), notes.text.trim());
-                if (context.mounted) Navigator.pop(context);
+                final sent = await _sendOffer(
+                  ride,
+                  price.text.trim(),
+                  notes.text.trim(),
+                );
+                if (sent && context.mounted) Navigator.pop(context);
               },
               icon: const Icon(Icons.send),
               label: const Text('إرسال العرض'),

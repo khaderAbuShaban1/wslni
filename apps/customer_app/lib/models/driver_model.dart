@@ -1,5 +1,7 @@
 class DriverOffer {
   const DriverOffer({
+    required this.id,
+    required this.driverId,
     required this.name,
     required this.rating,
     required this.car,
@@ -7,6 +9,8 @@ class DriverOffer {
     required this.eta,
   });
 
+  final int id;
+  final int driverId;
   final String name;
   final String rating;
   final String car;

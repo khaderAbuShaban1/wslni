@@ -1,4 +1,4 @@
-﻿part of '../main.dart';
+part of '../main.dart';
 
 class RideRequestItem {
   RideRequestItem({
@@ -7,6 +7,9 @@ class RideRequestItem {
     required this.dropoff,
     required this.customerName,
     required this.notes,
+    this.customerPhone = '',
+    this.status = 'requested',
+    this.actualFare = '',
     this.offers = const [],
   });
 
@@ -14,8 +17,25 @@ class RideRequestItem {
   final String pickup;
   final String dropoff;
   final String customerName;
+  final String customerPhone;
   final String notes;
+  final String status;
+  final String actualFare;
   final List<DriverRideOffer> offers;
+
+  bool get isActive =>
+      const {'accepted', 'arrived', 'in_progress'}.contains(status);
+
+  String get statusLabel {
+    return switch (status) {
+      'accepted' => 'تم قبول الطلب',
+      'arrived' => 'وصل السائق إلى الزبون',
+      'in_progress' => 'الرحلة قيد التنفيذ',
+      'completed' => 'رحلة مكتملة',
+      'cancelled' => 'رحلة ملغاة',
+      _ => 'بانتظار القبول',
+    };
+  }
 
   int? get lowestOffer {
     final prices = offers
@@ -35,7 +55,10 @@ class RideRequestItem {
       pickup: json['pickup_address']?.toString() ?? '',
       dropoff: json['dropoff_address']?.toString() ?? '',
       customerName: customerMap['name']?.toString() ?? 'زبون',
+      customerPhone: customerMap['phone']?.toString() ?? '',
       notes: json['notes']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'requested',
+      actualFare: json['actual_fare']?.toString() ?? '',
       offers: DriverRideOffer.listFrom(json['offers']),
     );
   }
@@ -57,7 +80,8 @@ class DriverRideOffer {
   factory DriverRideOffer.fromMap(Map map) {
     return DriverRideOffer(
       driverId: int.tryParse(map['driver_id']?.toString() ?? '') ?? 0,
-      driverName: map['driver_name']?.toString() ??
+      driverName:
+          map['driver_name']?.toString() ??
           map['driver']?['name']?.toString() ??
           'سائق',
       price: map['price']?.toString() ?? '0',

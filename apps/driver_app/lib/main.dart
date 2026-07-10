@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -12,6 +12,7 @@ import 'firebase_options.dart';
 part 'app.dart';
 part 'models/driver_user.dart';
 part 'models/ride_request_item.dart';
+part 'screens/active_ride_page.dart';
 part 'screens/auth_page.dart';
 part 'screens/driver_home_page.dart';
 part 'screens/earnings_page.dart';
