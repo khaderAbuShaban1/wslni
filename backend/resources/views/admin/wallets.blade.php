@@ -17,8 +17,8 @@
         <div class="panel-header">
             <div class="panel-title">
                 <div>
-                    <h2>إشعارات الدفع بانتظار الموافقة</h2>
-                    <p>راجع صورة الإشعار وتفاصيل التحويل، ثم اعتمد المبلغ الذي سيتم إيداعه فعليًا في محفظة الكستمر.</p>
+                    <h2>طابور إشعارات الدفع</h2>
+                    <p>كل صف يمثل طلبًا مستقلًا برقم واضح وبيانات الكستمر؛ راجع الإشعار ثم اعتمد أو ارفض بدون خلط بين الطلبات.</p>
                 </div>
                 <a class="btn" href="{{ route('admin.wallets.index', ['status' => 'pending']) }}">عرض المعلقة فقط</a>
             </div>
@@ -27,70 +27,81 @@
         @if ($pendingDeposits->isEmpty())
             <div class="empty">لا توجد إشعارات دفع بانتظار الموافقة الآن.</div>
         @else
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:14px; padding:18px;">
-                @foreach ($pendingDeposits as $deposit)
-                    <article style="border:1px solid var(--line); border-radius:16px; overflow:hidden; background:#fff; box-shadow:0 8px 24px rgba(15, 23, 42, 0.04);">
-                        @if ($deposit->receipt_path)
-                            <a href="{{ asset('storage/' . $deposit->receipt_path) }}" target="_blank" style="display:block; background:#f8fafc;">
-                                <img src="{{ asset('storage/' . $deposit->receipt_path) }}" alt="صورة إشعار الدفع" style="width:100%; height:220px; object-fit:contain; display:block;">
-                            </a>
-                        @else
-                            <div style="height:220px; display:grid; place-items:center; background:#f8fafc; color:var(--muted);">لا توجد صورة إشعار</div>
-                        @endif
-
-                        <div style="padding:16px; display:grid; gap:12px;">
-                            <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
-                                <div>
+            <div style="overflow:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>الطلب</th>
+                            <th>الكستمر</th>
+                            <th>المبلغ والرصيد</th>
+                            <th>طريقة الدفع</th>
+                            <th>الإشعار</th>
+                            <th>قرار المراجعة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($pendingDeposits as $deposit)
+                            @php
+                                $customerPendingCount = $pendingCustomerCounts[$deposit->user_id] ?? 0;
+                            @endphp
+                            <tr>
+                                <td>
+                                    <strong>طلب #{{ $deposit->id }}</strong>
+                                    <div class="muted">{{ optional($deposit->created_at)->format('Y-m-d H:i') }}</div>
+                                    <span class="status pending" style="margin-top:8px;">بانتظار المراجعة</span>
+                                </td>
+                                <td>
                                     <strong>{{ $deposit->user?->name }}</strong>
-                                    <div class="muted">{{ $deposit->user?->email }}</div>
                                     <div class="muted">{{ $deposit->user?->phone }}</div>
-                                </div>
-                                <span class="status pending">بانتظار الموافقة</span>
-                            </div>
-
-                            <div class="summary" style="margin:0; grid-template-columns: repeat(2, minmax(0, 1fr));">
-                                <div class="metric" style="padding:12px; box-shadow:none;">
-                                    <div class="label">المبلغ الذي كتبه الكستمر</div>
-                                    <div class="value" style="font-size:22px;">{{ number_format((float) $deposit->amount, 2) }} ₪</div>
-                                </div>
-                                <div class="metric" style="padding:12px; box-shadow:none;">
-                                    <div class="label">رصيد الكستمر الحالي</div>
-                                    <div class="value" style="font-size:22px;">{{ number_format((float) ($deposit->user?->wallet_balance ?? 0), 2) }} ₪</div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div class="muted">حساب التحويل: {{ $deposit->paymentAccount?->name ?? $deposit->bank_name }}</div>
-                                @if ($deposit->paymentAccount)
-                                    <div class="muted">صاحب الحساب: {{ $deposit->paymentAccount->account_holder_name }}</div>
-                                @endif
-                                <div class="muted">رقم المرجع: {{ $deposit->reference_number ?? 'بدون مرجع' }}</div>
-                                <div class="muted">تاريخ الإرسال: {{ optional($deposit->created_at)->format('Y-m-d H:i') }}</div>
-                                @if ($deposit->note)
-                                    <div class="muted">ملاحظة: {{ $deposit->note }}</div>
-                                @endif
-                            </div>
-
-                            <form method="post" action="{{ route('admin.wallets.approve', $deposit) }}" class="form-grid" style="grid-template-columns: minmax(0, 1fr) auto;">
-                                @csrf
-                                @method('patch')
-                                <div class="form-row">
-                                    <label>المبلغ الذي سيتم إيداعه</label>
-                                    <input class="input" name="approved_amount" type="number" step="0.01" min="1" value="{{ old('approved_amount', $deposit->amount) }}" required>
-                                </div>
-                                <div class="form-row" style="align-self:end;">
-                                    <button class="btn blue" type="submit">اعتماد وإيداع</button>
-                                </div>
-                            </form>
-
-                            <form method="post" action="{{ route('admin.wallets.reject', $deposit) }}">
-                                @csrf
-                                @method('patch')
-                                <button class="btn danger" type="submit" style="width:100%;">رفض الإشعار</button>
-                            </form>
-                        </div>
-                    </article>
-                @endforeach
+                                    <div class="muted">{{ $deposit->user?->email }}</div>
+                                    @if ($customerPendingCount > 1)
+                                        <span class="status pending" style="margin-top:8px;">له {{ $customerPendingCount }} طلبات معلقة</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <strong>{{ number_format((float) $deposit->amount, 2) }} ₪</strong>
+                                    <div class="muted">رصيده الحالي: {{ number_format((float) ($deposit->user?->wallet_balance ?? 0), 2) }} ₪</div>
+                                </td>
+                                <td>
+                                    <strong>{{ $deposit->paymentAccount?->name ?? $deposit->bank_name }}</strong>
+                                    @if ($deposit->paymentAccount)
+                                        <div class="muted">{{ $deposit->paymentAccount->account_holder_name }}</div>
+                                    @endif
+                                    <div class="muted">مرجع: {{ $deposit->reference_number ?? 'بدون مرجع' }}</div>
+                                    @if ($deposit->note)
+                                        <div class="muted">ملاحظة: {{ $deposit->note }}</div>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($deposit->receipt_path)
+                                        <a href="{{ asset('storage/' . $deposit->receipt_path) }}" target="_blank" style="display:inline-block; margin-bottom:8px;">
+                                            <img src="{{ asset('storage/' . $deposit->receipt_path) }}" alt="صورة إشعار طلب #{{ $deposit->id }}" style="width:96px; height:64px; object-fit:contain; border:1px solid var(--line); border-radius:12px; background:#f8fafc;">
+                                        </a>
+                                        <br>
+                                        <a href="{{ asset('storage/' . $deposit->receipt_path) }}" target="_blank" class="btn">فتح الصورة</a>
+                                    @else
+                                        <div class="muted">لا توجد صورة مرفقة.</div>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div style="display:grid; gap:8px; min-width:220px;">
+                                        <form method="post" action="{{ route('admin.wallets.approve', $deposit) }}" style="display:grid; gap:8px;" onsubmit="return confirm('اعتماد طلب #{{ $deposit->id }} وإضافة الرصيد؟')">
+                                            @csrf
+                                            @method('patch')
+                                            <input class="input" name="approved_amount" type="number" step="0.01" min="1" value="{{ $deposit->amount }}" aria-label="مبلغ اعتماد طلب #{{ $deposit->id }}" required>
+                                            <button class="btn blue" type="submit">اعتماد طلب #{{ $deposit->id }}</button>
+                                        </form>
+                                        <form method="post" action="{{ route('admin.wallets.reject', $deposit) }}" onsubmit="return confirm('رفض طلب #{{ $deposit->id }}؟')">
+                                            @csrf
+                                            @method('patch')
+                                            <button class="btn danger" type="submit" style="width:100%;">رفض طلب #{{ $deposit->id }}</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         @endif
     </div>
@@ -282,7 +293,7 @@
                     <input type="hidden" name="status" value="{{ $status }}">
                     <label class="search" style="min-width:min(100%, 320px);">
                         <span>بحث</span>
-                        <input type="search" name="search" value="{{ $search }}" placeholder="رقم المرجع، البنك، أو اسم الراكب">
+                        <input type="search" name="search" value="{{ $search }}" placeholder="رقم الطلب، المرجع، البنك، اسم الراكب، الهاتف أو البريد">
                     </label>
                     <button class="btn primary" type="submit">تصفية</button>
                     <a class="btn" href="{{ route('admin.wallets.index') }}">إعادة ضبط</a>
@@ -296,6 +307,7 @@
             <table>
                 <thead>
                     <tr>
+                        <th>الطلب</th>
                         <th>الراكب</th>
                         <th>التحويل</th>
                         <th>الإشعار</th>
@@ -306,6 +318,10 @@
                 <tbody>
                     @foreach ($deposits as $deposit)
                         <tr>
+                            <td>
+                                <strong>#{{ $deposit->id }}</strong>
+                                <div class="muted">{{ optional($deposit->created_at)->format('Y-m-d H:i') }}</div>
+                            </td>
                             <td>
                                 <strong>{{ $deposit->user?->name }}</strong>
                                 <div class="muted">{{ $deposit->user?->email }}</div>

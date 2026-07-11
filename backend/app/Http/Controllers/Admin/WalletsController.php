@@ -69,7 +69,15 @@ class WalletsController extends Controller
                 $query->where(function ($nested) use ($search) {
                     $nested->where('reference_number', 'like', "%{$search}%")
                         ->orWhere('bank_name', 'like', "%{$search}%")
-                        ->orWhereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', "%{$search}%"));
+                        ->orWhereHas('user', function ($userQuery) use ($search) {
+                            $userQuery->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%");
+                        });
+
+                    if (is_numeric($search)) {
+                        $nested->orWhere('id', (int) $search);
+                    }
                 });
             })
             ->latest()
@@ -78,12 +86,13 @@ class WalletsController extends Controller
         $pendingDeposits = WalletDeposit::query()
             ->with(['user:id,name,email,phone,wallet_balance', 'paymentAccount'])
             ->where('status', 'pending')
-            ->latest()
+            ->oldest()
             ->get();
 
         return view('admin.wallets', [
             'deposits' => $deposits,
             'pendingDeposits' => $pendingDeposits,
+            'pendingCustomerCounts' => $pendingDeposits->groupBy('user_id')->map->count(),
             'status' => $status ?: 'all',
             'search' => $search,
             'users' => User::query()->where('role', 'customer')->orderBy('name')->get(['id', 'name', 'wallet_balance']),
@@ -175,20 +184,22 @@ class WalletsController extends Controller
 
     public function approve(Request $request, WalletDeposit $walletDeposit): RedirectResponse
     {
-        if ($walletDeposit->isApproved()) {
-            return back()->with('status', 'هذا الإشعار معتمد مسبقًا.');
+        if (! $walletDeposit->isPending()) {
+            return back()->withErrors(['status' => 'تمت مراجعة هذا الإشعار مسبقًا، حدّث الصفحة لمشاهدة الحالة الحالية.']);
         }
 
         $data = $request->validate([
             'approved_amount' => ['nullable', 'numeric', 'min:1'],
         ]);
 
-        DB::transaction(function () use ($walletDeposit, $data): void {
+        $approved = false;
+
+        DB::transaction(function () use ($walletDeposit, $data, &$approved): void {
             $walletDeposit = WalletDeposit::query()
                 ->lockForUpdate()
                 ->findOrFail($walletDeposit->id);
 
-            if ($walletDeposit->isApproved()) {
+            if (! $walletDeposit->isPending()) {
                 return;
             }
 
@@ -204,23 +215,47 @@ class WalletsController extends Controller
                 'reviewed_at' => now(),
                 'wallet_credited_at' => now(),
             ]);
+
+            $approved = true;
         });
+
+        if (! $approved) {
+            return back()->withErrors(['status' => 'تمت مراجعة هذا الإشعار من صفحة أخرى، حدّث الصفحة قبل المتابعة.']);
+        }
 
         return back()->with('status', 'تم اعتماد الإشعار وإضافة الرصيد إلى المحفظة.');
     }
 
     public function reject(WalletDeposit $walletDeposit): RedirectResponse
     {
-        if ($walletDeposit->isApproved()) {
-            return back()->withErrors(['status' => 'لا يمكن رفض إشعار معتمد بالفعل.']);
+        if (! $walletDeposit->isPending()) {
+            return back()->withErrors(['status' => 'تمت مراجعة هذا الإشعار مسبقًا، حدّث الصفحة لمشاهدة الحالة الحالية.']);
         }
 
-        $walletDeposit->update([
-            'status' => 'rejected',
-            'reviewed_by' => auth()->id(),
-            'reviewed_at' => now(),
-            'wallet_credited_at' => null,
-        ]);
+        $rejected = false;
+
+        DB::transaction(function () use ($walletDeposit, &$rejected): void {
+            $walletDeposit = WalletDeposit::query()
+                ->lockForUpdate()
+                ->findOrFail($walletDeposit->id);
+
+            if (! $walletDeposit->isPending()) {
+                return;
+            }
+
+            $walletDeposit->update([
+                'status' => 'rejected',
+                'reviewed_by' => auth()->id(),
+                'reviewed_at' => now(),
+                'wallet_credited_at' => null,
+            ]);
+
+            $rejected = true;
+        });
+
+        if (! $rejected) {
+            return back()->withErrors(['status' => 'تمت مراجعة هذا الإشعار من صفحة أخرى، حدّث الصفحة قبل المتابعة.']);
+        }
 
         return back()->with('status', 'تم رفض إشعار الإيداع.');
     }

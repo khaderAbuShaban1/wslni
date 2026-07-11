@@ -60,6 +60,7 @@ class AdminWalletsTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.wallets.index'))
             ->assertOk()
+            ->assertSee("طلب #{$deposit->id}")
             ->assertSee('REF-TEST-001')
             ->assertSee('75.00');
 
@@ -75,6 +76,50 @@ class AdminWalletsTest extends TestCase
             'reference_number' => 'REF-TEST-001',
             'status' => 'approved',
         ]);
+    }
+
+    public function test_reviewed_wallet_deposit_cannot_be_reviewed_again(): void
+    {
+        $admin = User::create([
+            'name' => 'Admin User',
+            'email' => 'admin-reviewed@example.com',
+            'phone' => '0597111005',
+            'password' => Hash::make('123123123'),
+            'role' => 'admin',
+            'account_status' => 'active',
+            'wallet_balance' => 0,
+            'email_verified_at' => now(),
+        ]);
+
+        $customer = User::create([
+            'name' => 'Customer User',
+            'email' => 'customer-reviewed@example.com',
+            'phone' => '0597111006',
+            'password' => Hash::make('123123123'),
+            'role' => 'customer',
+            'account_status' => 'active',
+            'wallet_balance' => 0,
+            'email_verified_at' => now(),
+        ]);
+
+        $deposit = WalletDeposit::create([
+            'user_id' => $customer->id,
+            'amount' => 30,
+            'bank_name' => 'Bank of Palestine',
+            'reference_number' => 'REVIEWED-REF-1',
+            'status' => 'rejected',
+            'reviewed_by' => $admin->id,
+            'reviewed_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.wallets.approve', $deposit), [
+                'approved_amount' => 30,
+            ])
+            ->assertSessionHasErrors('status');
+
+        $this->assertSame('0.00', $customer->fresh()->wallet_balance);
+        $this->assertSame('rejected', $deposit->fresh()->status);
     }
 
     public function test_admin_can_create_and_toggle_wallet_payment_account(): void
