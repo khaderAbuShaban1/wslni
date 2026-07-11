@@ -23,8 +23,10 @@ part 'services/api_client.dart';
 part 'services/realtime_driver_service.dart';
 part 'utils/constants.dart';
 part 'utils/firebase_runtime.dart';
+part 'utils/theme.dart';
 part 'widgets/empty_state_card.dart';
 part 'widgets/ride_request_card.dart';
+part 'widgets/skeleton_loader.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

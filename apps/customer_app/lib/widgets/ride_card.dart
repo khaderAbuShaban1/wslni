@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../utils/constants.dart';
 import 'premium_card.dart';
 
 class RouteSummary extends StatelessWidget {
@@ -48,18 +47,19 @@ class _RouteLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
         CircleAvatar(
-          backgroundColor: lightGray,
-          child: Icon(icon, color: emerald),
+          backgroundColor: scheme.primaryContainer,
+          child: Icon(icon, color: scheme.onPrimaryContainer),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(color: mutedText)),
+              Text(label, style: TextStyle(color: scheme.onSurfaceVariant)),
               const SizedBox(height: 3),
               Text(value, style: const TextStyle(fontWeight: FontWeight.w900)),
             ],
@@ -84,11 +84,12 @@ class SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(color: mutedText)),
+          Text(label, style: TextStyle(color: scheme.onSurfaceVariant)),
           const Spacer(),
           Flexible(
             child: Text(

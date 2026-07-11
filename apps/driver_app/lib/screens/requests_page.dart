@@ -192,7 +192,7 @@ class _RequestsPageState extends State<RequestsPage> {
       builder: (context, databaseSnapshot) {
         if (databaseSnapshot.connectionState == ConnectionState.waiting &&
             _lastRides.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
+          return const _SkeletonList();
         }
 
         if (databaseSnapshot.hasError && _rideStream == null) {
@@ -223,7 +223,7 @@ class _RequestsPageState extends State<RequestsPage> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting &&
                 databaseRides.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
+              return const _SkeletonList();
             }
             if (snapshot.hasError && databaseRides.isEmpty) {
               return Center(

@@ -112,7 +112,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
   @override
   Widget build(BuildContext context) {
     if (_initializing && _activeRide == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: SafeArea(child: _SkeletonList()));
     }
 
     final activeRide = _activeRide;
@@ -140,15 +140,20 @@ class _DriverHomePageState extends State<DriverHomePage> {
           ),
         ],
       ),
-      body: _pages[_index],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        child: KeyedSubtree(key: ValueKey(_index), child: _pages[_index]),
+      ),
       bottomNavigationBar: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Color(0x14000000),
+              color: Theme.of(context).shadowColor.withValues(alpha: .08),
               blurRadius: 24,
-              offset: Offset(0, -8),
+              offset: const Offset(0, -8),
             ),
           ],
         ),
@@ -158,9 +163,6 @@ class _DriverHomePageState extends State<DriverHomePage> {
             currentIndex: _index,
             onTap: (value) => setState(() => _index = value),
             type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            selectedItemColor: _emerald,
-            unselectedItemColor: _muted,
             selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w900),
             unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
             items: const [

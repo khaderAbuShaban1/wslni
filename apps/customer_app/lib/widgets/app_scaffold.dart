@@ -16,33 +16,35 @@ class AppScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          children: [
-            Row(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: ListView(
+              padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 20, 32),
               children: [
-                if (showBack)
-                  IconButton.filledTonal(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.arrow_forward_rounded),
-                  ),
-                if (showBack) const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
+                Row(
+                  children: [
+                    if (showBack)
+                      IconButton.filledTonal(
+                        onPressed: () => Navigator.of(context).maybePop(),
+                        icon: const Icon(Icons.arrow_forward_rounded),
+                      ),
+                    if (showBack) const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(title, style: theme.textTheme.headlineSmall),
                     ),
-                  ),
+                    ?trailing,
+                  ],
                 ),
-                ?trailing,
+                const SizedBox(height: 22),
+                child,
               ],
             ),
-            const SizedBox(height: 22),
-            child,
-          ],
+          ),
         ),
       ),
     );

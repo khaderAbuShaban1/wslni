@@ -8,6 +8,7 @@ import '../widgets/app_scaffold.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/empty_state_card.dart';
 import '../widgets/premium_card.dart';
+import '../widgets/skeleton_loader.dart';
 import 'driver_offers_screen.dart';
 
 class TripHistoryScreen extends StatefulWidget {
@@ -64,7 +65,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
 
           if (databaseSnapshot.connectionState == ConnectionState.waiting &&
               databaseRides.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const SkeletonList();
           }
 
           return StreamBuilder<List<RideDraft>>(

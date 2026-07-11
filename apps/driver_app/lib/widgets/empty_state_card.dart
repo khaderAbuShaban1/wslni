@@ -1,4 +1,4 @@
-﻿part of '../main.dart';
+part of '../main.dart';
 
 class _EmptyStateCard extends StatelessWidget {
   const _EmptyStateCard({
@@ -17,21 +17,22 @@ class _EmptyStateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _line),
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           CircleAvatar(
             radius: 34,
-            backgroundColor: _light,
-            child: Icon(icon, color: _emerald, size: 30),
+            backgroundColor: scheme.primaryContainer,
+            child: Icon(icon, color: scheme.onPrimaryContainer, size: 30),
           ),
           const SizedBox(height: 14),
           Text(
@@ -39,14 +40,16 @@ class _EmptyStateCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w900,
-              color: _dark,
+              color: scheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: _muted, height: 1.5),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
           ),
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: 14),

@@ -21,15 +21,19 @@ class DriverCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return PremiumCard(
       child: Column(
         children: [
           Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 28,
-                backgroundColor: lightGray,
-                child: Icon(Icons.person_rounded, color: emerald),
+                backgroundColor: scheme.primaryContainer,
+                child: Icon(
+                  Icons.person_rounded,
+                  color: scheme.onPrimaryContainer,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -46,7 +50,7 @@ class DriverCard extends StatelessWidget {
                     const SizedBox(height: 5),
                     Text(
                       '${offer.car} • ${offer.rating} • ${offer.eta}',
-                      style: const TextStyle(color: mutedText),
+                      style: TextStyle(color: scheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -61,7 +65,10 @@ class DriverCard extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  Text(selectedRide, style: const TextStyle(color: mutedText)),
+                  Text(
+                    selectedRide,
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
                 ],
               ),
             ],

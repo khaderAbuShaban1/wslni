@@ -1,4 +1,4 @@
-﻿part of '../main.dart';
+part of '../main.dart';
 
 class _RideRequestCard extends StatelessWidget {
   const _RideRequestCard({required this.ride, required this.onOffer});
@@ -8,17 +8,18 @@ class _RideRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _line),
-        boxShadow: const [
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: scheme.outlineVariant),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0F111827),
+            color: Theme.of(context).shadowColor.withValues(alpha: .06),
             blurRadius: 24,
-            offset: Offset(0, 10),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -41,7 +42,7 @@ class _RideRequestCard extends StatelessWidget {
                       ride.customerName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
-                        color: _dark,
+                        color: scheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -95,13 +96,14 @@ class _CompetitorOffersPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     if (ride.offers.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
+          color: scheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _line),
+          border: Border.all(color: scheme.outlineVariant),
         ),
         child: const Row(
           children: [
@@ -122,9 +124,9 @@ class _CompetitorOffersPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _line),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -138,9 +140,9 @@ class _CompetitorOffersPanel extends StatelessWidget {
                   lowest == null
                       ? 'العروض المقدمة'
                       : 'أقل عرض حالي: $lowest شيكل',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    color: _dark,
+                    color: scheme.onSurface,
                   ),
                 ),
               ),
@@ -185,10 +187,7 @@ class _CompetitorOfferRow extends StatelessWidget {
         ),
         Text(
           '${offer.price} شيكل',
-          style: const TextStyle(
-            color: _emerald,
-            fontWeight: FontWeight.w900,
-          ),
+          style: const TextStyle(color: _emerald, fontWeight: FontWeight.w900),
         ),
       ],
     );
@@ -202,10 +201,11 @@ class _RouteSummaryBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _light,
+        color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -236,6 +236,7 @@ class _RouteLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
         Icon(icon, size: 20, color: _emerald),
@@ -244,7 +245,10 @@ class _RouteLine extends StatelessWidget {
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(fontWeight: FontWeight.w900, color: _dark),
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              color: scheme.onSurface,
+            ),
           ),
         ),
       ],

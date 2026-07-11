@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../utils/constants.dart';
-
 class CustomButton extends StatelessWidget {
   const CustomButton({
     required this.label,
@@ -22,13 +20,6 @@ class CustomButton extends StatelessWidget {
       width: width ?? double.infinity,
       height: 56,
       child: FilledButton.icon(
-        style: FilledButton.styleFrom(
-          backgroundColor: emerald,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
         onPressed: onPressed,
         icon: Icon(icon),
         label: Text(label, style: const TextStyle(fontWeight: FontWeight.w900)),
@@ -54,13 +45,6 @@ class OutlinedActionButton extends StatelessWidget {
     return SizedBox(
       height: 52,
       child: OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: darkText,
-          side: const BorderSide(color: borderGray),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
         onPressed: onPressed,
         icon: Icon(icon),
         label: Text(label, style: const TextStyle(fontWeight: FontWeight.w900)),

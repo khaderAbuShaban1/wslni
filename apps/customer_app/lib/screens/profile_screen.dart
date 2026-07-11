@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../services/profile_service.dart';
 import '../utils/constants.dart';
+import '../utils/theme_mode_controller.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
@@ -201,6 +202,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 18),
           _SettingsSwitchTile(
+            icon: Icons.dark_mode_outlined,
+            title: 'الوضع الداكن',
+            subtitle: 'مظهر مريح للعين في الإضاءة المنخفضة',
+            value: Theme.of(context).brightness == Brightness.dark,
+            onChanged: setDarkMode,
+          ),
+          _SettingsSwitchTile(
             icon: Icons.notifications_active_outlined,
             title: 'إشعارات الرحلات',
             subtitle: 'العروض، وصول السائق، وتحديثات الرحلة',
@@ -261,22 +269,23 @@ class _SettingsSwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: borderGray),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: SwitchListTile(
         secondary: CircleAvatar(
-          backgroundColor: lightGray,
-          child: Icon(icon, color: darkText),
+          backgroundColor: scheme.primaryContainer,
+          child: Icon(icon, color: scheme.onPrimaryContainer),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
         subtitle: Text(subtitle),
         value: value,
-        activeThumbColor: emerald,
+        activeThumbColor: scheme.primary,
         onChanged: onChanged,
       ),
     );
@@ -298,6 +307,7 @@ class _SettingsActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: onTap,
@@ -305,15 +315,15 @@ class _SettingsActionTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: scheme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: borderGray),
+          border: Border.all(color: scheme.outlineVariant),
         ),
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: lightGray,
-              child: Icon(icon, color: darkText),
+              backgroundColor: scheme.primaryContainer,
+              child: Icon(icon, color: scheme.onPrimaryContainer),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -325,7 +335,10 @@ class _SettingsActionTile extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 3),
-                  Text(subtitle, style: const TextStyle(color: mutedText)),
+                  Text(
+                    subtitle,
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
                 ],
               ),
             ),

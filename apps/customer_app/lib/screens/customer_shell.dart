@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../models/user_model.dart';
-import '../utils/constants.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'trip_history_screen.dart';
@@ -32,50 +31,50 @@ class _CustomerShellState extends State<CustomerShell> {
         onUserChanged: (user) => setState(() => _user = user),
       ),
     ];
+    final theme = Theme.of(context);
 
     return Scaffold(
-      body: pages[_index],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        child: KeyedSubtree(key: ValueKey(_index), child: pages[_index]),
+      ),
       bottomNavigationBar: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Color(0x14000000),
+              color: theme.shadowColor.withValues(alpha: .08),
               blurRadius: 24,
-              offset: Offset(0, -8),
+              offset: const Offset(0, -8),
             ),
           ],
         ),
         child: SafeArea(
           top: false,
-          child: BottomNavigationBar(
-            currentIndex: _index,
-            onTap: (value) => setState(() => _index = value),
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            selectedItemColor: emerald,
-            unselectedItemColor: mutedText,
-            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w900),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
-            items: const [
-              BottomNavigationBarItem(
+          child: NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: (value) => setState(() => _index = value),
+            destinations: const [
+              NavigationDestination(
                 icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home_rounded),
+                selectedIcon: Icon(Icons.home_rounded),
                 label: 'الرئيسية',
               ),
-              BottomNavigationBarItem(
+              NavigationDestination(
                 icon: Icon(Icons.receipt_long_outlined),
-                activeIcon: Icon(Icons.receipt_long_rounded),
+                selectedIcon: Icon(Icons.receipt_long_rounded),
                 label: 'الرحلات',
               ),
-              BottomNavigationBarItem(
+              NavigationDestination(
                 icon: Icon(Icons.account_balance_wallet_outlined),
-                activeIcon: Icon(Icons.account_balance_wallet_rounded),
+                selectedIcon: Icon(Icons.account_balance_wallet_rounded),
                 label: 'المحفظة',
               ),
-              BottomNavigationBarItem(
+              NavigationDestination(
                 icon: Icon(Icons.person_outline_rounded),
-                activeIcon: Icon(Icons.person_rounded),
+                selectedIcon: Icon(Icons.person_rounded),
                 label: 'الحساب',
               ),
             ],

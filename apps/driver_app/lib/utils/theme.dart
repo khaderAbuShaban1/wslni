@@ -1,34 +1,23 @@
-import 'package:flutter/material.dart';
+part of '../main.dart';
 
-import 'constants.dart';
-
-const _fontFamily = 'Noto Sans Arabic';
-const _fontFallback = <String>['Segoe UI', 'Tahoma', 'Arial'];
-
-ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
-  final isDark = brightness == Brightness.dark;
+ThemeData _buildDriverTheme({Brightness brightness = Brightness.light}) {
+  final dark = brightness == Brightness.dark;
   final scheme = ColorScheme.fromSeed(
-    seedColor: emerald,
+    seedColor: _emerald,
     brightness: brightness,
-    primary: isDark ? const Color(0xFF5EE9B5) : emerald,
-    secondary: isDark ? const Color(0xFF7DD3FC) : const Color(0xFF0369A1),
-    tertiary: isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
-    error: isDark ? const Color(0xFFFFB4AB) : const Color(0xFFBA1A1A),
-    surface: isDark ? const Color(0xFF111827) : Colors.white,
+    primary: dark ? const Color(0xFF5EE9B5) : _emerald,
+    secondary: dark ? const Color(0xFF7DD3FC) : const Color(0xFF0369A1),
+    tertiary: dark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
+    surface: dark ? const Color(0xFF111827) : Colors.white,
   );
-  final textTheme = ThemeData(brightness: brightness).textTheme
+  final text = ThemeData(brightness: brightness).textTheme
       .apply(
-        fontFamily: _fontFamily,
-        fontFamilyFallback: _fontFallback,
+        fontFamily: 'Noto Sans Arabic',
+        fontFamilyFallback: const ['Segoe UI', 'Tahoma', 'Arial'],
         bodyColor: scheme.onSurface,
         displayColor: scheme.onSurface,
       )
       .copyWith(
-        displaySmall: const TextStyle(
-          fontSize: 34,
-          height: 1.25,
-          fontWeight: FontWeight.w800,
-        ),
         headlineLarge: const TextStyle(
           fontSize: 30,
           height: 1.3,
@@ -70,24 +59,19 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
           fontWeight: FontWeight.w800,
         ),
       );
-  final outline = isDark ? const Color(0xFF334155) : borderGray;
-  final fieldColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
+  final outline = dark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+  final field = dark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
 
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
     colorScheme: scheme,
-    fontFamily: _fontFamily,
-    fontFamilyFallback: _fontFallback,
-    textTheme: textTheme,
-    scaffoldBackgroundColor: isDark
+    fontFamily: 'Noto Sans Arabic',
+    fontFamilyFallback: const ['Segoe UI', 'Tahoma', 'Arial'],
+    textTheme: text,
+    scaffoldBackgroundColor: dark
         ? const Color(0xFF0B1120)
         : const Color(0xFFF6F8FB),
-    canvasColor: isDark ? const Color(0xFF0B1120) : const Color(0xFFF6F8FB),
-    dividerTheme: DividerThemeData(
-      color: outline.withValues(alpha: .8),
-      thickness: 1,
-    ),
     appBarTheme: AppBarTheme(
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -95,8 +79,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       backgroundColor: Colors.transparent,
       foregroundColor: scheme.onSurface,
       surfaceTintColor: Colors.transparent,
-      titleTextStyle: textTheme.titleLarge,
-      iconTheme: IconThemeData(color: scheme.onSurface),
+      titleTextStyle: text.titleLarge,
     ),
     cardTheme: CardThemeData(
       elevation: 0,
@@ -105,22 +88,35 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: outline.withValues(alpha: .72)),
+        side: BorderSide(color: outline),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        minimumSize: const Size(64, 56),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        textStyle: text.labelLarge,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(64, 54),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
+        side: BorderSide(color: outline),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        textStyle: text.labelLarge,
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: fieldColor,
+      fillColor: field,
       contentPadding: const EdgeInsetsDirectional.fromSTEB(18, 17, 18, 17),
       labelStyle: TextStyle(
         color: scheme.onSurfaceVariant,
         fontWeight: FontWeight.w600,
       ),
-      hintStyle: TextStyle(
-        color: scheme.onSurfaceVariant.withValues(alpha: .75),
-      ),
       prefixIconColor: scheme.onSurfaceVariant,
-      suffixIconColor: scheme.onSurfaceVariant,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide(color: outline),
@@ -136,59 +132,6 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide(color: scheme.error),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
-        borderSide: BorderSide(color: scheme.error, width: 2),
-      ),
-    ),
-    filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        minimumSize: const Size(64, 56),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        textStyle: textTheme.labelLarge,
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(64, 54),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
-        side: BorderSide(color: outline),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        textStyle: textTheme.labelLarge,
-      ),
-    ),
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        minimumSize: const Size(48, 48),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: textTheme.labelLarge,
-      ),
-    ),
-    iconButtonTheme: IconButtonThemeData(
-      style: IconButton.styleFrom(
-        minimumSize: const Size(48, 48),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-    ),
-    navigationBarTheme: NavigationBarThemeData(
-      height: 72,
-      elevation: 0,
-      backgroundColor: scheme.surface,
-      indicatorColor: scheme.primaryContainer,
-      indicatorShape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      labelTextStyle: WidgetStateProperty.resolveWith(
-        (states) => textTheme.labelMedium?.copyWith(
-          fontWeight: states.contains(WidgetState.selected)
-              ? FontWeight.w800
-              : FontWeight.w600,
-          color: states.contains(WidgetState.selected)
-              ? scheme.primary
-              : scheme.onSurfaceVariant,
-        ),
       ),
     ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -207,20 +150,20 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       type: BottomNavigationBarType.fixed,
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: fieldColor,
+      backgroundColor: field,
       selectedColor: scheme.primaryContainer,
       side: BorderSide(color: outline),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      labelStyle: textTheme.labelMedium,
+      labelStyle: text.labelMedium,
     ),
     dialogTheme: DialogThemeData(
       elevation: 24,
       backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      titleTextStyle: textTheme.titleLarge,
-      contentTextStyle: textTheme.bodyLarge?.copyWith(
+      titleTextStyle: text.titleLarge,
+      contentTextStyle: text.bodyLarge?.copyWith(
         color: scheme.onSurfaceVariant,
       ),
     ),
@@ -236,30 +179,24 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       elevation: 8,
-      backgroundColor: isDark
-          ? const Color(0xFFE2E8F0)
-          : const Color(0xFF172033),
-      contentTextStyle: textTheme.bodyMedium?.copyWith(
-        color: isDark ? const Color(0xFF172033) : Colors.white,
+      backgroundColor: dark ? const Color(0xFFE2E8F0) : const Color(0xFF172033),
+      contentTextStyle: text.bodyMedium?.copyWith(
+        color: dark ? const Color(0xFF172033) : Colors.white,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       insetPadding: const EdgeInsets.all(16),
     ),
-    progressIndicatorTheme: ProgressIndicatorThemeData(
-      color: scheme.primary,
-      linearTrackColor: scheme.surfaceContainerHighest,
-    ),
     pageTransitionsTheme: const PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: _PremiumPageTransitionBuilder(),
-        TargetPlatform.iOS: _PremiumPageTransitionBuilder(),
+        TargetPlatform.android: _DriverPageTransitionBuilder(),
+        TargetPlatform.iOS: _DriverPageTransitionBuilder(),
       },
     ),
   );
 }
 
-class _PremiumPageTransitionBuilder extends PageTransitionsBuilder {
-  const _PremiumPageTransitionBuilder();
+class _DriverPageTransitionBuilder extends PageTransitionsBuilder {
+  const _DriverPageTransitionBuilder();
 
   @override
   Widget buildTransitions<T>(

@@ -6,7 +6,7 @@ const _apiBaseUrlOverride = String.fromEnvironment('API_BASE_URL');
 String _resolveBaseUrl(String? baseUrl) {
   if (baseUrl != null && baseUrl.isNotEmpty) return baseUrl;
   if (_apiBaseUrlOverride.isNotEmpty) return _apiBaseUrlOverride;
-  return 'http://10.0.0.11:8000/api';
+  return 'http://10.0.0.3:8000/api';
 }
 
 HttpClient _createHttpClient() {

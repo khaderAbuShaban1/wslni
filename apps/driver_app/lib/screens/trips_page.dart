@@ -63,7 +63,7 @@ class _TripsPageState extends State<_TripsPage> {
       builder: (context, databaseSnapshot) {
         if (databaseSnapshot.connectionState == ConnectionState.waiting &&
             _lastRides.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
+          return const _SkeletonList();
         }
 
         final databaseRides =

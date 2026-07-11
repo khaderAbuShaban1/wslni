@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../utils/constants.dart';
 import 'premium_card.dart';
 
 class QuickActionRow extends StatelessWidget {
@@ -19,6 +18,7 @@ class QuickActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return PremiumCard(
       padding: 14,
       child: InkWell(
@@ -28,8 +28,8 @@ class QuickActionRow extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: const Color(0xFFD1FAE5),
-              child: Icon(icon, color: emerald),
+              backgroundColor: scheme.primaryContainer,
+              child: Icon(icon, color: scheme.onPrimaryContainer),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -44,7 +44,10 @@ class QuickActionRow extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: mutedText)),
+                  Text(
+                    subtitle,
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
                 ],
               ),
             ),
@@ -64,15 +67,19 @@ class RecentTripCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: PremiumCard(
         padding: 14,
         child: Row(
           children: [
-            const CircleAvatar(
-              backgroundColor: lightGray,
-              child: Icon(Icons.route_rounded, color: emerald),
+            CircleAvatar(
+              backgroundColor: scheme.primaryContainer,
+              child: Icon(
+                Icons.route_rounded,
+                color: scheme.onPrimaryContainer,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -87,7 +94,7 @@ class RecentTripCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(date, style: const TextStyle(color: mutedText)),
+                  Text(date, style: TextStyle(color: scheme.onSurfaceVariant)),
                 ],
               ),
             ),
