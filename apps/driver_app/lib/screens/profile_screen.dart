@@ -1,4 +1,4 @@
-﻿part of '../main.dart';
+part of '../main.dart';
 
 class _DriverProfilePage extends StatelessWidget {
   const _DriverProfilePage({required this.user});
@@ -13,34 +13,47 @@ class _DriverProfilePage extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: _line),
-            boxShadow: const [
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+            boxShadow: [
               BoxShadow(
-                color: Color(0x0F111827),
-                blurRadius: 24,
-                offset: Offset(0, 10),
+                color: Theme.of(context).shadowColor.withValues(alpha: .11),
+                blurRadius: 36,
+                offset: const Offset(0, 16),
               ),
             ],
           ),
           child: Column(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 40,
-                backgroundColor: Color(0xFFD1FAE5),
-                child: Icon(Icons.person, size: 38, color: _emerald),
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: .15),
+                child: Icon(
+                  Icons.person,
+                  size: 38,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
               ),
               const SizedBox(height: 12),
               Text(
                 user.name,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w900,
-                  color: _dark,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 4),
-              Text(user.email, style: const TextStyle(color: _muted)),
+              Text(
+                user.email,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
             ],
           ),
         ),
@@ -77,14 +90,21 @@ class _ProfileInfoTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _line),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _light,
-          child: Icon(icon, color: _dark),
+          radius: 25,
+          backgroundColor: Theme.of(
+            context,
+          ).colorScheme.primary.withValues(alpha: .15),
+          child: Icon(
+            icon,
+            color: Theme.of(context).colorScheme.primary,
+            size: 25,
+          ),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
         subtitle: Text(value),

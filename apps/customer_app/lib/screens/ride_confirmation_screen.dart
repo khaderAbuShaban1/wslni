@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../models/driver_model.dart';
 import '../models/ride_model.dart';
-import '../utils/constants.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/premium_card.dart';
@@ -30,13 +29,15 @@ class RideConfirmationScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 34,
-                      backgroundColor: lightGray,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: .15),
                       child: Icon(
                         Icons.person_rounded,
                         size: 34,
-                        color: emerald,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     const SizedBox(width: 14),

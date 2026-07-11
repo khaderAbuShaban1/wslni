@@ -18,9 +18,11 @@ class SupportScreen extends StatelessWidget {
           PremiumCard(
             child: Column(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 34,
-                  backgroundColor: Color(0xFFD1FAE5),
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: .15),
                   child: Icon(Icons.support_agent_rounded, color: emerald),
                 ),
                 const SizedBox(height: 16),

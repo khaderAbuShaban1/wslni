@@ -51,7 +51,7 @@ class _WalletScreenState extends State<WalletScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -406,7 +406,9 @@ class _SelectablePaymentAccount extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEFFDF5) : Colors.white,
+          color: selected
+              ? Theme.of(context).colorScheme.primaryContainer
+              : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: selected ? emerald : borderGray,
@@ -452,12 +454,14 @@ class _PaymentAccountDetails extends StatelessWidget {
         Row(
           children: [
             CircleAvatar(
-              backgroundColor: lightGray,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: .15),
               child: Icon(
                 account.type == 'bank'
                     ? Icons.account_balance_rounded
                     : Icons.account_balance_wallet_rounded,
-                color: darkText,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(width: 12),
@@ -533,7 +537,7 @@ void _openPaymentAccountInvoice(
     context: context,
     useSafeArea: true,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
+    backgroundColor: Theme.of(context).colorScheme.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -657,18 +661,18 @@ class _DepositTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (deposit.status) {
-      'approved' => emerald,
-      'rejected' => Colors.redAccent,
-      _ => Colors.orange,
+      'approved' => successColor,
+      'rejected' => errorColor,
+      _ => warningColor,
     };
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderGray),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Row(
         children: [
@@ -766,15 +770,22 @@ class _EmptyWalletMessage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderGray),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Column(
         children: [
           CircleAvatar(
-            backgroundColor: lightGray,
-            child: Icon(icon, color: darkText),
+            radius: 25,
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.primary.withValues(alpha: .15),
+            child: Icon(
+              icon,
+              color: Theme.of(context).colorScheme.primary,
+              size: 25,
+            ),
           ),
           const SizedBox(height: 12),
           Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),

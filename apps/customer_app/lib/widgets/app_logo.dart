@@ -15,7 +15,7 @@ class AppLogo extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
-          colors: [primary, const Color(0xFF047857)],
+          colors: [const Color(0xFFF6D16F), const Color(0xFFE2AD28)],
         ),
         borderRadius: BorderRadius.circular(size * .28),
         boxShadow: [
@@ -26,7 +26,11 @@ class AppLogo extends StatelessWidget {
           ),
         ],
       ),
-      child: Icon(Icons.near_me_rounded, color: Colors.white, size: size * .52),
+      child: Icon(
+        Icons.near_me_rounded,
+        color: const Color(0xFF171717),
+        size: size * .52,
+      ),
     );
   }
 }

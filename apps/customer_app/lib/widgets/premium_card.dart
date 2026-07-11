@@ -21,9 +21,14 @@ class PremiumCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? const Color(0x26000000) : const Color(0x0F0F172A),
-            blurRadius: 32,
-            offset: const Offset(0, 12),
+            color: isDark ? const Color(0x38000000) : const Color(0x14000000),
+            blurRadius: 38,
+            offset: const Offset(0, 18),
+          ),
+          BoxShadow(
+            color: isDark ? const Color(0x1AFFFFFF) : const Color(0x0A000000),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),

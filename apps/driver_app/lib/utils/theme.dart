@@ -2,14 +2,42 @@ part of '../main.dart';
 
 ThemeData _buildDriverTheme({Brightness brightness = Brightness.light}) {
   final dark = brightness == Brightness.dark;
-  final scheme = ColorScheme.fromSeed(
+  final generatedScheme = ColorScheme.fromSeed(
     seedColor: _emerald,
     brightness: brightness,
-    primary: dark ? const Color(0xFF5EE9B5) : _emerald,
-    secondary: dark ? const Color(0xFF7DD3FC) : const Color(0xFF0369A1),
-    tertiary: dark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
-    surface: dark ? const Color(0xFF111827) : Colors.white,
+    dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+    primary: dark ? const Color(0xFFF3C455) : _emerald,
+    secondary: dark ? const Color(0xFFF4F4F6) : const Color(0xFF111214),
+    tertiary: dark ? const Color(0xFFA9B8CC) : const Color(0xFF30343A),
+    error: dark ? const Color(0xFFFFB4AB) : _error,
+    surface: dark ? const Color(0xFF151618) : const Color(0xFFFFFFFF),
   );
+  final scheme = dark
+      ? generatedScheme.copyWith(
+          primary: const Color(0xFFF3C455),
+          onPrimary: const Color(0xFF211A00),
+          primaryContainer: const Color(0xFF493A12),
+          onPrimaryContainer: const Color(0xFFFFE8A6),
+          secondary: const Color(0xFFF0F0F2),
+          onSecondary: const Color(0xFF1B1B1D),
+          secondaryContainer: const Color(0xFF2B2C30),
+          onSecondaryContainer: const Color(0xFFE8E8EB),
+          tertiary: const Color(0xFFAEB8C8),
+          onTertiary: const Color(0xFF17202B),
+          error: const Color(0xFFFFB4AB),
+          onError: const Color(0xFF690005),
+          surface: const Color(0xFF24262C),
+          onSurface: const Color(0xFFF5F5F6),
+          surfaceContainerLowest: const Color(0xFF17191E),
+          surfaceContainerLow: const Color(0xFF292B32),
+          surfaceContainer: const Color(0xFF2E3038),
+          surfaceContainerHigh: const Color(0xFF353841),
+          surfaceContainerHighest: const Color(0xFF3D404A),
+          onSurfaceVariant: const Color(0xFFC3C6CE),
+          outline: const Color(0xFF5A5D67),
+          outlineVariant: const Color(0xFF41444D),
+        )
+      : generatedScheme;
   final text = ThemeData(brightness: brightness).textTheme
       .apply(
         fontFamily: 'Noto Sans Arabic',
@@ -59,8 +87,8 @@ ThemeData _buildDriverTheme({Brightness brightness = Brightness.light}) {
           fontWeight: FontWeight.w800,
         ),
       );
-  final outline = dark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
-  final field = dark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC);
+  final outline = dark ? const Color(0xFF41444D) : _line;
+  final field = dark ? const Color(0xFF2D3037) : const Color(0xFFF5F5F7);
 
   return ThemeData(
     useMaterial3: true,
@@ -70,8 +98,9 @@ ThemeData _buildDriverTheme({Brightness brightness = Brightness.light}) {
     fontFamilyFallback: const ['Segoe UI', 'Tahoma', 'Arial'],
     textTheme: text,
     scaffoldBackgroundColor: dark
-        ? const Color(0xFF0B1120)
-        : const Color(0xFFF6F8FB),
+        ? const Color(0xFF1A1C21)
+        : const Color(0xFFFAFAFB),
+    shadowColor: dark ? const Color(0xFF090A0C) : const Color(0xFF67635B),
     appBarTheme: AppBarTheme(
       elevation: 0,
       scrolledUnderElevation: 0,
@@ -82,12 +111,13 @@ ThemeData _buildDriverTheme({Brightness brightness = Brightness.light}) {
       titleTextStyle: text.titleLarge,
     ),
     cardTheme: CardThemeData(
-      elevation: 0,
+      elevation: dark ? 2 : 3,
+      shadowColor: dark ? const Color(0x66090A0C) : const Color(0x2667635B),
       color: scheme.surface,
       surfaceTintColor: Colors.transparent,
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         side: BorderSide(color: outline),
       ),
     ),
@@ -95,7 +125,7 @@ ThemeData _buildDriverTheme({Brightness brightness = Brightness.light}) {
       style: FilledButton.styleFrom(
         minimumSize: const Size(64, 56),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         textStyle: text.labelLarge,
       ),
     ),
@@ -104,7 +134,7 @@ ThemeData _buildDriverTheme({Brightness brightness = Brightness.light}) {
         minimumSize: const Size(64, 54),
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
         side: BorderSide(color: outline),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         textStyle: text.labelLarge,
       ),
     ),
@@ -134,6 +164,23 @@ ThemeData _buildDriverTheme({Brightness brightness = Brightness.light}) {
         borderSide: BorderSide(color: scheme.error),
       ),
     ),
+    listTileTheme: ListTileThemeData(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+      minTileHeight: 68,
+      minLeadingWidth: 52,
+      horizontalTitleGap: 14,
+      iconColor: scheme.primary,
+      textColor: scheme.onSurface,
+      titleTextStyle: text.titleMedium?.copyWith(
+        color: scheme.onSurface,
+        fontWeight: FontWeight.w800,
+      ),
+      subtitleTextStyle: text.bodyMedium?.copyWith(
+        color: scheme.onSurfaceVariant,
+        height: 1.45,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    ),
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       elevation: 0,
       backgroundColor: scheme.surface,
@@ -149,6 +196,34 @@ ThemeData _buildDriverTheme({Brightness brightness = Brightness.light}) {
       ),
       type: BottomNavigationBarType.fixed,
     ),
+    navigationBarTheme: NavigationBarThemeData(
+      height: 72,
+      elevation: 4,
+      shadowColor: const Color(0x2467635B),
+      backgroundColor: scheme.surface,
+      indicatorColor: scheme.primary,
+      indicatorShape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => text.labelMedium?.copyWith(
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w800
+              : FontWeight.w600,
+          color: states.contains(WidgetState.selected)
+              ? scheme.onSurface
+              : scheme.onSurfaceVariant,
+        ),
+      ),
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          color: states.contains(WidgetState.selected)
+              ? scheme.onPrimary
+              : scheme.onSurfaceVariant,
+          size: states.contains(WidgetState.selected) ? 25 : 23,
+        ),
+      ),
+    ),
     chipTheme: ChipThemeData(
       backgroundColor: field,
       selectedColor: scheme.primaryContainer,
@@ -157,11 +232,35 @@ ThemeData _buildDriverTheme({Brightness brightness = Brightness.light}) {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       labelStyle: text.labelMedium,
     ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      elevation: 7,
+      focusElevation: 10,
+      hoverElevation: 10,
+      highlightElevation: 4,
+      backgroundColor: dark ? scheme.primary : scheme.secondary,
+      foregroundColor: dark ? scheme.onPrimary : scheme.onSecondary,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    ),
+    badgeTheme: BadgeThemeData(
+      backgroundColor: scheme.primary,
+      textColor: scheme.onPrimary,
+      largeSize: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+    ),
+    tabBarTheme: TabBarThemeData(
+      indicatorColor: scheme.primary,
+      dividerColor: Colors.transparent,
+      labelColor: scheme.primary,
+      unselectedLabelColor: scheme.onSurfaceVariant,
+      labelStyle: text.labelLarge,
+      indicatorSize: TabBarIndicatorSize.label,
+    ),
     dialogTheme: DialogThemeData(
-      elevation: 24,
+      elevation: 30,
+      shadowColor: const Color(0x66000000),
       backgroundColor: scheme.surface,
       surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       titleTextStyle: text.titleLarge,
       contentTextStyle: text.bodyLarge?.copyWith(
         color: scheme.onSurfaceVariant,
@@ -179,9 +278,9 @@ ThemeData _buildDriverTheme({Brightness brightness = Brightness.light}) {
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       elevation: 8,
-      backgroundColor: dark ? const Color(0xFFE2E8F0) : const Color(0xFF172033),
+      backgroundColor: dark ? const Color(0xFFF2F4F7) : const Color(0xFF101828),
       contentTextStyle: text.bodyMedium?.copyWith(
-        color: dark ? const Color(0xFF172033) : Colors.white,
+        color: dark ? const Color(0xFF101828) : Colors.white,
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       insetPadding: const EdgeInsets.all(16),

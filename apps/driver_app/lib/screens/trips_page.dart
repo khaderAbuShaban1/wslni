@@ -109,7 +109,7 @@ class _TripsPageState extends State<_TripsPage> {
                       'سجل الرحلات',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w900,
-                        color: _dark,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     );
                   }
@@ -148,14 +148,14 @@ class _AcceptedRideCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _line),
-        boxShadow: const [
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0F111827),
-            blurRadius: 24,
-            offset: Offset(0, 10),
+            color: Theme.of(context).shadowColor.withValues(alpha: .11),
+            blurRadius: 36,
+            offset: const Offset(0, 16),
           ),
         ],
       ),
@@ -167,15 +167,17 @@ class _AcceptedRideCard extends StatelessWidget {
               CircleAvatar(
                 radius: 26,
                 backgroundColor: ride.status == 'completed'
-                    ? const Color(0xFFD1FAE5)
-                    : const Color(0xFFFEE2E2),
+                    ? Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: .15)
+                    : _error.withValues(alpha: .14),
                 child: Icon(
                   ride.status == 'completed'
                       ? Icons.check_rounded
                       : Icons.close_rounded,
                   color: ride.status == 'completed'
-                      ? _emerald
-                      : Colors.red.shade700,
+                      ? Theme.of(context).colorScheme.primary
+                      : _error,
                 ),
               ),
               const SizedBox(width: 12),
@@ -187,16 +189,14 @@ class _AcceptedRideCard extends StatelessWidget {
                       ride.customerName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
-                        color: _dark,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       ride.statusLabel,
                       style: TextStyle(
-                        color: ride.status == 'completed'
-                            ? _emerald
-                            : Colors.red.shade700,
+                        color: ride.status == 'completed' ? _success : _error,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -211,9 +211,11 @@ class _AcceptedRideCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
+              color: Theme.of(context).colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _line),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
             ),
             child: Row(
               children: [
@@ -221,9 +223,7 @@ class _AcceptedRideCard extends StatelessWidget {
                   ride.status == 'completed'
                       ? Icons.task_alt_rounded
                       : Icons.info_outline_rounded,
-                  color: ride.status == 'completed'
-                      ? _emerald
-                      : Colors.red.shade700,
+                  color: ride.status == 'completed' ? _success : _error,
                 ),
                 const SizedBox(width: 10),
                 Expanded(

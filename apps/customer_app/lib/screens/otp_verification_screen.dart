@@ -96,12 +96,14 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD1FAE5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: .15),
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.mark_email_read_outlined,
-                    color: emerald,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 38,
                   ),
                 ),

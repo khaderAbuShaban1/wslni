@@ -31,12 +31,14 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                   width: 82,
                   height: 82,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD1FAE5),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: .15),
                     borderRadius: BorderRadius.circular(26),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.check_rounded,
-                    color: emerald,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 48,
                   ),
                 ),

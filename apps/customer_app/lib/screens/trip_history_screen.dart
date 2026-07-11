@@ -120,15 +120,17 @@ class _CustomerRideCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return PremiumCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              const CircleAvatar(
-                backgroundColor: Color(0xFFD1FAE5),
-                child: Icon(Icons.local_taxi_rounded, color: Color(0xFF10B981)),
+              CircleAvatar(
+                radius: 27,
+                backgroundColor: scheme.primary.withValues(alpha: .15),
+                child: Icon(Icons.local_taxi_rounded, color: scheme.primary),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -144,8 +146,8 @@ class _CustomerRideCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       ride.statusLabel,
-                      style: const TextStyle(
-                        color: Color(0xFF10B981),
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -187,7 +189,7 @@ class _OffersBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: .16),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Text(
@@ -208,7 +210,12 @@ class _RouteText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text('$label: ', style: const TextStyle(color: Color(0xFF6B7280))),
+        Text(
+          '$label: ',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
         Expanded(
           child: Text(
             value,

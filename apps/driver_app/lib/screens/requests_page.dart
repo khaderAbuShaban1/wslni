@@ -121,9 +121,9 @@ class _RequestsPageState extends State<RequestsPage> {
           18,
           MediaQuery.of(context).viewInsets.bottom + 18,
         ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -133,7 +133,7 @@ class _RequestsPageState extends State<RequestsPage> {
               'قدّم عرض سعر',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w900,
-                color: _dark,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 12),
@@ -306,7 +306,7 @@ class _RequestsList extends StatelessWidget {
                     'طلبات الزبائن',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w900,
-                      color: _dark,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),

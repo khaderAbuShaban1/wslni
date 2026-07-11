@@ -31,8 +31,8 @@ class _EmptyStateCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 34,
-            backgroundColor: scheme.primaryContainer,
-            child: Icon(icon, color: scheme.onPrimaryContainer, size: 30),
+            backgroundColor: scheme.primary.withValues(alpha: .15),
+            child: Icon(icon, color: scheme.primary, size: 30),
           ),
           const SizedBox(height: 14),
           Text(

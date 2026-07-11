@@ -51,17 +51,18 @@ class _RouteLine extends StatelessWidget {
     return Row(
       children: [
         CircleAvatar(
-          backgroundColor: scheme.primaryContainer,
-          child: Icon(icon, color: scheme.onPrimaryContainer),
+          radius: 25,
+          backgroundColor: scheme.primary.withValues(alpha: .15),
+          child: Icon(icon, color: scheme.primary, size: 25),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(value, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 2),
               Text(label, style: TextStyle(color: scheme.onSurfaceVariant)),
-              const SizedBox(height: 3),
-              Text(value, style: const TextStyle(fontWeight: FontWeight.w900)),
             ],
           ),
         ),

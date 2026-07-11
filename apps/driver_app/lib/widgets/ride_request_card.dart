@@ -17,9 +17,9 @@ class _RideRequestCard extends StatelessWidget {
         border: Border.all(color: scheme.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).shadowColor.withValues(alpha: .06),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+            color: Theme.of(context).shadowColor.withValues(alpha: .11),
+            blurRadius: 36,
+            offset: const Offset(0, 16),
           ),
         ],
       ),
@@ -28,10 +28,15 @@ class _RideRequestCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 26,
-                backgroundColor: Color(0xFFD1FAE5),
-                child: Icon(Icons.person, color: _emerald),
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: .15),
+                child: Icon(
+                  Icons.person,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -172,10 +177,16 @@ class _CompetitorOfferRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const CircleAvatar(
+        CircleAvatar(
           radius: 15,
-          backgroundColor: Color(0xFFD1FAE5),
-          child: Icon(Icons.person, color: _emerald, size: 16),
+          backgroundColor: Theme.of(
+            context,
+          ).colorScheme.primary.withValues(alpha: .15),
+          child: Icon(
+            Icons.person,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
+            size: 16,
+          ),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -239,16 +250,26 @@ class _RouteLine extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
-        Icon(icon, size: 20, color: _emerald),
-        const SizedBox(width: 8),
-        Text('$label: ', style: const TextStyle(color: _muted)),
+        CircleAvatar(
+          radius: 25,
+          backgroundColor: scheme.primary.withValues(alpha: .15),
+          child: Icon(icon, size: 25, color: scheme.primary),
+        ),
+        const SizedBox(width: 14),
         Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              color: scheme.onSurface,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(label, style: TextStyle(color: scheme.onSurfaceVariant)),
+            ],
           ),
         ),
       ],

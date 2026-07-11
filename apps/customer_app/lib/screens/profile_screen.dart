@@ -135,7 +135,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     CircleAvatar(
                       radius: 46,
-                      backgroundColor: const Color(0xFFD1FAE5),
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
                       backgroundImage: hasPhoto ? FileImage(file) : null,
                       child: hasPhoto
                           ? null
@@ -274,13 +276,14 @@ class _SettingsSwitchTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(26),
         border: Border.all(color: scheme.outlineVariant),
       ),
       child: SwitchListTile(
         secondary: CircleAvatar(
-          backgroundColor: scheme.primaryContainer,
-          child: Icon(icon, color: scheme.onPrimaryContainer),
+          radius: 27,
+          backgroundColor: scheme.primary.withValues(alpha: .15),
+          child: Icon(icon, color: scheme.primary, size: 27),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
         subtitle: Text(subtitle),
@@ -309,21 +312,22 @@ class _SettingsActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return InkWell(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(26),
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: scheme.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(26),
           border: Border.all(color: scheme.outlineVariant),
         ),
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: scheme.primaryContainer,
-              child: Icon(icon, color: scheme.onPrimaryContainer),
+              radius: 27,
+              backgroundColor: scheme.primary.withValues(alpha: .15),
+              child: Icon(icon, color: scheme.primary, size: 27),
             ),
             const SizedBox(width: 14),
             Expanded(

@@ -98,6 +98,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 IconButton.filledTonal(
+                  style: IconButton.styleFrom(
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: .15),
+                    foregroundColor: Theme.of(context).colorScheme.primary,
+                    fixedSize: const Size(54, 54),
+                    shape: const CircleBorder(),
+                  ),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => const NotificationsScreen(),

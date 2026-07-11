@@ -29,11 +29,8 @@ class DriverCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 28,
-                backgroundColor: scheme.primaryContainer,
-                child: Icon(
-                  Icons.person_rounded,
-                  color: scheme.onPrimaryContainer,
-                ),
+                backgroundColor: scheme.primary.withValues(alpha: .15),
+                child: Icon(Icons.person_rounded, color: scheme.primary),
               ),
               const SizedBox(width: 12),
               Expanded(

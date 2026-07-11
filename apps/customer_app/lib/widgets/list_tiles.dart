@@ -27,9 +27,9 @@ class QuickActionRow extends StatelessWidget {
         child: Row(
           children: [
             CircleAvatar(
-              radius: 24,
-              backgroundColor: scheme.primaryContainer,
-              child: Icon(icon, color: scheme.onPrimaryContainer),
+              radius: 25,
+              backgroundColor: scheme.primary.withValues(alpha: .15),
+              child: Icon(icon, color: scheme.primary, size: 25),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -75,11 +75,9 @@ class RecentTripCard extends StatelessWidget {
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: scheme.primaryContainer,
-              child: Icon(
-                Icons.route_rounded,
-                color: scheme.onPrimaryContainer,
-              ),
+              radius: 25,
+              backgroundColor: scheme.primary.withValues(alpha: .15),
+              child: Icon(Icons.route_rounded, color: scheme.primary, size: 25),
             ),
             const SizedBox(width: 12),
             Expanded(
