@@ -27,4 +27,13 @@ abstract final class RideStatuses {
     driverArrived,
     tripStarted,
   };
+
+  static String normalize(String status) => switch (status) {
+    'open' || 'requested' => pending,
+    'accepted' => driverConfirmed,
+    'arrived' => driverArrived,
+    'in_progress' => tripStarted,
+    'completed' => tripCompleted,
+    _ => status,
+  };
 }

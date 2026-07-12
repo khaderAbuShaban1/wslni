@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/user_model.dart';
+import '../models/ride_model.dart';
+import '../services/realtime_ride_service.dart';
 import '../services/ride_service.dart';
 import '../utils/constants.dart';
 import '../widgets/custom_button.dart';
@@ -22,14 +24,17 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _rideService = RideService();
+  final _realtime = RealtimeRideService();
   final _pickup = TextEditingController();
   final _destination = TextEditingController();
+  final _scrollController = ScrollController();
   bool _requesting = false;
 
   @override
   void dispose() {
     _pickup.dispose();
     _destination.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -71,11 +76,23 @@ class _HomeScreenState extends State<HomeScreen> {
     ).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  void _repeatRide(RideDraft ride) {
+    _pickup.text = ride.pickup;
+    _destination.text = ride.destination;
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+    _showMessage('تم تجهيز نفس العناوين. راجعها ثم اضغط طلب رحلة.');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: ListView(
+          controller: _scrollController,
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 26),
           children: [
             Row(
@@ -143,12 +160,116 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 24),
             const SectionHeader(title: 'آخر الرحلات'),
             const SizedBox(height: 12),
-            const EmptyStateCard(
-              icon: Icons.receipt_long_outlined,
-              title: 'لا توجد رحلات بعد',
-              message: 'بعد أول رحلة، ستظهر آخر رحلاتك هنا.',
+            StreamBuilder<List<RideDraft>>(
+              stream: _realtime.watchCustomerRides(widget.user.id),
+              builder: (context, snapshot) {
+                final completed = (snapshot.data ?? const <RideDraft>[])
+                    .where(
+                      (ride) =>
+                          ride.status == RideStatuses.tripCompleted ||
+                          ride.status == RideStatuses.rated ||
+                          ride.status == 'completed',
+                    )
+                    .take(3)
+                    .toList();
+                if (completed.isEmpty) {
+                  return const EmptyStateCard(
+                    icon: Icons.receipt_long_outlined,
+                    title: 'لا توجد رحلات مكتملة بعد',
+                    message: 'بعد إكمال أول رحلة، ستظهر هنا مباشرة.',
+                  );
+                }
+                return Column(
+                  children: [
+                    for (final ride in completed) ...[
+                      _RecentRideCard(
+                        ride: ride,
+                        onTap: () => _repeatRide(ride),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                  ],
+                );
+              },
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentRideCard extends StatelessWidget {
+  const _RecentRideCard({required this.ride, required this.onTap});
+
+  final RideDraft ride;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: PremiumCard(
+          child: Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: .15),
+                  borderRadius: BorderRadius.circular(17),
+                ),
+                child: Icon(Icons.local_taxi_rounded, color: scheme.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ride.destination,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${ride.pickup} ← ${ride.destination}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: mutedText, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (ride.price.isNotEmpty && ride.price != 'بانتظار العرض')
+                    Text(
+                      '${ride.price} ش',
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'مكتملة',
+                    style: TextStyle(
+                      color: successColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 6),
+              const Icon(Icons.replay_rounded, color: mutedText, size: 20),
+            ],
+          ),
         ),
       ),
     );

@@ -43,7 +43,9 @@ class RideDraft {
       rideName: 'طلب جديد',
       price: 'بانتظار العرض',
       eta: 'بانتظار السائق',
-      status: json['status']?.toString() ?? RideStatuses.pending,
+      status: RideStatuses.normalize(
+        json['status']?.toString() ?? RideStatuses.pending,
+      ),
       offersCount: _offersCount(json['offers']),
       customerId: int.tryParse(json['customer_id']?.toString() ?? '') ?? 0,
       driverName: driverMap['name']?.toString() ?? '',

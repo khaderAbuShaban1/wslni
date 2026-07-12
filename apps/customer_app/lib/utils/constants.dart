@@ -24,4 +24,13 @@ abstract final class RideStatuses {
   static const tripCompleted = 'trip_completed';
   static const rated = 'rated';
   static const cancelled = 'cancelled';
+
+  static String normalize(String status) => switch (status) {
+    'open' || 'requested' => pending,
+    'accepted' => driverConfirmed,
+    'arrived' => driverArrived,
+    'in_progress' => tripStarted,
+    'completed' => tripCompleted,
+    _ => status,
+  };
 }

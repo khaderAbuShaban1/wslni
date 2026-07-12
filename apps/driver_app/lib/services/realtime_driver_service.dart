@@ -18,7 +18,9 @@ class RealtimeDriverService {
 
       final rides = <RideRequestItem>[];
       for (final raw in _rows(value)) {
-        final status = raw['status']?.toString() ?? RideStatuses.pending;
+        final status = RideStatuses.normalize(
+          raw['status']?.toString() ?? RideStatuses.pending,
+        );
         if (!RideStatuses.openForOffers.contains(status)) continue;
         rides.add(_rideFromRaw(raw));
       }
@@ -35,7 +37,7 @@ class RealtimeDriverService {
 
       final rides = <RideRequestItem>[];
       for (final raw in _rows(value)) {
-        final status = raw['status']?.toString() ?? '';
+        final status = RideStatuses.normalize(raw['status']?.toString() ?? '');
         final rawDriverId = int.tryParse(raw['driver_id']?.toString() ?? '');
         if (!RideStatuses.activeForDriver.contains(status) ||
             rawDriverId != driverId) {
@@ -191,7 +193,9 @@ class RealtimeDriverService {
       customerName: raw['customer_name']?.toString() ?? 'زبون',
       customerPhone: raw['customer_phone']?.toString() ?? '',
       notes: raw['notes']?.toString() ?? '',
-      status: raw['status']?.toString() ?? RideStatuses.pending,
+      status: RideStatuses.normalize(
+        raw['status']?.toString() ?? RideStatuses.pending,
+      ),
       actualFare: raw['actual_fare']?.toString() ?? '',
       platformFee: raw['platform_fee']?.toString() ?? '',
       offers: DriverRideOffer.listFrom(raw['offers']),

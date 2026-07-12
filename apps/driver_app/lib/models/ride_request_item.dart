@@ -29,14 +29,17 @@ class RideRequestItem {
 
   String get statusLabel {
     return switch (status) {
+      RideStatuses.pending => 'بانتظار العروض',
+      RideStatuses.receivingOffers => 'يتم استقبال العروض',
       RideStatuses.driverSelected => 'بانتظار تأكيدك',
       RideStatuses.driverConfirmed => 'تم تأكيد الرحلة',
       RideStatuses.driverOnTheWay => 'في الطريق إلى الزبون',
       RideStatuses.driverArrived => 'وصلت إلى الزبون',
       RideStatuses.tripStarted => 'الرحلة قيد التنفيذ',
       RideStatuses.tripCompleted => 'رحلة مكتملة',
+      RideStatuses.rated => 'رحلة مكتملة',
       RideStatuses.cancelled => 'رحلة ملغاة',
-      _ => 'بانتظار القبول',
+      _ => 'حالة غير معروفة',
     };
   }
 
@@ -60,7 +63,9 @@ class RideRequestItem {
       customerName: customerMap['name']?.toString() ?? 'زبون',
       customerPhone: customerMap['phone']?.toString() ?? '',
       notes: json['notes']?.toString() ?? '',
-      status: json['status']?.toString() ?? RideStatuses.pending,
+      status: RideStatuses.normalize(
+        json['status']?.toString() ?? RideStatuses.pending,
+      ),
       actualFare: json['actual_fare']?.toString() ?? '',
       platformFee: json['platform_fee']?.toString() ?? '',
       offers: DriverRideOffer.listFrom(json['offers']),
