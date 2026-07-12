@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerWalletController;
 use App\Http\Controllers\Api\DriverController;
+use App\Http\Controllers\Api\DriverWithdrawalController;
 use App\Http\Controllers\Api\HealthController;
 use App\Http\Controllers\Api\RideOfferController;
 use App\Http\Controllers\Api\RideController;
@@ -27,6 +28,8 @@ Route::patch('rides/{ride}/driver-confirmation', [RideController::class, 'driver
 Route::post('rides/{ride}/rating', [RideController::class, 'rate']);
 Route::get('drivers/available', [DriverController::class, 'available']);
 Route::patch('drivers/{driver}/status', [DriverController::class, 'updateStatus']);
+Route::get('drivers/{driver}/withdrawals', [DriverWithdrawalController::class, 'index']);
+Route::post('drivers/{driver}/withdrawals', [DriverWithdrawalController::class, 'store']);
 Route::get('customers/me', [CustomerController::class, 'me']);
 Route::patch('customers/{customer}', [CustomerController::class, 'update']);
 Route::get('customers/{customer}/wallet', [CustomerWalletController::class, 'show']);

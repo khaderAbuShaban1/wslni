@@ -51,6 +51,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
     Route::post('/wallets', [WalletsController::class, 'store'])->name('wallets.store');
     Route::patch('/wallets/{walletDeposit}/approve', [WalletsController::class, 'approve'])->name('wallets.approve');
     Route::patch('/wallets/{walletDeposit}/reject', [WalletsController::class, 'reject'])->name('wallets.reject');
+    Route::patch('/driver-withdrawals/{driverWithdrawal}/approve', [WalletsController::class, 'approveWithdrawal'])->name('driver-withdrawals.approve');
+    Route::patch('/driver-withdrawals/{driverWithdrawal}/reject', [WalletsController::class, 'rejectWithdrawal'])->name('driver-withdrawals.reject');
     Route::get('/wallet-payment-accounts', [WalletsController::class, 'paymentAccounts'])->name('wallet-payment-accounts.index');
     Route::post('/wallet-payment-accounts', [WalletsController::class, 'storePaymentAccount'])->name('wallet-payment-accounts.store');
     Route::get('/wallet-payment-accounts/{walletPaymentAccount}/invoice', [WalletsController::class, 'paymentAccountInvoice'])->name('wallet-payment-accounts.invoice');

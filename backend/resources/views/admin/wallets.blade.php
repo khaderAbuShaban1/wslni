@@ -374,4 +374,38 @@
             </table>
         @endif
     </div>
+
+    <div class="panel" style="margin-top:24px;">
+        <div class="panel-head">
+            <div>
+                <h3>طلبات سحب أرباح السائقين</h3>
+                <p class="muted">راجع بيانات التحويل ثم اعتمد الطلب أو ارفضه لإعادة المبلغ.</p>
+            </div>
+        </div>
+        @if ($driverWithdrawals->isEmpty())
+            <div class="empty">لا توجد طلبات سحب حاليًا.</div>
+        @else
+            <table>
+                <thead><tr><th>السائق</th><th>المبلغ</th><th>طريقة التحويل</th><th>الحالة</th><th>الإجراء</th></tr></thead>
+                <tbody>
+                    @foreach ($driverWithdrawals as $withdrawal)
+                        <tr>
+                            <td><strong>{{ $withdrawal->driver?->name }}</strong><div class="muted">{{ $withdrawal->driver?->phone }}</div></td>
+                            <td><strong>{{ number_format((float) $withdrawal->amount, 2) }} ₪</strong></td>
+                            <td>{{ $withdrawal->method === 'bank' ? 'حساب بنكي' : 'محفظة جوال' }}<div class="muted">{{ $withdrawal->account_name }} · {{ $withdrawal->account_number }}</div></td>
+                            <td><span class="status {{ $withdrawal->status }}">{{ $withdrawal->status === 'paid' ? 'مدفوع' : ($withdrawal->status === 'rejected' ? 'مرفوض' : 'بانتظار المراجعة') }}</span></td>
+                            <td>
+                                @if ($withdrawal->status === 'pending')
+                                    <div class="table-actions">
+                                        <form method="post" action="{{ route('admin.driver-withdrawals.approve', $withdrawal) }}">@csrf @method('patch')<button class="btn blue">تم التحويل</button></form>
+                                        <form method="post" action="{{ route('admin.driver-withdrawals.reject', $withdrawal) }}">@csrf @method('patch')<button class="btn danger">رفض وإرجاع</button></form>
+                                    </div>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @endif
+    </div>
 @endsection

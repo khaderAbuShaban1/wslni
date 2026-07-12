@@ -75,6 +75,20 @@ class ApiClient {
     return [];
   }
 
+  Future<Map<String, dynamic>> get(String path) async {
+    final client = _createHttpClient();
+    final request = await client.getUrl(Uri.parse('$baseUrl/$path'));
+    request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+    final response = await request.close();
+    final text = await response.transform(utf8.decoder).join();
+    client.close();
+    final decoded = _decode(text);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(_message(decoded), response.statusCode, decoded);
+    }
+    return decoded;
+  }
+
   Map<String, dynamic> _decode(String text) {
     if (text.isEmpty) return {};
     try {

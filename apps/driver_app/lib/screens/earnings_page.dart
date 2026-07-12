@@ -68,6 +68,8 @@ class _EarningsPage extends StatelessWidget {
             const SizedBox(height: 18),
             _NetEarningsCard(net: net),
             const SizedBox(height: 12),
+            _WithdrawalPanel(user: user),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -121,6 +123,316 @@ class _EarningsPage extends StatelessWidget {
   }
 
   double _amount(String value) => double.tryParse(value) ?? 0;
+}
+
+class _WithdrawalPanel extends StatefulWidget {
+  const _WithdrawalPanel({required this.user});
+  final DriverUser user;
+
+  @override
+  State<_WithdrawalPanel> createState() => _WithdrawalPanelState();
+}
+
+class _WithdrawalPanelState extends State<_WithdrawalPanel> {
+  final _api = ApiClient();
+  final _realtime = RealtimeDriverService();
+  double? _balance;
+  bool _loading = true;
+  List<Map<String, dynamic>> _withdrawals = const [];
+  StreamSubscription<List<Map<String, dynamic>>>? _withdrawalSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    _withdrawalSubscription = _realtime.watchWithdrawals(widget.user.id).listen(
+      (rows) {
+        if (mounted) {
+          setState(() {
+            _withdrawals = rows;
+            if (rows.isNotEmpty) {
+              _balance =
+                  double.tryParse(
+                    rows.first['wallet_balance']?.toString() ?? '',
+                  ) ??
+                  _balance;
+            }
+          });
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _withdrawalSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final data = await _api.get('drivers/${widget.user.id}/withdrawals');
+      if (mounted) {
+        setState(() {
+          _balance =
+              double.tryParse(data['wallet_balance']?.toString() ?? '') ?? 0;
+          final rows = data['withdrawals'];
+          _withdrawals = rows is List
+              ? rows.whereType<Map<String, dynamic>>().toList()
+              : const [];
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _openWithdrawal() async {
+    final amount = TextEditingController();
+    final accountName = TextEditingController(text: widget.user.name);
+    final accountNumber = TextEditingController();
+    var method = 'mobile_wallet';
+    final submitted = await showModalBottomSheet<Map<String, String>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            MediaQuery.viewInsetsOf(context).bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'سحب الأرباح',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'المتاح: ${(_balance ?? 0).toStringAsFixed(2)} شيكل',
+                style: const TextStyle(color: _muted),
+              ),
+              const SizedBox(height: 16),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                    value: 'mobile_wallet',
+                    label: Text('محفظة جوال'),
+                    icon: Icon(Icons.phone_android),
+                  ),
+                  ButtonSegment(
+                    value: 'bank',
+                    label: Text('حساب بنكي'),
+                    icon: Icon(Icons.account_balance_outlined),
+                  ),
+                ],
+                selected: {method},
+                onSelectionChanged: (value) =>
+                    setSheetState(() => method = value.first),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: amount,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'المبلغ',
+                  prefixIcon: Icon(Icons.payments_outlined),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: accountName,
+                decoration: const InputDecoration(
+                  labelText: 'اسم صاحب الحساب',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: accountNumber,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'رقم الحساب أو الجوال',
+                  prefixIcon: Icon(Icons.numbers),
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(context, {
+                  'amount': amount.text.trim(),
+                  'method': method,
+                  'account_name': accountName.text.trim(),
+                  'account_number': accountNumber.text.trim(),
+                }),
+                icon: const Icon(Icons.send_rounded),
+                label: const Text('إرسال طلب السحب'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (submitted == null) return;
+    try {
+      final result = await _api.post(
+        'drivers/${widget.user.id}/withdrawals',
+        submitted,
+      );
+      if (!mounted) return;
+      setState(() {
+        _balance =
+            double.tryParse(result['wallet_balance']?.toString() ?? '') ??
+            _balance;
+        final withdrawal = result['withdrawal'];
+        if (withdrawal is Map<String, dynamic>) {
+          _withdrawals = [withdrawal, ..._withdrawals];
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم إرسال طلب السحب للمراجعة.')),
+      );
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.savings_outlined, color: _emerald),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'الرصيد المتاح للسحب',
+                      style: TextStyle(color: _muted),
+                    ),
+                    Text(
+                      _loading
+                          ? 'جاري التحميل...'
+                          : '${(_balance ?? 0).toStringAsFixed(2)} شيكل',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              FilledButton(
+                onPressed: _loading || (_balance ?? 0) < 10
+                    ? null
+                    : _openWithdrawal,
+                child: const Text('سحب'),
+              ),
+            ],
+          ),
+        ),
+        if (_withdrawals.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          const Text(
+            'طلبات السحب',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          for (final withdrawal in _withdrawals) ...[
+            _WithdrawalStatusCard(withdrawal: withdrawal),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+class _WithdrawalStatusCard extends StatelessWidget {
+  const _WithdrawalStatusCard({required this.withdrawal});
+
+  final Map<String, dynamic> withdrawal;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = withdrawal['status']?.toString() ?? 'pending';
+    final (label, color, icon) = switch (status) {
+      'paid' => ('تم التحويل', _success, Icons.check_circle_rounded),
+      'rejected' => ('مرفوض — أُعيد المبلغ', _error, Icons.cancel_rounded),
+      _ => (
+        'بانتظار المراجعة',
+        const Color(0xFFD99C18),
+        Icons.schedule_rounded,
+      ),
+    };
+    final method = withdrawal['method']?.toString() == 'bank'
+        ? 'حساب بنكي'
+        : 'محفظة جوال';
+    final amount = double.tryParse(withdrawal['amount']?.toString() ?? '') ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .07),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withValues(alpha: .25)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: color.withValues(alpha: .14),
+            child: Icon(icon, color: color, size: 21),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${amount.toStringAsFixed(2)} شيكل',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '$method · ${withdrawal['account_number'] ?? ''}',
+                  style: const TextStyle(color: _muted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _NetEarningsCard extends StatelessWidget {

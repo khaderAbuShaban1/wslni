@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\DriverWithdrawal;
 use App\Models\WalletDeposit;
 use App\Models\WalletPaymentAccount;
+use App\Services\FirebaseRealtimeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -106,7 +108,28 @@ class WalletsController extends Controller
             'rejectedCount' => WalletDeposit::query()->where('status', 'rejected')->count(),
             'totalCredited' => (float) WalletDeposit::query()->where('status', 'approved')->sum('amount'),
             'totalBalances' => (float) User::query()->sum('wallet_balance'),
+            'driverWithdrawals' => DriverWithdrawal::query()->with('driver:id,name,phone,wallet_balance')->latest()->get(),
         ]);
+    }
+
+    public function approveWithdrawal(DriverWithdrawal $driverWithdrawal): RedirectResponse
+    {
+        if ($driverWithdrawal->status !== 'pending') return back()->withErrors(['status' => 'تمت مراجعة طلب السحب مسبقًا.']);
+        $driverWithdrawal->update(['status' => 'paid', 'reviewed_by' => auth()->id(), 'reviewed_at' => now()]);
+        app(FirebaseRealtimeService::class)->syncWithdrawal($driverWithdrawal->fresh());
+        return back()->with('status', 'تم اعتماد طلب السحب وتحويله إلى مدفوع.');
+    }
+
+    public function rejectWithdrawal(DriverWithdrawal $driverWithdrawal): RedirectResponse
+    {
+        DB::transaction(function () use ($driverWithdrawal): void {
+            $withdrawal = DriverWithdrawal::query()->lockForUpdate()->findOrFail($driverWithdrawal->id);
+            if ($withdrawal->status !== 'pending') return;
+            User::query()->lockForUpdate()->findOrFail($withdrawal->driver_id)->increment('wallet_balance', $withdrawal->amount);
+            $withdrawal->update(['status' => 'rejected', 'reviewed_by' => auth()->id(), 'reviewed_at' => now()]);
+        });
+        app(FirebaseRealtimeService::class)->syncWithdrawal($driverWithdrawal->fresh());
+        return back()->with('status', 'تم رفض طلب السحب وإعادة المبلغ لمحفظة السائق.');
     }
 
     public function storePaymentAccount(Request $request): RedirectResponse

@@ -10,6 +10,22 @@ class RealtimeDriverService {
 
   DatabaseReference get _ridesRef => _database.ref('ride_requests');
 
+  Stream<List<Map<String, dynamic>>> watchWithdrawals(int driverId) {
+    if (!isEnabled || driverId == 0) return const Stream.empty();
+    return _database.ref('driver_withdrawals/$driverId').onValue.map((event) {
+      final rows = <Map<String, dynamic>>[];
+      for (final raw in _rows(event.snapshot.value)) {
+        rows.add(Map<String, dynamic>.from(raw));
+      }
+      rows.sort(
+        (a, b) => (int.tryParse(b['id']?.toString() ?? '') ?? 0).compareTo(
+          int.tryParse(a['id']?.toString() ?? '') ?? 0,
+        ),
+      );
+      return rows;
+    });
+  }
+
   Stream<List<RideRequestItem>> watchOpenRides() {
     if (!isEnabled) return const Stream.empty();
 

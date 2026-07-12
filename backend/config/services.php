@@ -2,6 +2,10 @@
 
 return [
 
+    'firebase' => [
+        'database_url' => env('FIREBASE_DATABASE_URL', 'https://wslni-527a2-default-rtdb.europe-west1.firebasedatabase.app'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
