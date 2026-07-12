@@ -10,6 +10,7 @@ class RideRequestItem {
     this.customerPhone = '',
     this.status = RideStatuses.pending,
     this.actualFare = '',
+    this.platformFee = '',
     this.offers = const [],
   });
 
@@ -21,6 +22,7 @@ class RideRequestItem {
   final String notes;
   final String status;
   final String actualFare;
+  final String platformFee;
   final List<DriverRideOffer> offers;
 
   bool get isActive => RideStatuses.activeForDriver.contains(status);
@@ -60,6 +62,7 @@ class RideRequestItem {
       notes: json['notes']?.toString() ?? '',
       status: json['status']?.toString() ?? RideStatuses.pending,
       actualFare: json['actual_fare']?.toString() ?? '',
+      platformFee: json['platform_fee']?.toString() ?? '',
       offers: DriverRideOffer.listFrom(json['offers']),
     );
   }

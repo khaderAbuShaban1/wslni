@@ -21,7 +21,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
   late final List<Widget> _pages = [
     RequestsPage(user: widget.user),
     _TripsPage(user: widget.user),
-    const _EarningsPage(),
+    _EarningsPage(user: widget.user),
     _DriverProfilePage(user: widget.user),
   ];
 

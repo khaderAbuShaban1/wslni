@@ -100,6 +100,8 @@ class RealtimeDriverService {
   Future<void> updateRideStatus({
     required int rideId,
     required String status,
+    String? actualFare,
+    String? platformFee,
   }) async {
     if (!isEnabled || rideId == 0) return;
 
@@ -115,6 +117,8 @@ class RealtimeDriverService {
     }
     if (status == RideStatuses.tripCompleted) {
       updates['completed_at'] = ServerValue.timestamp;
+      if (actualFare != null) updates['actual_fare'] = actualFare;
+      if (platformFee != null) updates['platform_fee'] = platformFee;
     }
     if (status == RideStatuses.cancelled) {
       updates['cancelled_at'] = ServerValue.timestamp;
@@ -189,6 +193,7 @@ class RealtimeDriverService {
       notes: raw['notes']?.toString() ?? '',
       status: raw['status']?.toString() ?? RideStatuses.pending,
       actualFare: raw['actual_fare']?.toString() ?? '',
+      platformFee: raw['platform_fee']?.toString() ?? '',
       offers: DriverRideOffer.listFrom(raw['offers']),
     );
   }

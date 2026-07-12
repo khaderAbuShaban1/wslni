@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\RideStatus;
 use App\Http\Controllers\Controller;
+use App\Models\AppSetting;
 use App\Models\RideOffer;
 use App\Models\RideRequest;
+use App\Models\User;
+use App\Models\WalletTransaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -120,6 +123,61 @@ class RideController extends Controller
 
             $updates = ['status' => $data['status']];
             if ($data['status'] === RideStatus::TripCompleted->value) {
+                $fare = round((float) $lockedRide->actual_fare, 2);
+                if ($fare <= 0) {
+                    return ['error' => 'لا يمكن إنهاء الرحلة قبل تحديد الأجرة.', 'status' => 422];
+                }
+
+                $users = User::query()
+                    ->whereIn('id', [$lockedRide->customer_id, $lockedRide->driver_id])
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+                $customer = $users->get($lockedRide->customer_id);
+                $driver = $users->get($lockedRide->driver_id);
+                if (! $customer || ! $driver) {
+                    return ['error' => 'تعذر العثور على محفظة الزبون أو السائق.', 'status' => 422];
+                }
+                if ((float) $customer->wallet_balance < $fare) {
+                    return ['error' => 'رصيد محفظة الزبون غير كافٍ لإكمال الرحلة.', 'status' => 422];
+                }
+
+                $commissionPercent = (float) (AppSetting::query()
+                    ->where('key', 'commission_percent')
+                    ->value('value') ?? 15);
+                $platformFee = round($fare * $commissionPercent / 100, 2);
+                $driverEarning = round($fare - $platformFee, 2);
+                $customerBalance = round((float) $customer->wallet_balance - $fare, 2);
+                $driverBalance = round((float) $driver->wallet_balance + $driverEarning, 2);
+
+                $customer->update(['wallet_balance' => $customerBalance]);
+                $driver->update(['wallet_balance' => $driverBalance]);
+                WalletTransaction::create([
+                    'user_id' => $customer->id,
+                    'ride_request_id' => $lockedRide->id,
+                    'type' => 'ride_fare_debit',
+                    'amount' => -$fare,
+                    'balance_after' => $customerBalance,
+                    'description' => 'خصم أجرة الرحلة',
+                ]);
+                WalletTransaction::create([
+                    'user_id' => $driver->id,
+                    'ride_request_id' => $lockedRide->id,
+                    'type' => 'driver_earning_credit',
+                    'amount' => $driverEarning,
+                    'balance_after' => $driverBalance,
+                    'description' => 'صافي أرباح الرحلة',
+                ]);
+                WalletTransaction::create([
+                    'ride_request_id' => $lockedRide->id,
+                    'type' => 'platform_commission',
+                    'amount' => $platformFee,
+                    'description' => 'عمولة التطبيق',
+                ]);
+
+                $updates['commission_percent'] = $commissionPercent;
+                $updates['platform_fee'] = $platformFee;
                 $updates['completed_at'] = now();
             }
 

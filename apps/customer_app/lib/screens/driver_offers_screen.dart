@@ -19,6 +19,7 @@ class DriverOffersScreen extends StatefulWidget {
     this.driverService = const DriverService(),
     RideService? rideService,
     RealtimeRideService? realtimeService,
+    this.lockNavigation = false,
     super.key,
   }) : rideService = rideService ?? RideService(),
        realtimeService = realtimeService ?? RealtimeRideService();
@@ -27,6 +28,7 @@ class DriverOffersScreen extends StatefulWidget {
   final DriverService driverService;
   final RideService rideService;
   final RealtimeRideService realtimeService;
+  final bool lockNavigation;
 
   @override
   State<DriverOffersScreen> createState() => _DriverOffersScreenState();
@@ -64,50 +66,54 @@ class _DriverOffersScreenState extends State<DriverOffersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'عروض السائقين',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          RouteSummary(
-            pickup: widget.draft.pickup,
-            destination: widget.draft.destination,
-          ),
-          const SizedBox(height: 22),
-          const SectionHeader(title: 'اختر أفضل عرض'),
-          const SizedBox(height: 12),
-          StreamBuilder<List<DriverOffer>>(
-            stream: widget.realtimeService.watchOffers(widget.draft.id),
-            builder: (context, snapshot) {
-              final offers =
-                  snapshot.data ?? widget.driverService.currentOffers();
+    return PopScope(
+      canPop: !widget.lockNavigation,
+      child: AppScaffold(
+        showBack: !widget.lockNavigation,
+        title: 'عروض السائقين',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RouteSummary(
+              pickup: widget.draft.pickup,
+              destination: widget.draft.destination,
+            ),
+            const SizedBox(height: 22),
+            const SectionHeader(title: 'اختر أفضل عرض'),
+            const SizedBox(height: 12),
+            StreamBuilder<List<DriverOffer>>(
+              stream: widget.realtimeService.watchOffers(widget.draft.id),
+              builder: (context, snapshot) {
+                final offers =
+                    snapshot.data ?? widget.driverService.currentOffers();
 
-              if (offers.isEmpty) {
-                return const EmptyStateCard(
-                  icon: Icons.local_taxi_outlined,
-                  title: 'لا توجد عروض بعد',
-                  message: 'عندما يرسل السائقون أسعارهم ستظهر هنا فورًا.',
-                );
-              }
+                if (offers.isEmpty) {
+                  return const EmptyStateCard(
+                    icon: Icons.local_taxi_outlined,
+                    title: 'لا توجد عروض بعد',
+                    message: 'عندما يرسل السائقون أسعارهم ستظهر هنا فورًا.',
+                  );
+                }
 
-              return Column(
-                children: [
-                  for (final offer in offers) ...[
-                    DriverCard(
-                      offer: offer,
-                      selectedRide: widget.draft.rideName,
-                      choosing: _acceptingDriverId == offer.driverId,
-                      onChoose: _acceptingDriverId == null
-                          ? () => _acceptOffer(offer)
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
+                return Column(
+                  children: [
+                    for (final offer in offers) ...[
+                      DriverCard(
+                        offer: offer,
+                        selectedRide: widget.draft.rideName,
+                        choosing: _acceptingDriverId == offer.driverId,
+                        onChoose: _acceptingDriverId == null
+                            ? () => _acceptOffer(offer)
+                            : null,
+                      ),
+                      const SizedBox(height: 12),
+                    ],
                   ],
-                ],
-              );
-            },
-          ),
-        ],
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

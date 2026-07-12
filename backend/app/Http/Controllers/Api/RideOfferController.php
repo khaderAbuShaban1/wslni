@@ -88,7 +88,16 @@ class RideOfferController extends Controller
                 return ['error' => 'تم اختيار سائق لهذه الرحلة مسبقًا.', 'status' => 422];
             }
 
-            User::query()->lockForUpdate()->findOrFail($lockedOffer->driver_id);
+            $users = User::query()
+                ->whereIn('id', [$lockedOffer->driver_id, $lockedRide->customer_id])
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+            $customer = $users->get($lockedRide->customer_id);
+            if (! $customer || (float) $customer->wallet_balance < (float) $lockedOffer->price) {
+                return ['error' => 'رصيد محفظتك غير كافٍ لقبول هذا العرض.', 'status' => 422];
+            }
 
             $hasActiveRide = RideRequest::query()
                 ->where('driver_id', $lockedOffer->driver_id)

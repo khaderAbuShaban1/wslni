@@ -17,81 +17,88 @@ class TripProgressScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<RideDraft?>(
-      stream: _realtime.watchRide(draft.id),
-      initialData: draft,
-      builder: (context, snapshot) {
-        final ride = snapshot.data ?? draft;
-        return AppScaffold(
-          title: 'حالة الرحلة',
-          child: Column(
-            children: [
-              PremiumCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      ride.statusLabel,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
+    return PopScope(
+      canPop: false,
+      child: StreamBuilder<RideDraft?>(
+        stream: _realtime.watchRide(draft.id),
+        initialData: draft,
+        builder: (context, snapshot) {
+          final ride = snapshot.data ?? draft;
+          return AppScaffold(
+            showBack: false,
+            title: 'حالة الرحلة',
+            child: Column(
+              children: [
+                PremiumCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        ride.statusLabel,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _statusMessage(ride.status),
-                      style: const TextStyle(color: mutedText),
-                    ),
-                    if (ride.driverName.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _statusMessage(ride.status),
+                        style: const TextStyle(color: mutedText),
+                      ),
+                      if (ride.driverName.isNotEmpty) ...[
+                        const Divider(height: 28),
+                        SummaryRow(label: 'السائق', value: ride.driverName),
+                        SummaryRow(
+                          label: 'الهاتف',
+                          value: ride.driverPhone.isEmpty
+                              ? 'غير متوفر'
+                              : ride.driverPhone,
+                        ),
+                        SummaryRow(
+                          label: 'السيارة',
+                          value: [
+                            ride.driverCar,
+                            ride.driverPlate,
+                          ].where((value) => value.isNotEmpty).join(' - '),
+                        ),
+                      ],
                       const Divider(height: 28),
-                      SummaryRow(label: 'السائق', value: ride.driverName),
-                      SummaryRow(
-                        label: 'الهاتف',
-                        value: ride.driverPhone.isEmpty
-                            ? 'غير متوفر'
-                            : ride.driverPhone,
-                      ),
-                      SummaryRow(
-                        label: 'السيارة',
-                        value: [
-                          ride.driverCar,
-                          ride.driverPlate,
-                        ].where((value) => value.isNotEmpty).join(' - '),
-                      ),
+                      SummaryRow(label: 'من', value: ride.pickup),
+                      SummaryRow(label: 'إلى', value: ride.destination),
                     ],
-                    const Divider(height: 28),
-                    SummaryRow(label: 'من', value: ride.pickup),
-                    SummaryRow(label: 'إلى', value: ride.destination),
-                  ],
-                ),
-              ),
-              if (ride.status == RideStatuses.tripCompleted) ...[
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (_) => TripCompletedScreen(draft: ride),
-                    ),
                   ),
-                  icon: const Icon(Icons.star_outline_rounded),
-                  label: const Text('عرض الملخص وتقييم السائق'),
                 ),
-              ],
-              if (ride.status == RideStatuses.receivingOffers) ...[
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (_) => DriverOffersScreen(draft: ride),
+                if (ride.status == RideStatuses.tripCompleted) ...[
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => TripCompletedScreen(draft: ride),
+                      ),
                     ),
+                    icon: const Icon(Icons.star_outline_rounded),
+                    label: const Text('عرض الملخص وتقييم السائق'),
                   ),
-                  icon: const Icon(Icons.local_offer_outlined),
-                  label: const Text('اختيار سائق آخر'),
-                ),
+                ],
+                if (ride.status == RideStatuses.receivingOffers) ...[
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => DriverOffersScreen(
+                          draft: ride,
+                          lockNavigation: true,
+                        ),
+                      ),
+                    ),
+                    icon: const Icon(Icons.local_offer_outlined),
+                    label: const Text('اختيار سائق آخر'),
+                  ),
+                ],
               ],
-            ],
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 

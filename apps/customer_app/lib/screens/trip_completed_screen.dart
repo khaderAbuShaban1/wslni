@@ -54,76 +54,80 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'اكتملت الرحلة',
-      child: Column(
-        children: [
-          PremiumCard(
-            child: Column(
-              children: [
-                Container(
-                  width: 82,
-                  height: 82,
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: .15),
-                    borderRadius: BorderRadius.circular(26),
+    return PopScope(
+      canPop: false,
+      child: AppScaffold(
+        showBack: false,
+        title: 'اكتملت الرحلة',
+        child: Column(
+          children: [
+            PremiumCard(
+              child: Column(
+                children: [
+                  Container(
+                    width: 82,
+                    height: 82,
+                    decoration: BoxDecoration(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: .15),
+                      borderRadius: BorderRadius.circular(26),
+                    ),
+                    child: Icon(
+                      Icons.check_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 48,
+                    ),
                   ),
-                  child: Icon(
-                    Icons.check_rounded,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: 48,
+                  const SizedBox(height: 18),
+                  Text(
+                    'وصلت بالسلامة',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'وصلت بالسلامة',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.draft.destination,
+                    style: const TextStyle(color: mutedText),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.draft.destination,
-                  style: const TextStyle(color: mutedText),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    5,
-                    (index) => IconButton(
-                      onPressed: () => setState(() => _rating = index + 1),
-                      icon: Icon(
-                        index < _rating
-                            ? Icons.star_rounded
-                            : Icons.star_border_rounded,
-                        color: const Color(0xFFF59E0B),
-                        size: 34,
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      5,
+                      (index) => IconButton(
+                        onPressed: () => setState(() => _rating = index + 1),
+                        icon: Icon(
+                          index < _rating
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          color: const Color(0xFFF59E0B),
+                          size: 34,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _comment,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'تعليق اختياري',
-                    prefixIcon: Icon(Icons.chat_bubble_outline),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _comment,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'تعليق اختياري',
+                      prefixIcon: Icon(Icons.chat_bubble_outline),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          CustomButton(
-            label: _saving ? 'جاري حفظ التقييم...' : 'إرسال التقييم',
-            icon: Icons.star_rounded,
-            onPressed: _saving ? null : _submitRating,
-          ),
-        ],
+            const SizedBox(height: 24),
+            CustomButton(
+              label: _saving ? 'جاري حفظ التقييم...' : 'إرسال التقييم',
+              icon: Icons.star_rounded,
+              onPressed: _saving ? null : _submitRating,
+            ),
+          ],
+        ),
       ),
     );
   }

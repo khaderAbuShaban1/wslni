@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\RideOffer;
 use App\Models\RideRequest;
 use App\Models\User;
+use App\Models\AppSetting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -97,7 +98,9 @@ class RideLifecycleTest extends TestCase
             'driver_id' => $driver->id,
             'status' => 'driver_confirmed',
             'accepted_at' => now(),
+            'actual_fare' => 40,
         ]);
+        AppSetting::query()->updateOrCreate(['key' => 'commission_percent'], ['value' => 15]);
 
         foreach (['driver_on_the_way', 'driver_arrived', 'trip_started', 'trip_completed'] as $status) {
             $this->patchJson("api/rides/{$ride->id}", [
@@ -111,6 +114,10 @@ class RideLifecycleTest extends TestCase
             'status' => 'trip_completed',
         ]);
         $this->assertNotNull($ride->fresh()->completed_at);
+        $this->assertSame('60.00', $ride->customer->fresh()->wallet_balance);
+        $this->assertSame('34.00', $driver->fresh()->wallet_balance);
+        $this->assertDatabaseHas('ride_requests', ['id' => $ride->id, 'platform_fee' => 6]);
+        $this->assertDatabaseCount('wallet_transactions', 3);
 
         $this->getJson("api/rides?driver_id={$driver->id}&status=active")
             ->assertOk()
@@ -131,6 +138,26 @@ class RideLifecycleTest extends TestCase
             'status' => 'trip_completed',
         ])->assertUnprocessable()
             ->assertJsonPath('message', 'لا يمكن نقل الرحلة إلى هذه الحالة الآن.');
+    }
+
+    public function test_trip_cannot_complete_when_customer_wallet_is_insufficient(): void
+    {
+        $driver = User::factory()->create(['role' => 'driver']);
+        $ride = $this->createRide([
+            'driver_id' => $driver->id,
+            'status' => 'trip_started',
+            'actual_fare' => 150,
+        ]);
+
+        $this->patchJson("api/rides/{$ride->id}", [
+            'driver_id' => $driver->id,
+            'status' => 'trip_completed',
+        ])->assertUnprocessable()
+            ->assertJsonPath('message', 'رصيد محفظة الزبون غير كافٍ لإكمال الرحلة.');
+
+        $this->assertSame('100.00', $ride->customer->fresh()->wallet_balance);
+        $this->assertSame('0.00', $driver->fresh()->wallet_balance);
+        $this->assertDatabaseCount('wallet_transactions', 0);
     }
 
     public function test_driver_rejection_returns_ride_to_receiving_offers(): void
@@ -191,7 +218,10 @@ class RideLifecycleTest extends TestCase
     private function createRide(array $attributes = []): RideRequest
     {
         return RideRequest::create(array_merge([
-            'customer_id' => User::factory()->create(['role' => 'customer'])->id,
+            'customer_id' => User::factory()->create([
+                'role' => 'customer',
+                'wallet_balance' => 100,
+            ])->id,
             'status' => 'pending',
             'pickup_address' => 'نقطة الانطلاق',
             'pickup_lat' => 0,

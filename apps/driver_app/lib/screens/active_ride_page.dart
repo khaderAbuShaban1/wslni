@@ -80,7 +80,12 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
 
       var realtimeSynced = true;
       try {
-        await _realtime.updateRideStatus(rideId: _ride.id, status: status);
+        await _realtime.updateRideStatus(
+          rideId: _ride.id,
+          status: status,
+          actualFare: updatedRide.actualFare,
+          platformFee: updatedRide.platformFee,
+        );
       } catch (_) {
         realtimeSynced = false;
       }
