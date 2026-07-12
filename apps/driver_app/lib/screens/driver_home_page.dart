@@ -10,16 +10,12 @@ class DriverHomePage extends StatefulWidget {
 }
 
 class _DriverHomePageState extends State<DriverHomePage> {
-  final _api = ApiClient();
   final _realtime = RealtimeDriverService();
   int _index = 0;
   bool _online = true;
-  bool _checkingActiveRide = false;
   bool _initializing = true;
   int? _withdrawnOffersForRideId;
-  int _activeRideRevision = 0;
   RideRequestItem? _activeRide;
-  Timer? _activeRideTimer;
   StreamSubscription<List<RideRequestItem>>? _activeRideSubscription;
 
   late final List<Widget> _pages = [
@@ -32,59 +28,31 @@ class _DriverHomePageState extends State<DriverHomePage> {
   @override
   void initState() {
     super.initState();
-    _checkForActiveRide();
-    _activeRideTimer = Timer.periodic(
-      const Duration(seconds: 3),
-      (_) => _checkForActiveRide(),
-    );
     if (_realtime.isEnabled) {
       _activeRideSubscription = _realtime
           .watchActiveRides(widget.user.id)
           .listen((rides) {
-            if (rides.isNotEmpty && mounted && _activeRide == null) {
-              setState(() => _activeRide = rides.first);
+            if (!mounted) return;
+            final activeRide = rides.isEmpty ? null : rides.first;
+            setState(() {
+              _activeRide = activeRide;
+              _initializing = false;
+            });
+            if (activeRide != null &&
+                _withdrawnOffersForRideId != activeRide.id) {
+              _withdrawnOffersForRideId = activeRide.id;
+              unawaited(_withdrawOtherOffers(activeRide.id));
             }
-            _checkForActiveRide();
           });
+    } else {
+      _initializing = false;
     }
   }
 
   @override
   void dispose() {
-    _activeRideTimer?.cancel();
     _activeRideSubscription?.cancel();
     super.dispose();
-  }
-
-  Future<void> _checkForActiveRide() async {
-    if (_checkingActiveRide) return;
-    _checkingActiveRide = true;
-    final revision = _activeRideRevision;
-    try {
-      final rows = await _api.getList(
-        'rides?driver_id=${widget.user.id}&status=active',
-      );
-      final rides = rows
-          .whereType<Map<String, dynamic>>()
-          .map(RideRequestItem.fromJson)
-          .where((ride) => ride.isActive)
-          .toList();
-      if (!mounted || revision != _activeRideRevision) return;
-      setState(() {
-        _activeRide = rides.isEmpty ? null : rides.first;
-        _initializing = false;
-      });
-      if (rides.isNotEmpty && _withdrawnOffersForRideId != rides.first.id) {
-        _withdrawnOffersForRideId = rides.first.id;
-        unawaited(_withdrawOtherOffers(rides.first.id));
-      }
-    } catch (_) {
-      if (mounted && _initializing) {
-        setState(() => _initializing = false);
-      }
-    } finally {
-      _checkingActiveRide = false;
-    }
   }
 
   Future<void> _withdrawOtherOffers(int activeRideId) async {
@@ -101,12 +69,10 @@ class _DriverHomePageState extends State<DriverHomePage> {
   void _releaseActiveRide() {
     if (!mounted) return;
     setState(() {
-      _activeRideRevision++;
       _activeRide = null;
       _withdrawnOffersForRideId = null;
       _index = 0;
     });
-    _checkForActiveRide();
   }
 
   @override

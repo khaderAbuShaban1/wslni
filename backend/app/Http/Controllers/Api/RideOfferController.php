@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\RideStatus;
 use App\Http\Controllers\Controller;
 use App\Models\RideOffer;
 use App\Models\RideRequest;
@@ -29,7 +30,7 @@ class RideOfferController extends Controller
         $result = DB::transaction(function () use ($ride, $data): array {
             $lockedRide = RideRequest::query()->lockForUpdate()->findOrFail($ride->id);
 
-            if ($lockedRide->status !== 'requested') {
+            if (! in_array($lockedRide->status, [RideStatus::Pending->value, RideStatus::ReceivingOffers->value], true)) {
                 return ['error' => 'لا يمكن تقديم عرض على هذا الطلب حاليًا.'];
             }
 
@@ -37,7 +38,7 @@ class RideOfferController extends Controller
 
             $hasActiveRide = RideRequest::query()
                 ->where('driver_id', $data['driver_id'])
-                ->whereIn('status', ['accepted', 'arrived', 'in_progress'])
+                ->whereIn('status', RideStatus::activeValues())
                 ->exists();
 
             if ($hasActiveRide) {
@@ -55,6 +56,10 @@ class RideOfferController extends Controller
                     'status' => 'pending',
                 ]
             );
+
+            if ($lockedRide->status === RideStatus::Pending->value) {
+                $lockedRide->update(['status' => RideStatus::ReceivingOffers->value]);
+            }
 
             return ['offer' => $offer];
         });
@@ -79,7 +84,7 @@ class RideOfferController extends Controller
                 return ['error' => 'هذا العرض لا يتبع لهذه الرحلة.', 'status' => 404];
             }
 
-            if ($lockedRide->status !== 'requested') {
+            if (! in_array($lockedRide->status, [RideStatus::Pending->value, RideStatus::ReceivingOffers->value], true)) {
                 return ['error' => 'تم اختيار سائق لهذه الرحلة مسبقًا.', 'status' => 422];
             }
 
@@ -88,7 +93,7 @@ class RideOfferController extends Controller
             $hasActiveRide = RideRequest::query()
                 ->where('driver_id', $lockedOffer->driver_id)
                 ->where('id', '!=', $lockedRide->id)
-                ->whereIn('status', ['accepted', 'arrived', 'in_progress'])
+                ->whereIn('status', RideStatus::activeValues())
                 ->exists();
 
             if ($hasActiveRide) {
@@ -98,21 +103,14 @@ class RideOfferController extends Controller
             RideOffer::query()
                 ->where('ride_request_id', $lockedRide->id)
                 ->where('id', '!=', $lockedOffer->id)
-                ->update(['status' => 'rejected']);
+                ->update(['status' => 'inactive']);
 
-            RideOffer::query()
-                ->where('driver_id', $lockedOffer->driver_id)
-                ->where('ride_request_id', '!=', $lockedRide->id)
-                ->where('status', 'pending')
-                ->update(['status' => 'rejected']);
-
-            $lockedOffer->update(['status' => 'accepted']);
+            $lockedOffer->update(['status' => 'selected']);
 
             $lockedRide->update([
                 'driver_id' => $lockedOffer->driver_id,
-                'status' => 'accepted',
+                'status' => RideStatus::DriverSelected->value,
                 'actual_fare' => $lockedOffer->price,
-                'accepted_at' => now(),
             ]);
 
             return ['ride' => $lockedRide, 'offer' => $lockedOffer];
@@ -128,8 +126,12 @@ class RideOfferController extends Controller
                 'customer:id,name,phone',
                 'driver:id,name,phone',
                 'offers.driver:id,name,phone',
+                'offers.driver.driverProfile',
             ]),
-            'offer' => $result['offer']->fresh('driver:id,name,phone'),
+            'offer' => $result['offer']->fresh([
+                'driver:id,name,phone',
+                'driver.driverProfile',
+            ]),
         ]);
     }
 

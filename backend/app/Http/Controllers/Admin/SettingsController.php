@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\RideStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\RideRequest;
@@ -18,7 +19,7 @@ class SettingsController extends Controller
         return view('admin.commission', [
             'commission' => $commission,
             'totalRevenue' => RideRequest::query()->sum('platform_fee'),
-            'completedRides' => RideRequest::query()->where('status', 'completed')->count(),
+            'completedRides' => RideRequest::query()->whereIn('status', [RideStatus::TripCompleted->value, RideStatus::Rated->value])->count(),
         ]);
     }
 

@@ -10,131 +10,64 @@ class _TripsPage extends StatefulWidget {
 }
 
 class _TripsPageState extends State<_TripsPage> {
-  final _api = ApiClient();
   final _realtime = RealtimeDriverService();
-  late Future<List<RideRequestItem>> _future;
   late Stream<List<RideRequestItem>> _rideStream;
-  Timer? _pollTimer;
-  List<RideRequestItem> _lastRides = const [];
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
-    _rideStream = _realtime.watchAcceptedRides(widget.user.id);
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) _refresh();
-    });
-  }
-
-  @override
-  void dispose() {
-    _pollTimer?.cancel();
-    super.dispose();
-  }
-
-  Future<List<RideRequestItem>> _load() async {
-    final rows = await _api.getList(
-      'rides?driver_id=${widget.user.id}&status=all',
-    );
-    final rides = rows
-        .whereType<Map<String, dynamic>>()
-        .map(RideRequestItem.fromJson)
-        .where(
-          (ride) => ride.status == 'completed' || ride.status == 'cancelled',
-        )
-        .toList();
-    _lastRides = rides;
-    return rides;
-  }
-
-  void _refresh() {
-    setState(() {
-      _future = _load();
-      _rideStream = _realtime.watchAcceptedRides(widget.user.id);
-    });
+    _rideStream = _realtime.watchDriverRides(widget.user.id);
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<RideRequestItem>>(
-      future: _future,
-      initialData: _lastRides,
-      builder: (context, databaseSnapshot) {
-        if (databaseSnapshot.connectionState == ConnectionState.waiting &&
-            _lastRides.isEmpty) {
+    return StreamBuilder<List<RideRequestItem>>(
+      stream: _rideStream,
+      builder: (context, realtimeSnapshot) {
+        if (realtimeSnapshot.connectionState == ConnectionState.waiting) {
           return const _SkeletonList();
         }
+        final rides = (realtimeSnapshot.data ?? const <RideRequestItem>[])
+            .where(
+              (ride) =>
+                  ride.status == RideStatuses.tripCompleted ||
+                  ride.status == RideStatuses.rated ||
+                  ride.status == RideStatuses.cancelled,
+            )
+            .toList();
 
-        final databaseRides =
-            databaseSnapshot.data ?? const <RideRequestItem>[];
+        if (rides.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: const _EmptyStateCard(
+                icon: Icons.route_outlined,
+                title: 'لا يوجد سجل رحلات بعد',
+                message: 'الرحلات المكتملة والملغاة ستظهر هنا.',
+              ),
+            ),
+          );
+        }
 
-        return StreamBuilder<List<RideRequestItem>>(
-          stream: _rideStream,
-          initialData: databaseRides,
-          builder: (context, realtimeSnapshot) {
-            final rides =
-                _mergeRides(databaseRides, realtimeSnapshot.data ?? const [])
-                    .where(
-                      (ride) =>
-                          ride.status == 'completed' ||
-                          ride.status == 'cancelled',
-                    )
-                    .toList();
-
-            if (rides.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: _EmptyStateCard(
-                    icon: Icons.route_outlined,
-                    title: 'لا يوجد سجل رحلات بعد',
-                    message: 'الرحلات المكتملة والملغاة ستظهر هنا.',
-                    actionLabel: 'تحديث',
-                    onAction: _refresh,
-                  ),
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: rides.length + 1,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Text(
+                'سجل الرحلات',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               );
             }
-
-            return RefreshIndicator(
-              onRefresh: () async => _refresh(),
-              child: ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: rides.length + 1,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return Text(
-                      'سجل الرحلات',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    );
-                  }
-                  return _AcceptedRideCard(ride: rides[index - 1]);
-                },
-              ),
-            );
+            return _AcceptedRideCard(ride: rides[index - 1]);
           },
         );
       },
     );
-  }
-
-  List<RideRequestItem> _mergeRides(
-    List<RideRequestItem> databaseRides,
-    List<RideRequestItem> realtimeRides,
-  ) {
-    final byId = <int, RideRequestItem>{};
-    for (final ride in databaseRides) {
-      byId[ride.id] = ride;
-    }
-    for (final ride in realtimeRides) {
-      byId[ride.id] = ride;
-    }
-    return byId.values.toList()..sort((a, b) => b.id.compareTo(a.id));
   }
 }
 
@@ -166,16 +99,21 @@ class _AcceptedRideCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 26,
-                backgroundColor: ride.status == 'completed'
+                backgroundColor:
+                    ride.status == RideStatuses.tripCompleted ||
+                        ride.status == RideStatuses.rated
                     ? Theme.of(
                         context,
                       ).colorScheme.primary.withValues(alpha: .15)
                     : _error.withValues(alpha: .14),
                 child: Icon(
-                  ride.status == 'completed'
+                  ride.status == RideStatuses.tripCompleted ||
+                          ride.status == RideStatuses.rated
                       ? Icons.check_rounded
                       : Icons.close_rounded,
-                  color: ride.status == 'completed'
+                  color:
+                      ride.status == RideStatuses.tripCompleted ||
+                          ride.status == RideStatuses.rated
                       ? Theme.of(context).colorScheme.primary
                       : _error,
                 ),
@@ -196,7 +134,11 @@ class _AcceptedRideCard extends StatelessWidget {
                     Text(
                       ride.statusLabel,
                       style: TextStyle(
-                        color: ride.status == 'completed' ? _success : _error,
+                        color:
+                            ride.status == RideStatuses.tripCompleted ||
+                                ride.status == RideStatuses.rated
+                            ? _success
+                            : _error,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -220,15 +162,21 @@ class _AcceptedRideCard extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  ride.status == 'completed'
+                  ride.status == RideStatuses.tripCompleted ||
+                          ride.status == RideStatuses.rated
                       ? Icons.task_alt_rounded
                       : Icons.info_outline_rounded,
-                  color: ride.status == 'completed' ? _success : _error,
+                  color:
+                      ride.status == RideStatuses.tripCompleted ||
+                          ride.status == RideStatuses.rated
+                      ? _success
+                      : _error,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    ride.status == 'completed'
+                    ride.status == RideStatuses.tripCompleted ||
+                            ride.status == RideStatuses.rated
                         ? 'تم إنهاء هذه الرحلة ويمكنك الآن استقبال طلبات جديدة.'
                         : 'تم إلغاء هذه الرحلة ويمكنك الآن استقبال طلبات جديدة.',
                     style: const TextStyle(

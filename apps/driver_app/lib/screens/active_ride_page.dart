@@ -36,27 +36,30 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
 
   String get _nextStatus {
     return switch (_ride.status) {
-      'accepted' => 'arrived',
-      'arrived' => 'in_progress',
-      'in_progress' => 'completed',
+      RideStatuses.driverConfirmed => RideStatuses.driverOnTheWay,
+      RideStatuses.driverOnTheWay => RideStatuses.driverArrived,
+      RideStatuses.driverArrived => RideStatuses.tripStarted,
+      RideStatuses.tripStarted => RideStatuses.tripCompleted,
       _ => '',
     };
   }
 
   String get _nextActionLabel {
     return switch (_ride.status) {
-      'accepted' => 'وصلت إلى موقع الزبون',
-      'arrived' => 'بدء الرحلة',
-      'in_progress' => 'إنهاء الرحلة',
+      RideStatuses.driverConfirmed => 'بدء التوجه إلى الزبون',
+      RideStatuses.driverOnTheWay => 'وصلت إلى موقع الزبون',
+      RideStatuses.driverArrived => 'بدء الرحلة',
+      RideStatuses.tripStarted => 'إنهاء الرحلة',
       _ => 'تحديث الحالة',
     };
   }
 
   IconData get _nextActionIcon {
     return switch (_ride.status) {
-      'accepted' => Icons.location_on_outlined,
-      'arrived' => Icons.play_arrow_rounded,
-      'in_progress' => Icons.check_circle_outline_rounded,
+      RideStatuses.driverConfirmed => Icons.directions_car_outlined,
+      RideStatuses.driverOnTheWay => Icons.location_on_outlined,
+      RideStatuses.driverArrived => Icons.play_arrow_rounded,
+      RideStatuses.tripStarted => Icons.check_circle_outline_rounded,
       _ => Icons.sync,
     };
   }
@@ -83,9 +86,12 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
       }
 
       if (!mounted) return;
-      if (status == 'completed' || status == 'cancelled') {
+      if (status == RideStatuses.tripCompleted ||
+          status == RideStatuses.cancelled) {
         _showMessage(
-          status == 'completed' ? 'تم إنهاء الرحلة بنجاح.' : 'تم إلغاء الرحلة.',
+          status == RideStatuses.tripCompleted
+              ? 'تم إنهاء الرحلة بنجاح.'
+              : 'تم إلغاء الرحلة.',
         );
         widget.onReleased();
         return;
@@ -109,6 +115,37 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
       if (mounted) {
         setState(() => _updating = false);
       }
+    }
+  }
+
+  Future<void> _respondToSelection(bool accepted) async {
+    if (_updating) return;
+    setState(() => _updating = true);
+    try {
+      final result = await _api.patch('rides/${_ride.id}/driver-confirmation', {
+        'driver_id': widget.user.id,
+        'accepted': accepted,
+      });
+      final rawRide = result['ride'];
+      final updated = rawRide is Map<String, dynamic>
+          ? RideRequestItem.fromJson(rawRide)
+          : _ride;
+      await _realtime.respondToSelection(
+        rideId: _ride.id,
+        driverId: widget.user.id,
+        accepted: accepted,
+      );
+      if (!mounted) return;
+      if (!accepted) {
+        widget.onReleased();
+        return;
+      }
+      setState(() => _ride = updated);
+      _showMessage('تم تأكيد الرحلة.');
+    } on ApiException catch (error) {
+      if (mounted) _showMessage(error.message);
+    } finally {
+      if (mounted) setState(() => _updating = false);
     }
   }
 
@@ -136,7 +173,7 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
     );
 
     if (confirmed == true) {
-      await _updateStatus('cancelled');
+      await _updateStatus(RideStatuses.cancelled);
     }
   }
 
@@ -213,32 +250,49 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
               const SizedBox(height: 12),
               _RideProgress(status: _ride.status),
               const SizedBox(height: 18),
-              FilledButton.icon(
-                onPressed: _updating || _nextStatus.isEmpty
-                    ? null
-                    : () => _updateStatus(_nextStatus),
-                icon: _updating
-                    ? const SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.4,
-                          color: Colors.white,
-                        ),
-                      )
-                    : Icon(_nextActionIcon),
-                label: Text(_updating ? 'جاري التحديث...' : _nextActionLabel),
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red.shade700,
-                  side: BorderSide(color: Colors.red.shade200),
-                  minimumSize: const Size(double.infinity, 52),
+              if (_ride.status == RideStatuses.driverSelected) ...[
+                FilledButton.icon(
+                  onPressed: _updating ? null : () => _respondToSelection(true),
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('تأكيد الرحلة'),
                 ),
-                onPressed: _updating ? null : _confirmCancellation,
-                icon: const Icon(Icons.cancel_outlined),
-                label: const Text('إلغاء الطلب'),
-              ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: _updating
+                      ? null
+                      : () => _respondToSelection(false),
+                  icon: const Icon(Icons.close_rounded),
+                  label: const Text('رفض الرحلة'),
+                ),
+              ] else ...[
+                FilledButton.icon(
+                  onPressed: _updating || _nextStatus.isEmpty
+                      ? null
+                      : () => _updateStatus(_nextStatus),
+                  icon: _updating
+                      ? const SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(_nextActionIcon),
+                  label: Text(_updating ? 'جاري التحديث...' : _nextActionLabel),
+                ),
+              ],
+              const SizedBox(height: 10),
+              if (_ride.status != RideStatuses.driverSelected)
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red.shade700,
+                    side: BorderSide(color: Colors.red.shade200),
+                    minimumSize: const Size(double.infinity, 52),
+                  ),
+                  onPressed: _updating ? null : _confirmCancellation,
+                  icon: const Icon(Icons.cancel_outlined),
+                  label: const Text('إلغاء الطلب'),
+                ),
             ],
           ),
         ),
@@ -380,16 +434,17 @@ class _RideProgress extends StatelessWidget {
 
   int get _currentStep {
     return switch (status) {
-      'accepted' => 0,
-      'arrived' => 1,
-      'in_progress' => 2,
+      RideStatuses.driverConfirmed => 0,
+      RideStatuses.driverOnTheWay => 1,
+      RideStatuses.driverArrived => 2,
+      RideStatuses.tripStarted => 3,
       _ => 0,
     };
   }
 
   @override
   Widget build(BuildContext context) {
-    const labels = ['تم قبول الطلب', 'الوصول للزبون', 'بدء الرحلة'];
+    const labels = ['تأكيد', 'في الطريق', 'الوصول', 'بدء الرحلة'];
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

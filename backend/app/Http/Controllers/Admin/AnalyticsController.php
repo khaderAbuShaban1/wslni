@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\RideStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\RideRequest;
@@ -13,7 +14,7 @@ class AnalyticsController extends Controller
     public function index(): View
     {
         $commission = (float) (AppSetting::query()->where('key', 'commission_percent')->value('value') ?? 15);
-        $baseQuery = RideRequest::query()->where('status', 'completed');
+        $baseQuery = RideRequest::query()->whereIn('status', [RideStatus::TripCompleted->value, RideStatus::Rated->value]);
         $driver = DB::connection()->getDriverName();
         $monthExpression = $driver === 'sqlite'
             ? 'strftime("%Y-%m", completed_at)'
@@ -31,7 +32,7 @@ class AnalyticsController extends Controller
             'averageDistance' => (clone $baseQuery)->avg('distance_km'),
             'monthly' => RideRequest::query()
                 ->selectRaw("{$monthExpression} as month, COUNT(*) as rides, SUM(platform_fee) as revenue")
-                ->where('status', 'completed')
+                ->whereIn('status', [RideStatus::TripCompleted->value, RideStatus::Rated->value])
                 ->whereNotNull('completed_at')
                 ->groupByRaw($monthExpression)
                 ->orderBy('month', 'desc')

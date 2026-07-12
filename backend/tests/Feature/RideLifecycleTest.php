@@ -12,11 +12,11 @@ class RideLifecycleTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_accepting_an_offer_locks_the_driver_and_rejects_their_other_offers(): void
+    public function test_selecting_an_offer_waits_for_driver_confirmation_and_inactivates_other_ride_offers(): void
     {
         $driver = User::factory()->create(['role' => 'driver']);
         $ride = $this->createRide();
-        $otherRide = $this->createRide();
+        $otherDriver = User::factory()->create(['role' => 'driver']);
         $offer = RideOffer::create([
             'ride_request_id' => $ride->id,
             'driver_id' => $driver->id,
@@ -24,22 +24,27 @@ class RideLifecycleTest extends TestCase
             'status' => 'pending',
         ]);
         $otherOffer = RideOffer::create([
-            'ride_request_id' => $otherRide->id,
-            'driver_id' => $driver->id,
+            'ride_request_id' => $ride->id,
+            'driver_id' => $otherDriver->id,
             'price' => 40,
             'status' => 'pending',
         ]);
 
         $this->patchJson("api/rides/{$ride->id}/offers/{$offer->id}/accept")
             ->assertOk()
-            ->assertJsonPath('ride.status', 'accepted')
+            ->assertJsonPath('ride.status', 'driver_selected')
             ->assertJsonPath('ride.driver_id', $driver->id)
             ->assertJsonPath('ride.customer.phone', $ride->customer->phone);
 
         $this->assertDatabaseHas('ride_offers', [
             'id' => $otherOffer->id,
-            'status' => 'rejected',
+            'status' => 'inactive',
         ]);
+
+        $this->patchJson("api/rides/{$ride->id}/driver-confirmation", [
+            'driver_id' => $driver->id,
+            'accepted' => true,
+        ])->assertOk()->assertJsonPath('ride.status', 'driver_confirmed');
 
         $this->getJson("api/rides?driver_id={$driver->id}&status=active")
             ->assertOk()
@@ -52,7 +57,7 @@ class RideLifecycleTest extends TestCase
         $driver = User::factory()->create(['role' => 'driver']);
         $activeRide = $this->createRide([
             'driver_id' => $driver->id,
-            'status' => 'accepted',
+            'status' => 'driver_confirmed',
             'accepted_at' => now(),
         ]);
         $requestedRide = $this->createRide();
@@ -76,11 +81,11 @@ class RideLifecycleTest extends TestCase
 
         $this->assertDatabaseHas('ride_requests', [
             'id' => $activeRide->id,
-            'status' => 'accepted',
+            'status' => 'driver_confirmed',
         ]);
         $this->assertDatabaseHas('ride_requests', [
             'id' => $requestedRide->id,
-            'status' => 'requested',
+            'status' => 'pending',
             'driver_id' => null,
         ]);
     }
@@ -90,11 +95,11 @@ class RideLifecycleTest extends TestCase
         $driver = User::factory()->create(['role' => 'driver']);
         $ride = $this->createRide([
             'driver_id' => $driver->id,
-            'status' => 'accepted',
+            'status' => 'driver_confirmed',
             'accepted_at' => now(),
         ]);
 
-        foreach (['arrived', 'in_progress', 'completed'] as $status) {
+        foreach (['driver_on_the_way', 'driver_arrived', 'trip_started', 'trip_completed'] as $status) {
             $this->patchJson("api/rides/{$ride->id}", [
                 'driver_id' => $driver->id,
                 'status' => $status,
@@ -103,7 +108,7 @@ class RideLifecycleTest extends TestCase
 
         $this->assertDatabaseHas('ride_requests', [
             'id' => $ride->id,
-            'status' => 'completed',
+            'status' => 'trip_completed',
         ]);
         $this->assertNotNull($ride->fresh()->completed_at);
 
@@ -117,22 +122,77 @@ class RideLifecycleTest extends TestCase
         $driver = User::factory()->create(['role' => 'driver']);
         $ride = $this->createRide([
             'driver_id' => $driver->id,
-            'status' => 'accepted',
+            'status' => 'driver_confirmed',
             'accepted_at' => now(),
         ]);
 
         $this->patchJson("api/rides/{$ride->id}", [
             'driver_id' => $driver->id,
-            'status' => 'completed',
+            'status' => 'trip_completed',
         ])->assertUnprocessable()
             ->assertJsonPath('message', 'لا يمكن نقل الرحلة إلى هذه الحالة الآن.');
+    }
+
+    public function test_driver_rejection_returns_ride_to_receiving_offers(): void
+    {
+        $driver = User::factory()->create(['role' => 'driver']);
+        $otherDriver = User::factory()->create(['role' => 'driver']);
+        $ride = $this->createRide(['status' => 'receiving_offers']);
+        $selected = RideOffer::create([
+            'ride_request_id' => $ride->id,
+            'driver_id' => $driver->id,
+            'price' => 35,
+            'status' => 'pending',
+        ]);
+        $other = RideOffer::create([
+            'ride_request_id' => $ride->id,
+            'driver_id' => $otherDriver->id,
+            'price' => 40,
+            'status' => 'pending',
+        ]);
+
+        $this->patchJson("api/rides/{$ride->id}/offers/{$selected->id}/accept")->assertOk();
+        $this->patchJson("api/rides/{$ride->id}/driver-confirmation", [
+            'driver_id' => $driver->id,
+            'accepted' => false,
+        ])->assertOk()->assertJsonPath('ride.status', 'receiving_offers');
+
+        $this->assertDatabaseHas('ride_requests', ['id' => $ride->id, 'driver_id' => null]);
+        $this->assertDatabaseHas('ride_offers', ['id' => $selected->id, 'status' => 'rejected']);
+        $this->assertDatabaseHas('ride_offers', ['id' => $other->id, 'status' => 'pending']);
+    }
+
+    public function test_receiving_offers_rides_remain_visible_in_open_requests(): void
+    {
+        $ride = $this->createRide(['status' => 'receiving_offers']);
+
+        $this->getJson('api/rides?status=open')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $ride->id, 'status' => 'receiving_offers']);
+    }
+
+    public function test_customer_can_rate_only_a_completed_trip(): void
+    {
+        $ride = $this->createRide(['status' => 'trip_completed']);
+
+        $this->postJson("api/rides/{$ride->id}/rating", [
+            'customer_id' => $ride->customer_id,
+            'rating' => 5,
+            'comment' => 'Great ride',
+        ])->assertOk()->assertJsonPath('ride.status', 'rated');
+
+        $this->assertDatabaseHas('ride_requests', [
+            'id' => $ride->id,
+            'rating' => 5,
+            'rating_comment' => 'Great ride',
+        ]);
     }
 
     private function createRide(array $attributes = []): RideRequest
     {
         return RideRequest::create(array_merge([
             'customer_id' => User::factory()->create(['role' => 'customer'])->id,
-            'status' => 'requested',
+            'status' => 'pending',
             'pickup_address' => 'نقطة الانطلاق',
             'pickup_lat' => 0,
             'pickup_lng' => 0,

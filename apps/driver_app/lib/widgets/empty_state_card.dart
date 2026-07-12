@@ -5,15 +5,11 @@ class _EmptyStateCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.message,
-    this.actionLabel,
-    this.onAction,
   });
 
   final IconData icon;
   final String title;
   final String message;
-  final String? actionLabel;
-  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -51,14 +47,6 @@ class _EmptyStateCard extends StatelessWidget {
               context,
             ).textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
           ),
-          if (actionLabel != null && onAction != null) ...[
-            const SizedBox(height: 14),
-            OutlinedButton.icon(
-              onPressed: onAction,
-              icon: const Icon(Icons.refresh),
-              label: Text(actionLabel!),
-            ),
-          ],
         ],
       ),
     );

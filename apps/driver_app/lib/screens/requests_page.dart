@@ -12,51 +12,12 @@ class RequestsPage extends StatefulWidget {
 class _RequestsPageState extends State<RequestsPage> {
   final _api = ApiClient();
   final _realtime = RealtimeDriverService();
-  late Future<List<RideRequestItem>> _future;
-  Stream<List<RideRequestItem>>? _rideStream;
-  Timer? _pollTimer;
-  List<RideRequestItem> _lastRides = const [];
+  late Stream<List<RideRequestItem>> _rideStream;
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
-    if (_realtime.isEnabled) {
-      _rideStream = _realtime.watchOpenRides();
-    }
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) _refresh(silent: true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _pollTimer?.cancel();
-    super.dispose();
-  }
-
-  Future<List<RideRequestItem>> _load() async {
-    final rows = await _api.getList('rides');
-    final rides = rows
-        .whereType<Map<String, dynamic>>()
-        .map(RideRequestItem.fromJson)
-        .toList();
-    _lastRides = rides;
-    return rides;
-  }
-
-  void _refresh({bool silent = false}) {
-    setState(() {
-      _future = _load();
-      if (_realtime.isEnabled) {
-        _rideStream = _realtime.watchOpenRides();
-      }
-    });
-    if (!silent) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('جاري تحديث الطلبات...')));
-    }
+    _rideStream = _realtime.watchOpenRides();
   }
 
   Future<bool> _sendOffer(
@@ -89,7 +50,6 @@ class _RequestsPageState extends State<RequestsPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('تم إرسال عرضك للزبون')));
-      _refresh();
       return true;
     } on ApiException catch (error) {
       if (mounted) {
@@ -186,92 +146,32 @@ class _RequestsPageState extends State<RequestsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<RideRequestItem>>(
-      future: _future,
-      initialData: _lastRides,
-      builder: (context, databaseSnapshot) {
-        if (databaseSnapshot.connectionState == ConnectionState.waiting &&
-            _lastRides.isEmpty) {
+    return StreamBuilder<List<RideRequestItem>>(
+      stream: _rideStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const _SkeletonList();
         }
-
-        if (databaseSnapshot.hasError && _rideStream == null) {
-          return Center(
-            child: TextButton.icon(
-              onPressed: () => _refresh(),
-              icon: const Icon(Icons.refresh),
-              label: const Text('تعذر تحميل الطلبات، حاول مرة أخرى'),
-            ),
+        if (snapshot.hasError) {
+          return const _EmptyStateCard(
+            icon: Icons.cloud_off_outlined,
+            title: 'انقطع الاتصال المباشر',
+            message: 'تحقق من اتصال Firebase ثم أعد فتح التطبيق.',
           );
         }
-
-        final databaseRides =
-            databaseSnapshot.data ?? const <RideRequestItem>[];
-
-        if (_rideStream == null) {
-          return _RequestsList(
-            rides: databaseRides,
-            onRefresh: () => _refresh(),
-            onPullRefresh: () async => _refresh(silent: true),
-            onOffer: _openOfferSheet,
-          );
-        }
-
-        return StreamBuilder<List<RideRequestItem>>(
-          stream: _rideStream,
-          initialData: databaseRides,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting &&
-                databaseRides.isEmpty) {
-              return const _SkeletonList();
-            }
-            if (snapshot.hasError && databaseRides.isEmpty) {
-              return Center(
-                child: TextButton.icon(
-                  onPressed: () => _refresh(),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('تعذر تحميل الطلبات، حاول مرة أخرى'),
-                ),
-              );
-            }
-            return _RequestsList(
-              rides: _mergeRides(databaseRides, snapshot.data ?? const []),
-              onRefresh: () => _refresh(),
-              onPullRefresh: () async => _refresh(silent: true),
-              onOffer: _openOfferSheet,
-            );
-          },
+        return _RequestsList(
+          rides: snapshot.data ?? const <RideRequestItem>[],
+          onOffer: _openOfferSheet,
         );
       },
     );
   }
-
-  List<RideRequestItem> _mergeRides(
-    List<RideRequestItem> databaseRides,
-    List<RideRequestItem> realtimeRides,
-  ) {
-    final byId = <int, RideRequestItem>{};
-    for (final ride in databaseRides) {
-      byId[ride.id] = ride;
-    }
-    for (final ride in realtimeRides) {
-      byId[ride.id] = ride;
-    }
-    return byId.values.toList()..sort((a, b) => b.id.compareTo(a.id));
-  }
 }
 
 class _RequestsList extends StatelessWidget {
-  const _RequestsList({
-    required this.rides,
-    required this.onRefresh,
-    required this.onOffer,
-    this.onPullRefresh,
-  });
+  const _RequestsList({required this.rides, required this.onOffer});
 
   final List<RideRequestItem> rides;
-  final VoidCallback onRefresh;
-  final Future<void> Function()? onPullRefresh;
   final void Function(RideRequestItem ride) onOffer;
 
   @override
@@ -280,48 +180,32 @@ class _RequestsList extends StatelessWidget {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: _EmptyStateCard(
+          child: const _EmptyStateCard(
             icon: Icons.local_taxi_outlined,
             title: 'لا توجد طلبات حاليًا',
             message: 'عندما يرسل الزبائن طلبات جديدة ستظهر هنا فورًا.',
-            actionLabel: 'تحديث',
-            onAction: onRefresh,
           ),
         ),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: onPullRefresh ?? () async => onRefresh(),
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: rides.length + 1,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            return Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'طلبات الزبائن',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                ),
-                IconButton.filledTonal(
-                  tooltip: 'تحديث',
-                  onPressed: onRefresh,
-                  icon: const Icon(Icons.refresh),
-                ),
-              ],
-            );
-          }
-          final ride = rides[index - 1];
-          return _RideRequestCard(ride: ride, onOffer: () => onOffer(ride));
-        },
-      ),
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: rides.length + 1,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Text(
+            'طلبات الزبائن',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w900,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          );
+        }
+        final ride = rides[index - 1];
+        return _RideRequestCard(ride: ride, onOffer: () => onOffer(ride));
+      },
     );
   }
 }

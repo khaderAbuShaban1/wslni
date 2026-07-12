@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\RideStatus;
 use App\Http\Controllers\Controller;
 use App\Models\DriverProfile;
 use App\Models\RideRequest;
@@ -36,9 +37,9 @@ class DashboardController extends Controller
             'drivers' => User::query()->where('role', 'driver')->count(),
             'customers' => User::query()->where('role', 'customer')->count(),
             'rides' => RideRequest::query()->count(),
-            'activeRides' => RideRequest::query()->whereIn('status', ['requested', 'accepted', 'arrived', 'in_progress'])->count(),
+            'activeRides' => RideRequest::query()->whereIn('status', RideStatus::activeValues())->count(),
             'onlineDrivers' => DriverProfile::query()->where('is_online', true)->count(),
-            'unassignedRides' => RideRequest::query()->whereNull('driver_id')->whereIn('status', ['requested', 'accepted'])->count(),
+            'unassignedRides' => RideRequest::query()->whereNull('driver_id')->whereIn('status', [RideStatus::Pending->value, RideStatus::ReceivingOffers->value])->count(),
             'statusCounts' => $statusCounts,
             'recentRides' => $ridesQuery->latest('requested_at')->limit(8)->get(),
             'activeStatus' => $status ?: 'all',

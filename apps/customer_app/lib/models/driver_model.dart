@@ -7,6 +7,8 @@ class DriverOffer {
     required this.car,
     required this.price,
     required this.eta,
+    this.phone = '',
+    this.vehiclePlate = '',
   });
 
   final int id;
@@ -16,4 +18,6 @@ class DriverOffer {
   final String car;
   final String price;
   final String eta;
+  final String phone;
+  final String vehiclePlate;
 }

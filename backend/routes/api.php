@@ -23,6 +23,8 @@ Route::apiResource('rides', RideController::class);
 Route::post('rides/{ride}/offers', [RideOfferController::class, 'store']);
 Route::patch('rides/{ride}/offers/{offer}/accept', [RideOfferController::class, 'accept']);
 Route::patch('rides/{ride}/drivers/{driver}/accept', [RideOfferController::class, 'acceptDriverOffer']);
+Route::patch('rides/{ride}/driver-confirmation', [RideController::class, 'driverConfirmation']);
+Route::post('rides/{ride}/rating', [RideController::class, 'rate']);
 Route::get('drivers/available', [DriverController::class, 'available']);
 Route::patch('drivers/{driver}/status', [DriverController::class, 'updateStatus']);
 Route::get('customers/me', [CustomerController::class, 'me']);

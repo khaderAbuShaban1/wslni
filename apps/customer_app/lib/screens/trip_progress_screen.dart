@@ -1,58 +1,108 @@
 import 'package:flutter/material.dart';
 
 import '../models/ride_model.dart';
+import '../services/realtime_ride_service.dart';
 import '../utils/constants.dart';
 import '../widgets/app_scaffold.dart';
-import '../widgets/custom_button.dart';
 import '../widgets/premium_card.dart';
-import '../widgets/progress_widgets.dart';
 import '../widgets/ride_card.dart';
-import 'payment_screen.dart';
+import 'trip_completed_screen.dart';
+import 'driver_offers_screen.dart';
 
 class TripProgressScreen extends StatelessWidget {
-  const TripProgressScreen({required this.draft, super.key});
+  TripProgressScreen({required this.draft, super.key});
 
   final RideDraft draft;
+  final RealtimeRideService _realtime = RealtimeRideService();
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'تقدم الرحلة',
-      child: Column(
-        children: [
-          PremiumCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'الرحلة قيد التنفيذ',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+    return StreamBuilder<RideDraft?>(
+      stream: _realtime.watchRide(draft.id),
+      initialData: draft,
+      builder: (context, snapshot) {
+        final ride = snapshot.data ?? draft;
+        return AppScaffold(
+          title: 'حالة الرحلة',
+          child: Column(
+            children: [
+              PremiumCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ride.statusLabel,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _statusMessage(ride.status),
+                      style: const TextStyle(color: mutedText),
+                    ),
+                    if (ride.driverName.isNotEmpty) ...[
+                      const Divider(height: 28),
+                      SummaryRow(label: 'السائق', value: ride.driverName),
+                      SummaryRow(
+                        label: 'الهاتف',
+                        value: ride.driverPhone.isEmpty
+                            ? 'غير متوفر'
+                            : ride.driverPhone,
+                      ),
+                      SummaryRow(
+                        label: 'السيارة',
+                        value: [
+                          ride.driverCar,
+                          ride.driverPlate,
+                        ].where((value) => value.isNotEmpty).join(' - '),
+                      ),
+                    ],
+                    const Divider(height: 28),
+                    SummaryRow(label: 'من', value: ride.pickup),
+                    SummaryRow(label: 'إلى', value: ride.destination),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'سيتم تحديث حالة الرحلة عند توفر بيانات السائق.',
-                  style: TextStyle(color: mutedText),
+              ),
+              if (ride.status == RideStatuses.tripCompleted) ...[
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (_) => TripCompletedScreen(draft: ride),
+                    ),
+                  ),
+                  icon: const Icon(Icons.star_outline_rounded),
+                  label: const Text('عرض الملخص وتقييم السائق'),
                 ),
-                const SizedBox(height: 24),
-                const RideProgressIndicator(progress: 0),
-                const SizedBox(height: 22),
-                SummaryRow(label: 'من', value: draft.pickup),
-                SummaryRow(label: 'إلى', value: draft.destination),
               ],
-            ),
+              if (ride.status == RideStatuses.receivingOffers) ...[
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: () => Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (_) => DriverOffersScreen(draft: ride),
+                    ),
+                  ),
+                  icon: const Icon(Icons.local_offer_outlined),
+                  label: const Text('اختيار سائق آخر'),
+                ),
+              ],
+            ],
           ),
-          const SizedBox(height: 24),
-          CustomButton(
-            label: 'إنهاء الرحلة والدفع',
-            icon: Icons.payments_outlined,
-            onPressed: () => Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => PaymentScreen(draft: draft)),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
+
+  String _statusMessage(String status) => switch (status) {
+    RideStatuses.driverSelected => 'تم إرسال طلب تأكيد إلى السائق.',
+    RideStatuses.driverConfirmed => 'أكد السائق الرحلة وسيبدأ التحرك قريبًا.',
+    RideStatuses.driverOnTheWay => 'السائق في الطريق إلى نقطة الانطلاق.',
+    RideStatuses.driverArrived => 'وصل السائق. يرجى التوجه إلى المركبة.',
+    RideStatuses.tripStarted => 'الرحلة قيد التنفيذ.',
+    RideStatuses.tripCompleted => 'اكتملت الرحلة. يمكنك الآن تقييم السائق.',
+    RideStatuses.receivingOffers => 'رفض السائق الطلب. يمكنك اختيار عرض آخر.',
+    _ => 'يتم تحديث حالة الرحلة تلقائيًا.',
+  };
 }

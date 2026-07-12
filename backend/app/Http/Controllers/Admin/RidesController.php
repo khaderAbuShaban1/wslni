@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\RideStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use App\Models\RideRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class RidesController extends Controller
@@ -34,19 +36,26 @@ class RidesController extends Controller
             'rides' => $rides,
             'search' => $search,
             'status' => $status ?: 'all',
-            'requestedCount' => RideRequest::query()->where('status', 'requested')->count(),
-            'inProgressCount' => RideRequest::query()->where('status', 'in_progress')->count(),
-            'completedCount' => RideRequest::query()->where('status', 'completed')->count(),
+            'requestedCount' => RideRequest::query()->whereIn('status', [RideStatus::Pending->value, RideStatus::ReceivingOffers->value])->count(),
+            'inProgressCount' => RideRequest::query()->where('status', RideStatus::TripStarted->value)->count(),
+            'completedCount' => RideRequest::query()->whereIn('status', [RideStatus::TripCompleted->value, RideStatus::Rated->value])->count(),
         ]);
     }
 
     public function updateStatus(Request $request, RideRequest $rideRequest): RedirectResponse
     {
         $data = $request->validate([
-            'status' => ['required', 'in:requested,accepted,arrived,in_progress,completed,cancelled'],
+            'status' => ['required', Rule::enum(RideStatus::class)],
             'actual_fare' => ['nullable', 'numeric', 'min:0'],
             'distance_km' => ['nullable', 'numeric', 'min:0'],
         ]);
+
+        $currentStatus = RideStatus::tryFrom($rideRequest->status);
+        $requestedStatus = RideStatus::from($data['status']);
+        $allowed = $requestedStatus === RideStatus::Cancelled || $currentStatus?->next() === $requestedStatus;
+        if (! $allowed) {
+            return back()->withErrors(['status' => 'لا يمكن تخطي مراحل الرحلة.']);
+        }
 
         $commissionPercent = (float) (AppSetting::query()->where('key', 'commission_percent')->value('value') ?? 15);
         $actualFare = $data['actual_fare'] ?? $rideRequest->fare_estimate;
@@ -58,8 +67,8 @@ class RidesController extends Controller
             'distance_km' => $data['distance_km'] ?? $rideRequest->distance_km,
             'commission_percent' => $commissionPercent,
             'platform_fee' => $platformFee,
-            'accepted_at' => $data['status'] === 'accepted' && $rideRequest->accepted_at === null ? now() : $rideRequest->accepted_at,
-            'completed_at' => $data['status'] === 'completed' ? now() : $rideRequest->completed_at,
+            'accepted_at' => $requestedStatus === RideStatus::DriverConfirmed && $rideRequest->accepted_at === null ? now() : $rideRequest->accepted_at,
+            'completed_at' => $requestedStatus === RideStatus::TripCompleted ? now() : $rideRequest->completed_at,
         ])->save();
 
         return back()->with('status', 'تم تحديث الرحلة بنجاح.');

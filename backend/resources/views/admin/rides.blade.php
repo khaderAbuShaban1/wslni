@@ -7,7 +7,7 @@
             <p class="subtitle">راقب الرحلات النشطة، وراجع الرحلات المكتملة، وحدّث الحالة مباشرة.</p>
         </div>
         <div class="topline">
-            @foreach (['all' => 'الكل', 'requested' => 'مطلوبة', 'accepted' => 'مقبولة', 'in_progress' => 'قيد التنفيذ', 'completed' => 'مكتملة'] as $key => $label)
+            @foreach (['all' => 'الكل', 'pending' => 'معلقة', 'receiving_offers' => 'تستقبل عروض', 'driver_selected' => 'تم اختيار سائق', 'driver_confirmed' => 'مؤكدة', 'driver_on_the_way' => 'السائق في الطريق', 'driver_arrived' => 'وصل السائق', 'trip_started' => 'قيد التنفيذ', 'trip_completed' => 'مكتملة', 'rated' => 'مقيّمة'] as $key => $label)
                 <a class="pill {{ $status === $key ? 'active' : '' }}" href="{{ route('admin.rides.index', ['status' => $key, 'search' => $search]) }}">{{ $label }}</a>
             @endforeach
         </div>
@@ -49,11 +49,15 @@
                 <tbody>
                     @php
                         $statusLabels = [
-                            'requested' => 'مطلوبة',
-                            'accepted' => 'مقبولة',
-                            'arrived' => 'وصل',
-                            'in_progress' => 'قيد التنفيذ',
-                            'completed' => 'مكتملة',
+                            'pending' => 'معلقة',
+                            'receiving_offers' => 'تستقبل عروض',
+                            'driver_selected' => 'تم اختيار سائق',
+                            'driver_confirmed' => 'مؤكدة',
+                            'driver_on_the_way' => 'السائق في الطريق',
+                            'driver_arrived' => 'وصل السائق',
+                            'trip_started' => 'قيد التنفيذ',
+                            'trip_completed' => 'مكتملة',
+                            'rated' => 'مقيّمة',
                             'cancelled' => 'ملغاة',
                         ];
                     @endphp
@@ -79,7 +83,7 @@
                                     <div class="form-row">
                                         <label>الحالة</label>
                                         <select name="status" class="select">
-                                            @foreach (['requested', 'accepted', 'arrived', 'in_progress', 'completed', 'cancelled'] as $option)
+                                            @foreach (['pending', 'receiving_offers', 'driver_selected', 'driver_confirmed', 'driver_on_the_way', 'driver_arrived', 'trip_started', 'trip_completed', 'rated', 'cancelled'] as $option)
                                                 <option value="{{ $option }}" @selected($ride->status === $option)>{{ $statusLabels[$option] ?? $option }}</option>
                                             @endforeach
                                         </select>

@@ -8,7 +8,7 @@ class RideRequestItem {
     required this.customerName,
     required this.notes,
     this.customerPhone = '',
-    this.status = 'requested',
+    this.status = RideStatuses.pending,
     this.actualFare = '',
     this.offers = const [],
   });
@@ -23,16 +23,17 @@ class RideRequestItem {
   final String actualFare;
   final List<DriverRideOffer> offers;
 
-  bool get isActive =>
-      const {'accepted', 'arrived', 'in_progress'}.contains(status);
+  bool get isActive => RideStatuses.activeForDriver.contains(status);
 
   String get statusLabel {
     return switch (status) {
-      'accepted' => 'تم قبول الطلب',
-      'arrived' => 'وصل السائق إلى الزبون',
-      'in_progress' => 'الرحلة قيد التنفيذ',
-      'completed' => 'رحلة مكتملة',
-      'cancelled' => 'رحلة ملغاة',
+      RideStatuses.driverSelected => 'بانتظار تأكيدك',
+      RideStatuses.driverConfirmed => 'تم تأكيد الرحلة',
+      RideStatuses.driverOnTheWay => 'في الطريق إلى الزبون',
+      RideStatuses.driverArrived => 'وصلت إلى الزبون',
+      RideStatuses.tripStarted => 'الرحلة قيد التنفيذ',
+      RideStatuses.tripCompleted => 'رحلة مكتملة',
+      RideStatuses.cancelled => 'رحلة ملغاة',
       _ => 'بانتظار القبول',
     };
   }
@@ -57,7 +58,7 @@ class RideRequestItem {
       customerName: customerMap['name']?.toString() ?? 'زبون',
       customerPhone: customerMap['phone']?.toString() ?? '',
       notes: json['notes']?.toString() ?? '',
-      status: json['status']?.toString() ?? 'requested',
+      status: json['status']?.toString() ?? RideStatuses.pending,
       actualFare: json['actual_fare']?.toString() ?? '',
       offers: DriverRideOffer.listFrom(json['offers']),
     );
@@ -78,14 +79,25 @@ class DriverRideOffer {
   final String vehicle;
 
   factory DriverRideOffer.fromMap(Map map) {
+    final driver = map['driver'];
+    final driverMap = driver is Map ? driver : const {};
+    final profile = driverMap['driver_profile'];
+    final profileMap = profile is Map ? profile : const {};
+    final realtimeVehicle = map['vehicle']?.toString().trim() ?? '';
+    final profileVehicle = profileMap['vehicle_type']?.toString().trim() ?? '';
+
     return DriverRideOffer(
       driverId: int.tryParse(map['driver_id']?.toString() ?? '') ?? 0,
       driverName:
           map['driver_name']?.toString() ??
-          map['driver']?['name']?.toString() ??
+          driverMap['name']?.toString() ??
           'سائق',
       price: map['price']?.toString() ?? '0',
-      vehicle: map['vehicle']?.toString() ?? 'سيارة',
+      vehicle: realtimeVehicle.isNotEmpty
+          ? realtimeVehicle
+          : profileVehicle.isNotEmpty
+          ? profileVehicle
+          : 'سيارة',
     );
   }
 

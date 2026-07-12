@@ -15,13 +15,11 @@ class RealtimeDriverService {
 
     return _ridesRef.onValue.map((event) {
       final value = event.snapshot.value;
-      if (value is! Map) return <RideRequestItem>[];
 
       final rides = <RideRequestItem>[];
-      for (final raw in value.values) {
-        if (raw is! Map) continue;
-        final status = raw['status']?.toString() ?? 'open';
-        if (status != 'open' && status != 'requested') continue;
+      for (final raw in _rows(value)) {
+        final status = raw['status']?.toString() ?? RideStatuses.pending;
+        if (!RideStatuses.openForOffers.contains(status)) continue;
         rides.add(_rideFromRaw(raw));
       }
       rides.sort((a, b) => b.id.compareTo(a.id));
@@ -34,14 +32,12 @@ class RealtimeDriverService {
 
     return _ridesRef.onValue.map((event) {
       final value = event.snapshot.value;
-      if (value is! Map) return <RideRequestItem>[];
 
       final rides = <RideRequestItem>[];
-      for (final raw in value.values) {
-        if (raw is! Map) continue;
+      for (final raw in _rows(value)) {
         final status = raw['status']?.toString() ?? '';
         final rawDriverId = int.tryParse(raw['driver_id']?.toString() ?? '');
-        if (!const {'accepted', 'arrived', 'in_progress'}.contains(status) ||
+        if (!RideStatuses.activeForDriver.contains(status) ||
             rawDriverId != driverId) {
           continue;
         }
@@ -54,6 +50,21 @@ class RealtimeDriverService {
 
   Stream<List<RideRequestItem>> watchAcceptedRides(int driverId) {
     return watchActiveRides(driverId);
+  }
+
+  Stream<List<RideRequestItem>> watchDriverRides(int driverId) {
+    if (!isEnabled) return const Stream.empty();
+
+    return _ridesRef.onValue.map((event) {
+      final value = event.snapshot.value;
+      final rides = <RideRequestItem>[];
+      for (final raw in _rows(value)) {
+        final rawDriverId = int.tryParse(raw['driver_id']?.toString() ?? '');
+        if (rawDriverId == driverId) rides.add(_rideFromRaw(raw));
+      }
+      rides.sort((a, b) => b.id.compareTo(a.id));
+      return rides;
+    });
   }
 
   Future<void> sendOffer({
@@ -78,6 +89,12 @@ class RealtimeDriverService {
       'rating': '5.0',
       'created_at': ServerValue.timestamp,
     });
+    await _ridesRef.child('${ride.id}/status').runTransaction((value) {
+      if (value == RideStatuses.pending) {
+        return Transaction.success(RideStatuses.receivingOffers);
+      }
+      return Transaction.abort();
+    });
   }
 
   Future<void> updateRideStatus({
@@ -90,17 +107,50 @@ class RealtimeDriverService {
       'status': status,
       'updated_at': ServerValue.timestamp,
     };
-    if (status == 'arrived') updates['arrived_at'] = ServerValue.timestamp;
-    if (status == 'in_progress') {
+    if (status == RideStatuses.driverArrived) {
+      updates['arrived_at'] = ServerValue.timestamp;
+    }
+    if (status == RideStatuses.tripStarted) {
       updates['started_at'] = ServerValue.timestamp;
     }
-    if (status == 'completed') {
+    if (status == RideStatuses.tripCompleted) {
       updates['completed_at'] = ServerValue.timestamp;
     }
-    if (status == 'cancelled') {
+    if (status == RideStatuses.cancelled) {
       updates['cancelled_at'] = ServerValue.timestamp;
     }
 
+    await _ridesRef.child(rideId.toString()).update(updates);
+  }
+
+  Future<void> respondToSelection({
+    required int rideId,
+    required int driverId,
+    required bool accepted,
+  }) async {
+    if (!isEnabled || rideId == 0 || driverId == 0) return;
+
+    final updates = <String, Object?>{
+      'status': accepted
+          ? RideStatuses.driverConfirmed
+          : RideStatuses.receivingOffers,
+      'updated_at': ServerValue.timestamp,
+      'offers/$driverId/status': accepted ? 'accepted' : 'rejected',
+    };
+    if (accepted) {
+      updates['confirmed_at'] = ServerValue.timestamp;
+    } else {
+      updates['driver_id'] = null;
+      final snapshot = await _ridesRef.child('$rideId/offers').get();
+      final offers = snapshot.value;
+      if (offers is Map) {
+        for (final key in offers.keys) {
+          if (key.toString() != driverId.toString()) {
+            updates['offers/${key.toString()}/status'] = 'pending';
+          }
+        }
+      }
+    }
     await _ridesRef.child(rideId.toString()).update(updates);
   }
 
@@ -112,13 +162,12 @@ class RealtimeDriverService {
 
     final snapshot = await _ridesRef.get();
     final value = snapshot.value;
-    if (value is! Map) return;
 
     final updates = <String, Object?>{};
-    for (final entry in value.entries) {
-      final rideId = int.tryParse(entry.key.toString());
-      final rawRide = entry.value;
-      if (rideId == null || rideId == activeRideId || rawRide is! Map) {
+    for (final entry in _indexedRows(value)) {
+      final rideId = entry.$1;
+      final rawRide = entry.$2;
+      if (rideId == activeRideId) {
         continue;
       }
       final offers = rawRide['offers'];
@@ -138,9 +187,35 @@ class RealtimeDriverService {
       customerName: raw['customer_name']?.toString() ?? 'زبون',
       customerPhone: raw['customer_phone']?.toString() ?? '',
       notes: raw['notes']?.toString() ?? '',
-      status: raw['status']?.toString() ?? 'requested',
+      status: raw['status']?.toString() ?? RideStatuses.pending,
       actualFare: raw['actual_fare']?.toString() ?? '',
       offers: DriverRideOffer.listFrom(raw['offers']),
     );
+  }
+
+  Iterable<Map> _rows(Object? value) sync* {
+    if (value is Map) {
+      for (final row in value.values) {
+        if (row is Map) yield row;
+      }
+    } else if (value is List) {
+      for (final row in value) {
+        if (row is Map) yield row;
+      }
+    }
+  }
+
+  Iterable<(int, Map)> _indexedRows(Object? value) sync* {
+    if (value is Map) {
+      for (final entry in value.entries) {
+        final id = int.tryParse(entry.key.toString());
+        if (id != null && entry.value is Map) yield (id, entry.value as Map);
+      }
+    } else if (value is List) {
+      for (var index = 0; index < value.length; index++) {
+        final row = value[index];
+        if (row is Map) yield (index, row);
+      }
+    }
   }
 }

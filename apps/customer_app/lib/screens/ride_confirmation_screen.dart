@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../models/driver_model.dart';
 import '../models/ride_model.dart';
+import '../services/realtime_ride_service.dart';
+import '../utils/constants.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/premium_card.dart';
 import '../widgets/ride_card.dart';
+import 'driver_offers_screen.dart';
 import 'trip_progress_screen.dart';
 
 class RideConfirmationScreen extends StatelessWidget {
@@ -20,14 +23,19 @@ class RideConfirmationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'تم العثور على سائق',
-      child: Column(
-        children: [
-          PremiumCard(
-            child: Column(
-              children: [
-                Row(
+    return StreamBuilder<RideDraft?>(
+      stream: RealtimeRideService().watchRide(draft.id),
+      initialData: draft,
+      builder: (context, snapshot) {
+        final ride = snapshot.data ?? draft;
+        final rejected = ride.status == RideStatuses.receivingOffers;
+
+        return AppScaffold(
+          title: rejected ? 'اختر سائقًا آخر' : 'متابعة تأكيد السائق',
+          child: Column(
+            children: [
+              PremiumCard(
+                child: Column(
                   children: [
                     CircleAvatar(
                       radius: 34,
@@ -40,75 +48,62 @@ class RideConfirmationScreen extends StatelessWidget {
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            offer.name,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w900),
-                          ),
-                          const SizedBox(height: 5),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.star_rounded,
-                                color: Color(0xFFF59E0B),
-                                size: 20,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(offer.rating),
-                            ],
-                          ),
-                        ],
+                    const SizedBox(height: 12),
+                    Text(
+                      ride.driverName.isEmpty ? offer.name : ride.driverName,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Text(
+                      ride.statusLabel,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const Divider(height: 28),
+                    SummaryRow(
+                      label: 'نوع المركبة',
+                      value: ride.driverCar.isEmpty
+                          ? offer.car
+                          : ride.driverCar,
+                    ),
+                    SummaryRow(
+                      label: 'رقم السيارة',
+                      value: ride.driverPlate.isEmpty
+                          ? offer.vehiclePlate
+                          : ride.driverPlate,
+                    ),
+                    SummaryRow(
+                      label: 'الهاتف',
+                      value: ride.driverPhone.isEmpty
+                          ? offer.phone
+                          : ride.driverPhone,
+                    ),
+                    SummaryRow(label: 'السعر', value: offer.price),
                   ],
                 ),
-                const SizedBox(height: 18),
-                SummaryRow(label: 'نوع المركبة', value: offer.car),
-                SummaryRow(label: 'الوصول المتوقع', value: offer.eta),
-                SummaryRow(
-                  label: 'السعر المتفق عليه',
-                  value: '${offer.price} دولار',
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedActionButton(
-                        icon: Icons.call_rounded,
-                        label: 'اتصال',
-                        onPressed: () {},
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedActionButton(
-                        icon: Icons.chat_bubble_outline_rounded,
-                        label: 'محادثة',
-                        onPressed: () {},
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          CustomButton(
-            label: 'متابعة الرحلة',
-            icon: Icons.timeline_rounded,
-            onPressed: () => Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (_) => TripProgressScreen(draft: draft),
               ),
-            ),
+              const SizedBox(height: 24),
+              CustomButton(
+                label: rejected ? 'مشاهدة العروض المتاحة' : 'متابعة الرحلة',
+                icon: rejected
+                    ? Icons.local_offer_outlined
+                    : Icons.timeline_rounded,
+                onPressed: () => Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => rejected
+                        ? DriverOffersScreen(draft: ride)
+                        : TripProgressScreen(draft: ride),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

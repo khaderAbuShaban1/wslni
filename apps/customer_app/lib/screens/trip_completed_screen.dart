@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/ride_model.dart';
+import '../services/api_client.dart';
+import '../services/realtime_ride_service.dart';
 import '../utils/constants.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/custom_button.dart';
@@ -17,6 +19,38 @@ class TripCompletedScreen extends StatefulWidget {
 
 class _TripCompletedScreenState extends State<TripCompletedScreen> {
   int _rating = 5;
+  final _comment = TextEditingController();
+  final _api = ApiClient();
+  final _realtime = RealtimeRideService();
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _comment.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitRating() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      await _api.post('rides/${widget.draft.id}/rating', {
+        'customer_id': widget.draft.customerId,
+        'rating': _rating,
+        'comment': _comment.text.trim().isEmpty ? null : _comment.text.trim(),
+      });
+      await _realtime.markRated(widget.draft.id, _rating, _comment.text.trim());
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,15 +105,23 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _comment,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'تعليق اختياري',
+                    prefixIcon: Icon(Icons.chat_bubble_outline),
+                  ),
+                ),
               ],
             ),
           ),
           const SizedBox(height: 24),
           CustomButton(
-            label: 'العودة للرئيسية',
-            icon: Icons.home_rounded,
-            onPressed: () =>
-                Navigator.of(context).popUntil((route) => route.isFirst),
+            label: _saving ? 'جاري حفظ التقييم...' : 'إرسال التقييم',
+            icon: Icons.star_rounded,
+            onPressed: _saving ? null : _submitRating,
           ),
         ],
       ),

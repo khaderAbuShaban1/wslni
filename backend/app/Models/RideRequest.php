@@ -27,6 +27,8 @@ class RideRequest extends Model
         'requested_at',
         'accepted_at',
         'completed_at',
+        'rating',
+        'rating_comment',
     ];
 
     protected function casts(): array
