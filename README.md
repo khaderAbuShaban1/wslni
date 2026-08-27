@@ -6,6 +6,26 @@
 - `apps/customer_app/` = تطبيق الكستمر Flutter
 - `apps/driver_app/` = تطبيق السائق Flutter
 
+## معرض الواجهات
+
+استعراض للواجهات الرئيسية لمنصة **وصلني**، بما يشمل تطبيق العميل وتطبيق السائق ولوحة الإدارة.
+
+### المنصة ولوحة الإدارة
+
+![نظرة عامة على منصة وصلني](docs/images/wslni-platform.png)
+
+![لوحة الإدارة وإحصاءات التشغيل](docs/images/admin-platform.png)
+
+![تفاصيل إحصاءات لوحة الإدارة](docs/images/admin-statistics.png)
+
+### تطبيق العميل
+
+![تجربة العميل في تطبيق وصلني](docs/images/customer-app.png)
+
+### تطبيق السائق
+
+![شاشات تطبيق السائق](docs/images/driver-app.png)
+
 ## تشغيل الـ backend
 
 ```bash
