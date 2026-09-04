@@ -55,9 +55,9 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: true,
       child: AppScaffold(
-        showBack: false,
+        showBack: true,
         title: 'اكتملت الرحلة',
         child: Column(
           children: [

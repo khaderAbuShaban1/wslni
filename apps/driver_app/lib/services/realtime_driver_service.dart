@@ -92,27 +92,8 @@ class RealtimeDriverService {
     required String price,
     required String notes,
   }) async {
-    if (!isEnabled || ride.id == 0) return;
-
-    await _ridesRef.child('${ride.id}/offers/${driver.id}').set({
-      'offer_id': offerId,
-      'driver_id': driver.id,
-      'driver_name': driver.name,
-      'driver_phone': driver.phone,
-      'vehicle': driver.vehicleType.isEmpty ? 'سيارة' : driver.vehicleType,
-      'vehicle_plate': driver.vehiclePlate,
-      'price': price,
-      'notes': notes,
-      'eta': 'قريبًا',
-      'rating': '5.0',
-      'created_at': ServerValue.timestamp,
-    });
-    await _ridesRef.child('${ride.id}/status').runTransaction((value) {
-      if (value == RideStatuses.pending) {
-        return Transaction.success(RideStatuses.receivingOffers);
-      }
-      return Transaction.abort();
-    });
+    // Offers are saved in MySQL by the API, then mirrored by Laravel.
+    return;
   }
 
   Future<void> updateRideStatus({
@@ -121,28 +102,8 @@ class RealtimeDriverService {
     String? actualFare,
     String? platformFee,
   }) async {
-    if (!isEnabled || rideId == 0) return;
-
-    final updates = <String, Object?>{
-      'status': status,
-      'updated_at': ServerValue.timestamp,
-    };
-    if (status == RideStatuses.driverArrived) {
-      updates['arrived_at'] = ServerValue.timestamp;
-    }
-    if (status == RideStatuses.tripStarted) {
-      updates['started_at'] = ServerValue.timestamp;
-    }
-    if (status == RideStatuses.tripCompleted) {
-      updates['completed_at'] = ServerValue.timestamp;
-      if (actualFare != null) updates['actual_fare'] = actualFare;
-      if (platformFee != null) updates['platform_fee'] = platformFee;
-    }
-    if (status == RideStatuses.cancelled) {
-      updates['cancelled_at'] = ServerValue.timestamp;
-    }
-
-    await _ridesRef.child(rideId.toString()).update(updates);
+    // Status updates are committed by Laravel before Firebase is updated.
+    return;
   }
 
   Future<void> respondToSelection({
@@ -150,55 +111,16 @@ class RealtimeDriverService {
     required int driverId,
     required bool accepted,
   }) async {
-    if (!isEnabled || rideId == 0 || driverId == 0) return;
-
-    final updates = <String, Object?>{
-      'status': accepted
-          ? RideStatuses.driverConfirmed
-          : RideStatuses.receivingOffers,
-      'updated_at': ServerValue.timestamp,
-      'offers/$driverId/status': accepted ? 'accepted' : 'rejected',
-    };
-    if (accepted) {
-      updates['confirmed_at'] = ServerValue.timestamp;
-    } else {
-      updates['driver_id'] = null;
-      final snapshot = await _ridesRef.child('$rideId/offers').get();
-      final offers = snapshot.value;
-      if (offers is Map) {
-        for (final key in offers.keys) {
-          if (key.toString() != driverId.toString()) {
-            updates['offers/${key.toString()}/status'] = 'pending';
-          }
-        }
-      }
-    }
-    await _ridesRef.child(rideId.toString()).update(updates);
+    // Confirmation is committed by the API and mirrored by Laravel.
+    return;
   }
 
   Future<void> withdrawOtherOffers({
     required int driverId,
     required int activeRideId,
   }) async {
-    if (!isEnabled || driverId == 0) return;
-
-    final snapshot = await _ridesRef.get();
-    final value = snapshot.value;
-
-    final updates = <String, Object?>{};
-    for (final entry in _indexedRows(value)) {
-      final rideId = entry.$1;
-      final rawRide = entry.$2;
-      if (rideId == activeRideId) {
-        continue;
-      }
-      final offers = rawRide['offers'];
-      if (offers is Map && offers.containsKey(driverId.toString())) {
-        updates['$rideId/offers/$driverId/status'] = 'rejected';
-      }
-    }
-
-    if (updates.isNotEmpty) await _ridesRef.update(updates);
+    // Laravel enforces one active ride and publishes the resulting offer state.
+    return;
   }
 
   RideRequestItem _rideFromRaw(Map raw) {

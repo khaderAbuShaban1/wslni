@@ -10,6 +10,7 @@ class DriverHomePage extends StatefulWidget {
 }
 
 class _DriverHomePageState extends State<DriverHomePage> {
+  final _api = ApiClient();
   final _realtime = RealtimeDriverService();
   int _index = 0;
   bool _online = true;
@@ -17,6 +18,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
   int? _withdrawnOffersForRideId;
   RideRequestItem? _activeRide;
   StreamSubscription<List<RideRequestItem>>? _activeRideSubscription;
+  Timer? _activeRideRefreshTimer;
 
   late final List<Widget> _pages = [
     RequestsPage(user: widget.user),
@@ -28,12 +30,17 @@ class _DriverHomePageState extends State<DriverHomePage> {
   @override
   void initState() {
     super.initState();
+    unawaited(_loadActiveRideFromApi());
+    _activeRideRefreshTimer = Timer.periodic(
+      const Duration(seconds: 12),
+      (_) => unawaited(_loadActiveRideFromApi()),
+    );
     if (_realtime.isEnabled) {
       _activeRideSubscription = _realtime
           .watchActiveRides(widget.user.id)
           .listen((rides) {
             if (!mounted) return;
-            final activeRide = rides.isEmpty ? null : rides.first;
+            final activeRide = rides.isEmpty ? _activeRide : rides.first;
             setState(() {
               _activeRide = activeRide;
               _initializing = false;
@@ -45,13 +52,41 @@ class _DriverHomePageState extends State<DriverHomePage> {
             }
           });
     } else {
-      _initializing = false;
+      // The API load above remains available even without Firebase.
+    }
+  }
+
+  Future<void> _loadActiveRideFromApi() async {
+    try {
+      final rows = await _api.getList(
+        'rides?driver_id=${widget.user.id}&status=active',
+      );
+      final rides = rows
+          .whereType<Map<String, dynamic>>()
+          .map(RideRequestItem.fromJson)
+          .where((ride) => ride.isActive)
+          .toList();
+      rides.sort((a, b) => b.id.compareTo(a.id));
+
+      if (!mounted) return;
+      setState(() {
+        _activeRide = rides.isEmpty ? null : rides.first;
+        _initializing = false;
+      });
+      final activeRide = _activeRide;
+      if (activeRide != null && _withdrawnOffersForRideId != activeRide.id) {
+        _withdrawnOffersForRideId = activeRide.id;
+        unawaited(_withdrawOtherOffers(activeRide.id));
+      }
+    } catch (_) {
+      if (mounted) setState(() => _initializing = false);
     }
   }
 
   @override
   void dispose() {
     _activeRideSubscription?.cancel();
+    _activeRideRefreshTimer?.cancel();
     super.dispose();
   }
 

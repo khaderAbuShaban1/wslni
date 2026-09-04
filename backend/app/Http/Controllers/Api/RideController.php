@@ -9,6 +9,7 @@ use App\Models\RideOffer;
 use App\Models\RideRequest;
 use App\Models\User;
 use App\Models\WalletTransaction;
+use App\Services\FirebaseRealtimeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,6 +70,8 @@ class RideController extends Controller
             'notes' => $data['notes'] ?? null,
             'requested_at' => now(),
         ]);
+
+        app(FirebaseRealtimeService::class)->syncRide($ride);
 
         return response()->json([
             'message' => 'تم إرسال طلب السيارة بنجاح.',
@@ -198,9 +201,12 @@ class RideController extends Controller
             return response()->json(['message' => $result['error']], $result['status']);
         }
 
+        $syncedRide = $result['ride']->fresh();
+        app(FirebaseRealtimeService::class)->syncRide($syncedRide);
+
         return response()->json([
             'message' => 'تم تحديث حالة الرحلة بنجاح.',
-            'ride' => $result['ride']->fresh([
+            'ride' => $syncedRide->load([
                 'customer:id,name,phone',
                 'driver:id,name,phone',
                 'offers.driver:id,name,phone',
@@ -253,7 +259,10 @@ class RideController extends Controller
             return response()->json(['message' => $result['error']], $result['status']);
         }
 
-        return response()->json(['ride' => $result['ride']->fresh(['customer:id,name,phone', 'driver.driverProfile'])]);
+        $syncedRide = $result['ride']->fresh();
+        app(FirebaseRealtimeService::class)->syncRide($syncedRide);
+
+        return response()->json(['ride' => $syncedRide->load(['customer:id,name,phone', 'driver.driverProfile'])]);
     }
 
     public function rate(Request $request, RideRequest $ride): JsonResponse
@@ -274,7 +283,10 @@ class RideController extends Controller
             'rating_comment' => $data['comment'] ?? null,
         ]);
 
-        return response()->json(['message' => 'تم حفظ تقييمك.', 'ride' => $ride->fresh()]);
+        $syncedRide = $ride->fresh();
+        app(FirebaseRealtimeService::class)->syncRide($syncedRide);
+
+        return response()->json(['message' => 'تم حفظ تقييمك.', 'ride' => $syncedRide]);
     }
 
     public function destroy(RideRequest $ride): JsonResponse

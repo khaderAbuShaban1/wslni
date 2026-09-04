@@ -63,7 +63,7 @@ This repository is under active development.
 
 The Flutter apps use the laptop API by default:
 
-- API URL: `http://10.0.0.11:8000/api`
+- API URL: `http://10.0.0.3:8000/api`
 - Laravel must run on the network host:
 
 ```bash
@@ -73,5 +73,5 @@ php artisan serve --host=0.0.0.0 --port=8000
 You can still override the API URL when running Flutter:
 
 ```bash
-flutter run --dart-define=API_BASE_URL=http://10.0.0.11:8000/api
+flutter run --dart-define=API_BASE_URL=http://10.0.0.3:8000/api
 ```

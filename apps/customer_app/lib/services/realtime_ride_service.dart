@@ -21,18 +21,9 @@ class RealtimeRideService {
     required String customerName,
     required String customerPhone,
   }) async {
-    if (!isEnabled || ride.id == 0) return;
-
-    await _ridesRef.child(ride.id.toString()).set({
-      'id': ride.id,
-      'customer_id': customerId,
-      'customer_name': customerName,
-      'customer_phone': customerPhone,
-      'pickup_address': ride.pickup,
-      'dropoff_address': ride.destination,
-      'status': _firebaseStatus(ride.status),
-      'created_at': ServerValue.timestamp,
-    });
+    // Laravel/MySQL is authoritative. The backend mirrors the saved ride to
+    // Firebase after it commits, preventing clients from creating stale rows.
+    return;
   }
 
   Stream<List<RideDraft>> watchCustomerRides(int customerId) {
@@ -139,55 +130,13 @@ class RealtimeRideService {
     required RideDraft ride,
     required DriverOffer offer,
   }) async {
-    if (!isEnabled || ride.id == 0 || offer.driverId == 0) return;
-
-    await _ridesRef.child(ride.id.toString()).update({
-      'status': RideStatuses.driverSelected,
-      'driver_id': offer.driverId,
-      'driver_name': offer.name,
-      'driver_phone': offer.phone,
-      'vehicle': offer.car,
-      'vehicle_plate': offer.vehiclePlate,
-      'accepted_offer_id': offer.id,
-      'accepted_at': ServerValue.timestamp,
-    });
-    await _ridesRef.child('${ride.id}/offers/${offer.driverId}').update({
-      'status': 'selected',
-    });
-
-    final snapshot = await _ridesRef.child('${ride.id}/offers').get();
-    final offers = snapshot.value;
-    if (offers is Map) {
-      final updates = <String, Object?>{};
-      for (final key in offers.keys) {
-        if (key.toString() != offer.driverId.toString()) {
-          updates['${key.toString()}/status'] = 'inactive';
-        }
-      }
-      if (updates.isNotEmpty) {
-        await _ridesRef.child('${ride.id}/offers').update(updates);
-      }
-    } else if (offers is List) {
-      final updates = <String, Object?>{};
-      for (var index = 0; index < offers.length; index++) {
-        if (offers[index] is Map && index != offer.driverId) {
-          updates['$index/status'] = 'inactive';
-        }
-      }
-      if (updates.isNotEmpty) {
-        await _ridesRef.child('${ride.id}/offers').update(updates);
-      }
-    }
+    // The API accepts the offer and the backend publishes the canonical state.
+    return;
   }
 
   Future<void> markRated(int rideId, int rating, String comment) async {
-    if (!isEnabled || rideId == 0) return;
-    await _ridesRef.child(rideId.toString()).update({
-      'status': RideStatuses.rated,
-      'rating': rating,
-      'rating_comment': comment,
-      'rated_at': ServerValue.timestamp,
-    });
+    // Rating is persisted by the API and mirrored by the backend.
+    return;
   }
 
   int _countOffers(Object? value) {

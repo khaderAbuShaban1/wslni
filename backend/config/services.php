@@ -4,6 +4,9 @@ return [
 
     'firebase' => [
         'database_url' => env('FIREBASE_DATABASE_URL', 'https://wslni-527a2-default-rtdb.europe-west1.firebasedatabase.app'),
+        // Firebase is a realtime projection only. MySQL remains the source of truth.
+        'realtime_enabled' => env('FIREBASE_REALTIME_ENABLED', true),
+        'service_account_path' => env('FIREBASE_SERVICE_ACCOUNT_PATH'),
     ],
 
     /*
