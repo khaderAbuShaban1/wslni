@@ -5,6 +5,7 @@ import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'trip_history_screen.dart';
 import 'wallet_screen.dart';
+import 'login_screen.dart';
 
 class CustomerShell extends StatefulWidget {
   const CustomerShell({required this.user, super.key});
@@ -18,6 +19,12 @@ class CustomerShell extends StatefulWidget {
 class _CustomerShellState extends State<CustomerShell> {
   late AppUser _user = widget.user;
   int _index = 0;
+  void _signOut() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +36,7 @@ class _CustomerShellState extends State<CustomerShell> {
         user: _user,
         showBack: false,
         onUserChanged: (user) => setState(() => _user = user),
+        onSignOut: _signOut,
       ),
     ];
     final theme = Theme.of(context);

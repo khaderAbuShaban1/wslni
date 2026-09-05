@@ -8,6 +8,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'firebase_options.dart';
 
@@ -20,6 +21,7 @@ part 'screens/driver_home_page.dart';
 part 'screens/earnings_page.dart';
 part 'screens/profile_screen.dart';
 part 'screens/requests_page.dart';
+part 'screens/support_page.dart';
 part 'screens/trips_page.dart';
 part 'services/api_client.dart';
 part 'services/realtime_driver_service.dart';

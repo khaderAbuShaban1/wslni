@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Enums\RideStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
+use App\Models\DriverProfile;
 use App\Models\RideOffer;
 use App\Models\RideRequest;
 use App\Models\User;
@@ -282,6 +283,14 @@ class RideController extends Controller
             'rating' => $data['rating'],
             'rating_comment' => $data['comment'] ?? null,
         ]);
+
+        $averageRating = RideRequest::query()
+            ->where('driver_id', $ride->driver_id)
+            ->whereNotNull('rating')
+            ->avg('rating');
+        DriverProfile::query()
+            ->where('user_id', $ride->driver_id)
+            ->update(['rating' => round((float) ($averageRating ?? 5), 2)]);
 
         $syncedRide = $ride->fresh();
         app(FirebaseRealtimeService::class)->syncRide($syncedRide);

@@ -24,7 +24,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
     RequestsPage(user: widget.user),
     _TripsPage(user: widget.user),
     _EarningsPage(user: widget.user),
-    _DriverProfilePage(user: widget.user),
+    _DriverProfilePage(user: widget.user, onSignOut: _signOut),
   ];
 
   @override
@@ -108,6 +108,13 @@ class _DriverHomePageState extends State<DriverHomePage> {
       _withdrawnOffersForRideId = null;
       _index = 0;
     });
+  }
+
+  void _signOut() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const AuthPage()),
+      (route) => false,
+    );
   }
 
   @override

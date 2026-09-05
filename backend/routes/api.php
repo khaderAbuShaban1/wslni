@@ -18,6 +18,8 @@ Route::prefix('auth')->middleware('throttle:auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
     Route::post('resend-otp', [AuthController::class, 'resendOtp']);
+    Route::post('change-password', [AuthController::class, 'changePassword'])
+        ->middleware('throttle:6,1');
 });
 
 Route::apiResource('rides', RideController::class);
@@ -27,6 +29,7 @@ Route::patch('rides/{ride}/drivers/{driver}/accept', [RideOfferController::class
 Route::patch('rides/{ride}/driver-confirmation', [RideController::class, 'driverConfirmation']);
 Route::post('rides/{ride}/rating', [RideController::class, 'rate']);
 Route::get('drivers/available', [DriverController::class, 'available']);
+Route::get('drivers/{driver}/ratings', [DriverController::class, 'ratings']);
 Route::patch('drivers/{driver}/status', [DriverController::class, 'updateStatus']);
 Route::get('drivers/{driver}/withdrawals', [DriverWithdrawalController::class, 'index']);
 Route::post('drivers/{driver}/withdrawals', [DriverWithdrawalController::class, 'store']);

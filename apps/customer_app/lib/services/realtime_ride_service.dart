@@ -164,6 +164,4 @@ class RealtimeRideService {
       }
     }
   }
-
-  String _firebaseStatus(String status) => status;
 }

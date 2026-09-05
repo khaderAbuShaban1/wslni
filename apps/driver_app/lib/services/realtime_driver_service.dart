@@ -152,18 +152,4 @@ class RealtimeDriverService {
       }
     }
   }
-
-  Iterable<(int, Map)> _indexedRows(Object? value) sync* {
-    if (value is Map) {
-      for (final entry in value.entries) {
-        final id = int.tryParse(entry.key.toString());
-        if (id != null && entry.value is Map) yield (id, entry.value as Map);
-      }
-    } else if (value is List) {
-      for (var index = 0; index < value.length; index++) {
-        final row = value[index];
-        if (row is Map) yield (index, row);
-      }
-    }
-  }
 }

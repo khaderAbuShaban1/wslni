@@ -13,17 +13,20 @@ import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/premium_card.dart';
 import 'support_screen.dart';
+import 'security_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
     required this.user,
     required this.onUserChanged,
+    required this.onSignOut,
     this.showBack = true,
     super.key,
   });
 
   final AppUser user;
   final ValueChanged<AppUser> onUserChanged;
+  final VoidCallback onSignOut;
   final bool showBack;
 
   @override
@@ -39,8 +42,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _photoPath;
   bool _saving = false;
   bool _notifications = true;
-  bool _email = false;
-  bool _biometric = true;
 
   @override
   void initState() {
@@ -65,8 +66,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() {
       _photoPath = prefs.getString(_key('photo'));
       _notifications = prefs.getBool(_key('notifications')) ?? true;
-      _email = prefs.getBool(_key('email_updates')) ?? false;
-      _biometric = prefs.getBool(_key('biometric')) ?? true;
     });
   }
 
@@ -112,6 +111,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _message(String text) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  Future<void> _confirmSignOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تسجيل الخروج'),
+        content: const Text('هل تريد تسجيل الخروج من هذا الجهاز؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('تسجيل الخروج'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) widget.onSignOut();
   }
 
   @override
@@ -219,25 +239,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _saveBool('notifications', value);
             },
           ),
-          _SettingsSwitchTile(
-            icon: Icons.mail_outline_rounded,
-            title: 'تحديثات البريد',
-            subtitle: 'عروض وكوبونات مختارة',
-            value: _email,
-            onChanged: (value) {
-              setState(() => _email = value);
-              _saveBool('email_updates', value);
-            },
-          ),
-          _SettingsSwitchTile(
-            icon: Icons.fingerprint_rounded,
-            title: 'دخول سريع',
-            subtitle: 'استخدام قفل الجهاز عند فتح التطبيق',
-            value: _biometric,
-            onChanged: (value) {
-              setState(() => _biometric = value);
-              _saveBool('biometric', value);
-            },
+          _SettingsActionTile(
+            icon: Icons.security_rounded,
+            title: 'الأمان',
+            subtitle: 'تغيير كلمة المرور وحماية حسابك',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => SecurityScreen(
+                  user: widget.user,
+                ),
+              ),
+            ),
           ),
           _SettingsActionTile(
             icon: Icons.support_agent_rounded,
@@ -246,6 +258,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onTap: () => Navigator.of(
               context,
             ).push(MaterialPageRoute(builder: (_) => const SupportScreen())),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _confirmSignOut,
+              icon: const Icon(Icons.logout_rounded),
+              label: const Text('تسجيل الخروج'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+                side: BorderSide(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           ),
         ],
       ),
