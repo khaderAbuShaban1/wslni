@@ -35,6 +35,14 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
+        if (! Auth::user()->isActive()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return back()->withErrors(['email' => 'هذا الحساب موقوف.']);
+        }
+
         return $this->redirectByRole(Auth::user());
     }
 

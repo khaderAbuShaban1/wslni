@@ -6,24 +6,24 @@
     <title>{{ $title ?? 'لوحة الإدارة' }}</title>
     <style>
         :root {
-            --bg: #eef3f8;
+            --bg: #f5f2ea;
             --panel: #ffffff;
-            --panel-soft: #f8fbfd;
-            --line: #d9e2ec;
-            --line-strong: #c8d4e0;
-            --text: #0f172a;
-            --muted: #64748b;
-            --primary: #0f766e;
-            --primary-soft: #dff5f1;
-            --accent: #1d4ed8;
-            --accent-soft: #e8efff;
-            --warning: #b45309;
-            --warning-soft: #fff4e6;
-            --danger: #b91c1c;
-            --danger-soft: #fde8e8;
-            --success: #166534;
+            --panel-soft: #fcfaf4;
+            --line: #e7dfcf;
+            --line-strong: #d9cfba;
+            --text: #111214;
+            --muted: #747880;
+            --primary: #e9b934;
+            --primary-soft: #fff3cf;
+            --accent: #30343a;
+            --accent-soft: #eceef1;
+            --warning: #d99c18;
+            --warning-soft: #fff3d8;
+            --danger: #c73a31;
+            --danger-soft: #fde7e3;
+            --success: #20835b;
             --success-soft: #e8f8ee;
-            --shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+            --shadow: 0 18px 48px rgba(103, 99, 91, 0.12);
         }
         * { box-sizing: border-box; }
         html { color-scheme: light; }
@@ -31,7 +31,7 @@
             margin: 0;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             background:
-                linear-gradient(180deg, rgba(15, 118, 110, 0.05) 0%, rgba(15, 118, 110, 0.01) 220px, transparent 220px),
+                linear-gradient(180deg, rgba(233, 185, 52, 0.12) 0%, rgba(233, 185, 52, 0.02) 220px, transparent 220px),
                 var(--bg);
             color: var(--text);
             direction: rtl;
@@ -49,9 +49,9 @@
             height: 100vh;
             overflow: auto;
             padding: 22px 18px;
-            background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
-            color: #e5eef7;
-            border-left: 1px solid rgba(255, 255, 255, 0.06);
+            background: linear-gradient(180deg, #111214 0%, #1a1c21 100%);
+            color: #f5f5f6;
+            border-left: 1px solid rgba(243, 196, 85, 0.1);
         }
         .brand {
             display: flex;
@@ -59,18 +59,18 @@
             gap: 12px;
             padding: 8px 8px 18px;
             margin-bottom: 8px;
-            border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+            border-bottom: 1px solid rgba(243, 196, 85, 0.16);
         }
         .brand-mark {
             width: 44px;
             height: 44px;
             border-radius: 14px;
-            background: linear-gradient(135deg, var(--primary) 0%, #10b981 100%);
+            background: linear-gradient(135deg, #f6d16f 0%, var(--primary) 100%);
             display: grid;
             place-items: center;
-            color: #fff;
+            color: #171717;
             font-weight: 800;
-            box-shadow: 0 12px 30px rgba(15, 118, 110, 0.35);
+            box-shadow: 0 12px 30px rgba(233, 185, 52, 0.32);
             flex: 0 0 auto;
         }
         .brand strong {
@@ -81,7 +81,7 @@
         .brand span {
             display: block;
             margin-top: 3px;
-            color: #9fb2c8;
+            color: #a9b8cc;
             font-size: 12px;
         }
         .nav {
@@ -93,32 +93,32 @@
             text-decoration: none;
             padding: 12px 14px;
             border-radius: 14px;
-            color: #cbd5e1;
-            background: rgba(255, 255, 255, 0.01);
+            color: #d7d9dd;
+            background: rgba(255, 255, 255, 0.02);
             border: 1px solid transparent;
             transition: 160ms ease;
         }
         .nav a:hover {
-            background: rgba(255, 255, 255, 0.04);
-            border-color: rgba(148, 163, 184, 0.14);
+            background: rgba(243, 196, 85, 0.08);
+            border-color: rgba(243, 196, 85, 0.16);
             transform: translateY(-1px);
         }
         .nav a.active {
-            color: #fff;
-            background: rgba(15, 118, 110, 0.2);
-            border-color: rgba(15, 118, 110, 0.38);
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+            color: #fff4cf;
+            background: rgba(243, 196, 85, 0.14);
+            border-color: rgba(243, 196, 85, 0.34);
+            box-shadow: inset 0 0 0 1px rgba(255, 244, 207, 0.04);
         }
         .nav small {
             display: block;
             margin-top: 4px;
-            color: #94a3b8;
+            color: #aeb8c8;
             line-height: 1.5;
         }
         .userbox {
             margin-top: 22px;
             padding: 16px 0 0;
-            border-top: 1px solid rgba(148, 163, 184, 0.18);
+            border-top: 1px solid rgba(243, 196, 85, 0.14);
             display: grid;
             gap: 12px;
         }
@@ -126,7 +126,7 @@
         .userline span {
             display: block;
             margin-top: 4px;
-            color: #94a3b8;
+            color: #aeb8c8;
             font-size: 13px;
             word-break: break-word;
         }
@@ -179,8 +179,8 @@
         .pill.active {
             border-color: transparent;
             background: var(--primary);
-            color: #fff;
-            box-shadow: 0 10px 24px rgba(15, 118, 110, 0.22);
+            color: #211a00;
+            box-shadow: 0 10px 24px rgba(233, 185, 52, 0.28);
         }
         .summary {
             display: grid;
@@ -189,11 +189,11 @@
             margin: 18px 0 18px;
         }
         .metric {
-            background: linear-gradient(180deg, #fff 0%, #fcfeff 100%);
+            background: linear-gradient(180deg, #fffdf8 0%, #ffffff 100%);
             border: 1px solid var(--line);
             border-radius: 16px;
             padding: 18px;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+            box-shadow: 0 8px 24px rgba(103, 99, 91, 0.08);
         }
         .metric .label {
             color: var(--muted);
@@ -524,5 +524,23 @@
             </div>
         </main>
     </div>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
+        import { getAuth, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
+        import { getDatabase, onValue, ref } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js';
+
+        const app = initializeApp({
+            apiKey: 'AIzaSyCRs-Z8vvQOkhpMP81XmUAXTrgSHRpx76o',
+            authDomain: 'wslni-527a2.firebaseapp.com',
+            databaseURL: 'https://wslni-527a2-default-rtdb.europe-west1.firebasedatabase.app',
+            projectId: 'wslni-527a2',
+        });
+
+        fetch('{{ route('admin.firebase.token') }}', { headers: { Accept: 'application/json' } })
+            .then((response) => response.ok ? response.json() : Promise.reject(response))
+            .then(({ token }) => token && signInWithCustomToken(getAuth(app), token))
+            .then(() => onValue(ref(getDatabase(app), 'admin/events'), () => window.location.reload()))
+            .catch(() => { /* Server rendering works even if Firebase is unavailable. */ });
+    </script>
 </body>
 </html>

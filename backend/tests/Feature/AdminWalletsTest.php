@@ -18,6 +18,7 @@ class AdminWalletsTest extends TestCase
     public function test_admin_can_create_and_approve_wallet_deposit(): void
     {
         Storage::fake('public');
+        Storage::fake('local');
 
         $admin = User::create([
             'name' => 'Admin User',
@@ -76,6 +77,24 @@ class AdminWalletsTest extends TestCase
             'reference_number' => 'REF-TEST-001',
             'status' => 'approved',
         ]);
+        $this->assertDatabaseHas('wallet_transactions', [
+            'user_id' => $customer->id,
+            'wallet_deposit_id' => $deposit->id,
+            'type' => 'deposit_credit',
+            'amount' => 50,
+            'balance_after' => 50,
+        ]);
+
+        Storage::disk('local')->assertExists($deposit->receipt_path);
+        Storage::disk('public')->assertMissing($deposit->receipt_path);
+
+        $this->actingAs($customer)
+            ->get(route('admin.wallets.receipt', $deposit))
+            ->assertRedirect(route('auth.login'));
+        $this->actingAs($admin)
+            ->get(route('admin.wallets.receipt', $deposit))
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'max-age=0, no-store, private');
     }
 
     public function test_reviewed_wallet_deposit_cannot_be_reviewed_again(): void

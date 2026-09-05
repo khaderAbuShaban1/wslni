@@ -86,7 +86,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _saving = true);
     try {
       final updated = await _profileService.updateProfile(
-        userId: widget.user.id,
         name: _name.text.trim(),
         phone: _phone.text.trim(),
       );

@@ -26,7 +26,7 @@ class RideConfirmationScreen extends StatelessWidget {
     return PopScope(
       canPop: false,
       child: StreamBuilder<RideDraft?>(
-        stream: RealtimeRideService().watchRide(draft.id),
+        stream: RealtimeRideService().watchRide(draft.customerId, draft.id),
         initialData: draft,
         builder: (context, snapshot) {
           final ride = snapshot.data ?? draft;

@@ -6,15 +6,15 @@
     <title>الحساب</title>
     <style>
         :root {
-            --bg: #eef3f8;
+            --bg: #f5f2ea;
             --panel: #ffffff;
-            --line: #d9e2ec;
-            --text: #0f172a;
-            --muted: #64748b;
-            --primary: #0f766e;
-            --primary-soft: #dff5f1;
-            --accent: #1d4ed8;
-            --shadow: 0 18px 46px rgba(15, 23, 42, 0.08);
+            --line: #e7dfcf;
+            --text: #111214;
+            --muted: #747880;
+            --primary: #e9b934;
+            --primary-soft: #fff3cf;
+            --accent: #30343a;
+            --shadow: 0 18px 46px rgba(103, 99, 91, 0.12);
         }
         * { box-sizing: border-box; }
         html { color-scheme: light; }
@@ -23,8 +23,8 @@
             min-height: 100vh;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             background:
-                radial-gradient(circle at top right, rgba(15, 118, 110, 0.06), transparent 34%),
-                linear-gradient(180deg, #f7fafc 0%, var(--bg) 100%);
+                radial-gradient(circle at top right, rgba(233, 185, 52, 0.14), transparent 34%),
+                linear-gradient(180deg, #faf7f1 0%, var(--bg) 100%);
             color: var(--text);
             direction: rtl;
             text-align: right;
@@ -53,10 +53,10 @@
             border-radius: 16px;
             display: grid;
             place-items: center;
-            color: #fff;
+            color: #171717;
             font-weight: 800;
-            background: linear-gradient(135deg, var(--primary) 0%, #10b981 100%);
-            box-shadow: 0 12px 30px rgba(15, 118, 110, 0.24);
+            background: linear-gradient(135deg, #f6d16f 0%, var(--primary) 100%);
+            box-shadow: 0 12px 30px rgba(233, 185, 52, 0.24);
         }
         .muted { color: var(--muted); line-height: 1.7; }
         .btn {
@@ -74,12 +74,12 @@
             font-weight: 700;
             transition: 140ms ease;
         }
-        .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06); }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(103, 99, 91, 0.1); }
         .btn.primary {
             background: var(--primary);
-            color: #fff;
+            color: #211a00;
             border-color: var(--primary);
-            box-shadow: 0 12px 26px rgba(15, 118, 110, 0.20);
+            box-shadow: 0 12px 26px rgba(233, 185, 52, 0.24);
         }
         .grid {
             display: grid;
@@ -137,7 +137,7 @@
             padding: 14px 16px;
             border: 1px solid var(--line);
             border-radius: 16px;
-            background: #fbfdff;
+            background: #fffdf8;
         }
         .item strong { display: block; margin-bottom: 4px; }
         .item span { color: var(--muted); font-size: 13px; }

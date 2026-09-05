@@ -7,11 +7,10 @@ class ProfileService {
   final ApiClient _api;
 
   Future<AppUser> updateProfile({
-    required int userId,
     required String name,
     required String phone,
   }) async {
-    final result = await _api.patch('customers/$userId', {
+    final result = await _api.patch('customers/me', {
       'name': name,
       'phone': phone,
     });

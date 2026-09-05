@@ -1,4 +1,4 @@
-﻿part of '../main.dart';
+part of '../main.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -53,8 +53,10 @@ class _AuthPageState extends State<AuthPage> {
         'email': _loginEmail.text.trim(),
         'password': _loginPassword.text,
       });
+      _requireDriverAccount(result);
       final user = DriverUser.fromJson(result['user'] as Map<String, dynamic>);
       if (user.id == 0) throw ApiException('بيانات السائق غير صحيحة.', 422, {});
+      await _signInToFirebase(result);
       _openHome(user);
     });
   }
@@ -87,8 +89,32 @@ class _AuthPageState extends State<AuthPage> {
         'email': _pendingEmail,
         'otp': _otp.text.trim(),
       });
+      _requireDriverAccount(result);
+      await _signInToFirebase(result);
       _openHome(DriverUser.fromJson(result['user'] as Map<String, dynamic>));
     });
+  }
+
+  Future<void> _signInToFirebase(Map<String, dynamic> result) async {
+    final token = result['firebase_token']?.toString() ?? '';
+    if (token.isNotEmpty && FirebaseRuntime.isReady) {
+      try {
+        await FirebaseAuth.instance.signInWithCustomToken(token);
+      } catch (_) {
+        // The API session remains valid even while Firebase is unavailable.
+      }
+    }
+  }
+
+  void _requireDriverAccount(Map<String, dynamic> result) {
+    final user = result['user'];
+    if (user is! Map || user['role']?.toString() != 'driver') {
+      throw ApiException(
+        'هذا حساب زبون. سجّل الدخول بحساب سائق في تطبيق السائق.',
+        403,
+        const {},
+      );
+    }
   }
 
   Future<void> _run(Future<void> Function() action) async {

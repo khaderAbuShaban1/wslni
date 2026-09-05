@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\DriverProfile;
 use App\Models\User;
+use App\Services\FirebaseRealtimeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -139,9 +140,15 @@ class AuthController extends Controller
             ], 403);
         }
 
+        if (! $user->isActive()) {
+            return response()->json(['message' => 'هذا الحساب موقوف. تواصل مع الإدارة.'], 403);
+        }
+
         return response()->json([
             'message' => 'تم تسجيل الدخول بنجاح.',
             'user' => $this->userPayload($user),
+            'token' => $this->issueToken($user),
+            'firebase_token' => app(FirebaseRealtimeService::class)->customToken($user),
         ]);
     }
 
@@ -161,7 +168,7 @@ class AuthController extends Controller
 
         if (
             ! $user->email_otp_code ||
-            ! hash_equals($user->email_otp_code, $data['otp']) ||
+            ! Hash::check($data['otp'], $user->email_otp_code) ||
             ! $user->email_otp_expires_at ||
             $user->email_otp_expires_at->isPast()
         ) {
@@ -176,9 +183,15 @@ class AuthController extends Controller
             'email_otp_expires_at' => null,
         ])->save();
 
+        if (! $user->isActive()) {
+            return response()->json(['message' => 'هذا الحساب موقوف. تواصل مع الإدارة.'], 403);
+        }
+
         return response()->json([
             'message' => 'تم تفعيل البريد الإلكتروني بنجاح.',
             'user' => $this->userPayload($user),
+            'token' => $this->issueToken($user),
+            'firebase_token' => app(FirebaseRealtimeService::class)->customToken($user),
         ]);
     }
 
@@ -211,7 +224,7 @@ class AuthController extends Controller
         );
 
         $user->forceFill([
-            'email_otp_code' => $otp,
+            'email_otp_code' => Hash::make($otp),
             'email_otp_expires_at' => Carbon::now()->addMinutes(10),
         ])->save();
     }
@@ -230,5 +243,16 @@ class AuthController extends Controller
             'email_verified_at' => $user->email_verified_at,
             'driver_profile' => $user->driverProfile,
         ];
+    }
+
+    private function issueToken(User $user): string
+    {
+        $user->tokens()->where('name', 'mobile-app')->delete();
+
+        return $user->createToken(
+            'mobile-app',
+            [$user->role],
+            now()->addDays(30),
+        )->plainTextToken;
     }
 }

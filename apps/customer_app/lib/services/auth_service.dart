@@ -1,4 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../models/user_model.dart';
+import '../utils/firebase_runtime.dart';
 import 'api_client.dart';
 
 class AuthService {
@@ -30,7 +33,7 @@ class AuthService {
       'email': email,
       'password': password,
     });
-    return AppUser.fromJson(result['user'] as Map<String, dynamic>);
+    return _authenticatedUser(result);
   }
 
   Future<AppUser> verifyOtp({
@@ -41,10 +44,36 @@ class AuthService {
       'email': email,
       'otp': otp,
     });
-    return AppUser.fromJson(result['user'] as Map<String, dynamic>);
+    return _authenticatedUser(result);
   }
 
   Future<void> resendOtp(String email) {
     return _api.post('auth/resend-otp', {'email': email}).then((_) {});
+  }
+
+  Future<AppUser> _authenticatedUser(Map<String, dynamic> result) async {
+    final user = AppUser.fromJson(result['user'] as Map<String, dynamic>);
+    final token = result['token']?.toString() ?? '';
+
+    if (user.role != 'customer' || token.isEmpty) {
+      await ApiTokenStore.clear();
+      throw ApiException(
+        'هذا الحساب غير مصرح له باستخدام تطبيق الزبون.',
+        403,
+        result,
+      );
+    }
+
+    await ApiTokenStore.write(token);
+    final firebaseToken = result['firebase_token']?.toString() ?? '';
+    if (firebaseToken.isNotEmpty && FirebaseRuntime.isReady) {
+      try {
+        await FirebaseAuth.instance.signInWithCustomToken(firebaseToken);
+      } catch (_) {
+        // Laravel remains authoritative. A temporary Firebase/Auth setup
+        // failure must never prevent an otherwise valid application login.
+      }
+    }
+    return user;
   }
 }

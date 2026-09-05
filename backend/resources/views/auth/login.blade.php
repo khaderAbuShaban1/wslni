@@ -6,16 +6,16 @@
     <title>تسجيل الدخول</title>
     <style>
         :root {
-            --bg: #eef3f8;
+            --bg: #f5f2ea;
             --panel: #ffffff;
-            --line: #d9e2ec;
-            --text: #0f172a;
-            --muted: #64748b;
-            --primary: #0f766e;
-            --primary-soft: #dff5f1;
-            --shadow: 0 20px 60px rgba(15, 23, 42, 0.10);
-            --danger: #b91c1c;
-            --danger-soft: #fde8e8;
+            --line: #e7dfcf;
+            --text: #111214;
+            --muted: #747880;
+            --primary: #e9b934;
+            --primary-soft: #fff3cf;
+            --shadow: 0 20px 60px rgba(103, 99, 91, 0.16);
+            --danger: #c73a31;
+            --danger-soft: #fde7e3;
         }
         * { box-sizing: border-box; }
         html { color-scheme: light; }
@@ -24,8 +24,8 @@
             min-height: 100vh;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             background:
-                radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 36%),
-                radial-gradient(circle at bottom left, rgba(29, 78, 216, 0.06), transparent 32%),
+                radial-gradient(circle at top right, rgba(233, 185, 52, 0.16), transparent 36%),
+                radial-gradient(circle at bottom left, rgba(17, 18, 20, 0.07), transparent 32%),
                 var(--bg);
             color: var(--text);
             direction: rtl;
@@ -55,12 +55,12 @@
             width: 50px;
             height: 50px;
             border-radius: 16px;
-            background: linear-gradient(135deg, var(--primary) 0%, #10b981 100%);
+            background: linear-gradient(135deg, #f6d16f 0%, var(--primary) 100%);
             display: grid;
             place-items: center;
-            color: #fff;
+            color: #171717;
             font-weight: 800;
-            box-shadow: 0 16px 30px rgba(15, 118, 110, 0.28);
+            box-shadow: 0 16px 30px rgba(233, 185, 52, 0.28);
         }
         .brand strong {
             display: block;
@@ -93,10 +93,10 @@
         }
         .feature {
             background: rgba(255, 255, 255, 0.75);
-            border: 1px solid rgba(217, 226, 236, 0.9);
+            border: 1px solid rgba(231, 223, 207, 0.95);
             border-radius: 18px;
             padding: 16px;
-            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
+            box-shadow: 0 12px 30px rgba(103, 99, 91, 0.08);
             backdrop-filter: blur(12px);
         }
         .feature strong {
@@ -110,7 +110,7 @@
             line-height: 1.7;
         }
         .panel {
-            background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            background: linear-gradient(180deg, #fffdf8 0%, #ffffff 100%);
             border-inline-start: 1px solid var(--line);
             padding: 28px;
             display: flex;
@@ -172,8 +172,8 @@
             transition: 120ms ease;
         }
         input:focus {
-            border-color: rgba(15, 118, 110, 0.45);
-            box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+            border-color: rgba(233, 185, 52, 0.58);
+            box-shadow: 0 0 0 4px rgba(233, 185, 52, 0.16);
         }
         .remember {
             display: flex;
@@ -204,9 +204,9 @@
         }
         .btn:hover { transform: translateY(-1px); }
         .primary-btn {
-            background: linear-gradient(135deg, var(--primary) 0%, #0e9f8a 100%);
-            color: #fff;
-            box-shadow: 0 14px 30px rgba(15, 118, 110, 0.25);
+            background: linear-gradient(135deg, #f6d16f 0%, var(--primary) 100%);
+            color: #211a00;
+            box-shadow: 0 14px 30px rgba(233, 185, 52, 0.3);
         }
         .footer {
             margin-top: 18px;

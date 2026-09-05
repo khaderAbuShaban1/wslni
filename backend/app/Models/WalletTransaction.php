@@ -9,6 +9,8 @@ class WalletTransaction extends Model
 {
     protected $fillable = [
         'user_id',
+        'wallet_deposit_id',
+        'created_by',
         'ride_request_id',
         'type',
         'amount',
@@ -32,5 +34,10 @@ class WalletTransaction extends Model
     public function rideRequest(): BelongsTo
     {
         return $this->belongsTo(RideRequest::class);
+    }
+
+    public function deposit(): BelongsTo
+    {
+        return $this->belongsTo(WalletDeposit::class, 'wallet_deposit_id');
     }
 }

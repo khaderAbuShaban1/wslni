@@ -6,13 +6,13 @@ use App\Http\Controllers\Api\CustomerWalletController;
 use App\Http\Controllers\Api\DriverController;
 use App\Http\Controllers\Api\DriverWithdrawalController;
 use App\Http\Controllers\Api\HealthController;
-use App\Http\Controllers\Api\RideOfferController;
 use App\Http\Controllers\Api\RideController;
+use App\Http\Controllers\Api\RideOfferController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [HealthController::class, 'index']);
 
-Route::prefix('auth')->group(function () {
+Route::prefix('auth')->middleware('throttle:auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('driver/register', [AuthController::class, 'registerDriver']);
     Route::post('login', [AuthController::class, 'login']);
@@ -32,5 +32,16 @@ Route::get('drivers/{driver}/withdrawals', [DriverWithdrawalController::class, '
 Route::post('drivers/{driver}/withdrawals', [DriverWithdrawalController::class, 'store']);
 Route::get('customers/me', [CustomerController::class, 'me']);
 Route::patch('customers/{customer}', [CustomerController::class, 'update']);
-Route::get('customers/{customer}/wallet', [CustomerWalletController::class, 'show']);
-Route::post('customers/{customer}/wallet/deposits', [CustomerWalletController::class, 'storeDeposit']);
+Route::middleware(['auth:sanctum', 'financial'])->group(function () {
+    Route::get('customers/me/wallet', [CustomerWalletController::class, 'show'])
+        ->middleware('throttle:wallet-read');
+    Route::post('customers/me/wallet/deposits', [CustomerWalletController::class, 'storeDeposit'])
+        ->middleware('throttle:wallet-deposit');
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('firebase/token', fn (\Illuminate\Http\Request $request) => response()->json([
+        'token' => app(\App\Services\FirebaseRealtimeService::class)->customToken($request->user()),
+    ]));
+    Route::patch('customers/me', [CustomerController::class, 'update']);
+});

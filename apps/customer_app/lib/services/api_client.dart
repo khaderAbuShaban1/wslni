@@ -1,12 +1,23 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
+
 const _apiBaseUrlOverride = String.fromEnvironment('API_BASE_URL');
 
 String _resolveBaseUrl(String? baseUrl) {
-  if (baseUrl != null && baseUrl.isNotEmpty) return baseUrl;
-  if (_apiBaseUrlOverride.isNotEmpty) return _apiBaseUrlOverride;
-  return 'http://10.0.0.3:8000/api';
+  final resolved = baseUrl != null && baseUrl.isNotEmpty
+      ? baseUrl
+      : _apiBaseUrlOverride.isNotEmpty
+      ? _apiBaseUrlOverride
+      : 'http://10.0.0.11:8000/api';
+
+  if (kReleaseMode && Uri.parse(resolved).scheme != 'https') {
+    throw StateError('API_BASE_URL must use HTTPS in release builds.');
+  }
+
+  return resolved;
 }
 
 HttpClient _createHttpClient() {
@@ -30,6 +41,7 @@ class ApiClient {
     final client = _createHttpClient();
     final uri = Uri.parse('$baseUrl/$path');
     final request = await client.getUrl(uri);
+    await _authorize(request);
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
 
     final response = await request.close();
@@ -47,6 +59,7 @@ class ApiClient {
     final client = _createHttpClient();
     final uri = Uri.parse('$baseUrl/$path');
     final request = await client.getUrl(uri);
+    await _authorize(request);
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
 
     final response = await request.close();
@@ -83,6 +96,7 @@ class ApiClient {
         ? await client.patchUrl(uri)
         : await client.postUrl(uri);
     request.headers.contentType = ContentType.json;
+    await _authorize(request);
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
     request.write(jsonEncode(body));
 
@@ -106,6 +120,7 @@ class ApiClient {
     final client = _createHttpClient();
     final uri = Uri.parse('$baseUrl/$path');
     final request = await client.postUrl(uri);
+    await _authorize(request);
     final boundary = '----wslni-${DateTime.now().microsecondsSinceEpoch}';
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
     request.headers.contentType = ContentType(
@@ -155,6 +170,13 @@ class ApiClient {
     return 'image/jpeg';
   }
 
+  Future<void> _authorize(HttpClientRequest request) async {
+    final token = await ApiTokenStore.read();
+    if (token != null && token.isNotEmpty) {
+      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+    }
+  }
+
   Map<String, dynamic> _decode(String text) {
     if (text.isEmpty) return {};
     try {
@@ -173,5 +195,25 @@ class ApiClient {
       if (first is List && first.isNotEmpty) return first.first.toString();
     }
     return decoded['message']?.toString() ?? 'حدث خطأ غير متوقع.';
+  }
+}
+
+class ApiTokenStore {
+  static const _storage = FlutterSecureStorage();
+  static const _key = 'wslni_api_token';
+  static String? _cached;
+
+  static Future<String?> read() async {
+    return _cached ??= await _storage.read(key: _key);
+  }
+
+  static Future<void> write(String token) async {
+    _cached = token;
+    await _storage.write(key: _key, value: token);
+  }
+
+  static Future<void> clear() async {
+    _cached = null;
+    await _storage.delete(key: _key);
   }
 }

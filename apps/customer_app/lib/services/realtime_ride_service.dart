@@ -29,7 +29,7 @@ class RealtimeRideService {
   Stream<List<RideDraft>> watchCustomerRides(int customerId) {
     if (!isEnabled) return const Stream.empty();
 
-    return _ridesRef.onValue.map((event) {
+    return _database.ref('users/$customerId/rides').onValue.map((event) {
       final value = event.snapshot.value;
 
       final rides = <RideDraft>[];
@@ -64,10 +64,14 @@ class RealtimeRideService {
     });
   }
 
-  Stream<RideDraft?> watchRide(int rideId) {
-    if (!isEnabled || rideId == 0) return Stream.value(null);
+  Stream<RideDraft?> watchRide(int customerId, int rideId) {
+    if (!isEnabled || customerId == 0 || rideId == 0) {
+      return Stream.value(null);
+    }
 
-    return _ridesRef.child(rideId.toString()).onValue.map((event) {
+    return _database.ref('users/$customerId/rides/$rideId').onValue.map((
+      event,
+    ) {
       final raw = event.snapshot.value;
       if (raw is! Map) return null;
       return _rideFromRealtime(raw);
@@ -94,10 +98,14 @@ class RealtimeRideService {
     );
   }
 
-  Stream<List<DriverOffer>> watchOffers(int rideId) {
-    if (!isEnabled || rideId == 0) return const Stream.empty();
+  Stream<List<DriverOffer>> watchOffers(int customerId, int rideId) {
+    if (!isEnabled || customerId == 0 || rideId == 0) {
+      return const Stream.empty();
+    }
 
-    return _ridesRef.child('$rideId/offers').onValue.map((event) {
+    return _database.ref('users/$customerId/rides/$rideId/offers').onValue.map((
+      event,
+    ) {
       final value = event.snapshot.value;
 
       final offers = <DriverOffer>[];

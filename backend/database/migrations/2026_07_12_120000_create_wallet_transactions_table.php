@@ -11,7 +11,9 @@ return new class extends Migration
         Schema::create('wallet_transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('ride_request_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('wallet_deposit_id')->nullable()->unique()->constrained()->nullOnDelete();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('ride_request_id')->nullable()->constrained()->cascadeOnDelete();
             $table->string('type');
             $table->decimal('amount', 10, 2);
             $table->decimal('balance_after', 10, 2)->nullable();

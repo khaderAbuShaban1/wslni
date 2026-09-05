@@ -17,7 +17,7 @@ class EnsureAdmin
             return redirect()->route('auth.login');
         }
 
-        if (! $user->isAdmin()) {
+        if (! $user->isAdmin() || ! $user->isActive()) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();

@@ -74,11 +74,11 @@
                                 </td>
                                 <td>
                                     @if ($deposit->receipt_path)
-                                        <a href="{{ asset('storage/' . $deposit->receipt_path) }}" target="_blank" style="display:inline-block; margin-bottom:8px;">
-                                            <img src="{{ asset('storage/' . $deposit->receipt_path) }}" alt="صورة إشعار طلب #{{ $deposit->id }}" style="width:96px; height:64px; object-fit:contain; border:1px solid var(--line); border-radius:12px; background:#f8fafc;">
+                                        <a href="{{ route('admin.wallets.receipt', $deposit) }}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-bottom:8px;">
+                                            <img src="{{ route('admin.wallets.receipt', $deposit) }}" alt="صورة إشعار طلب #{{ $deposit->id }}" style="width:96px; height:64px; object-fit:contain; border:1px solid var(--line); border-radius:12px; background:#f8fafc;">
                                         </a>
                                         <br>
-                                        <a href="{{ asset('storage/' . $deposit->receipt_path) }}" target="_blank" class="btn">فتح الصورة</a>
+                                        <a href="{{ route('admin.wallets.receipt', $deposit) }}" target="_blank" rel="noopener noreferrer" class="btn">فتح الصورة</a>
                                     @else
                                         <div class="muted">لا توجد صورة مرفقة.</div>
                                     @endif
@@ -337,7 +337,7 @@
                             </td>
                             <td>
                                 @if ($deposit->receipt_path)
-                                    <a href="{{ asset('storage/' . $deposit->receipt_path) }}" target="_blank" class="btn" style="margin-bottom:8px;">فتح الصورة</a>
+                                    <a href="{{ route('admin.wallets.receipt', $deposit) }}" target="_blank" rel="noopener noreferrer" class="btn" style="margin-bottom:8px;">فتح الصورة</a>
                                     <div class="muted">{{ $deposit->note ?? 'لا توجد ملاحظة' }}</div>
                                 @else
                                     <div class="muted">لا توجد صورة مرفقة.</div>

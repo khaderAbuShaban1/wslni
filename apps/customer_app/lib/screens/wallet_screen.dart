@@ -32,12 +32,12 @@ class _WalletScreenState extends State<WalletScreen> {
   @override
   void initState() {
     super.initState();
-    _walletFuture = _walletService.getWallet(widget.user.id);
+    _walletFuture = _walletService.getWallet();
   }
 
   void _reload() {
     setState(() {
-      _walletFuture = _walletService.getWallet(widget.user.id);
+      _walletFuture = _walletService.getWallet();
     });
   }
 
@@ -55,10 +55,7 @@ class _WalletScreenState extends State<WalletScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => _AddBalanceSheet(
-        userId: widget.user.id,
-        accounts: wallet.paymentAccounts,
-      ),
+      builder: (_) => _AddBalanceSheet(accounts: wallet.paymentAccounts),
     );
 
     if (submitted == true) {
@@ -175,9 +172,8 @@ class _WalletScreenState extends State<WalletScreen> {
 }
 
 class _AddBalanceSheet extends StatefulWidget {
-  const _AddBalanceSheet({required this.userId, required this.accounts});
+  const _AddBalanceSheet({required this.accounts});
 
-  final int userId;
   final List<WalletPaymentAccount> accounts;
 
   @override
@@ -235,7 +231,6 @@ class _AddBalanceSheetState extends State<_AddBalanceSheet> {
     setState(() => _submitting = true);
     try {
       await _walletService.submitDeposit(
-        userId: widget.userId,
         paymentAccountId: selected.id,
         amount: _amount.text.trim(),
         referenceNumber: _reference.text,

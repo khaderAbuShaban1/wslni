@@ -14,6 +14,7 @@ class WalletDeposit extends Model
         'bank_name',
         'reference_number',
         'receipt_path',
+        'receipt_sha256',
         'status',
         'note',
         'reviewed_by',

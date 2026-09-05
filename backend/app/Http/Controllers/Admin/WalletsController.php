@@ -7,12 +7,15 @@ use App\Models\User;
 use App\Models\DriverWithdrawal;
 use App\Models\WalletDeposit;
 use App\Models\WalletPaymentAccount;
+use App\Models\WalletTransaction;
 use App\Services\FirebaseRealtimeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class WalletsController extends Controller
 {
@@ -182,15 +185,22 @@ class WalletsController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'user_id' => ['required', 'exists:users,id'],
-            'amount' => ['required', 'numeric', 'min:1'],
+            'user_id' => ['required', Rule::exists('users', 'id')->where('role', 'customer')],
+            'amount' => ['required', 'decimal:0,2', 'min:1', 'max:100000'],
             'bank_name' => ['required', 'string', 'max:255'],
-            'reference_number' => ['nullable', 'string', 'max:255', 'unique:wallet_deposits,reference_number'],
-            'receipt_image' => ['required', 'image', 'max:5120'],
-            'note' => ['nullable', 'string', 'max:5000'],
+            'reference_number' => ['nullable', 'string', 'max:100', 'unique:wallet_deposits,reference_number'],
+            'receipt_image' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'note' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $path = $request->file('receipt_image')->store('wallet-deposits', 'public');
+        $receipt = $request->file('receipt_image');
+        $receiptHash = hash_file('sha256', $receipt->getRealPath());
+
+        if (WalletDeposit::query()->where('receipt_sha256', $receiptHash)->exists()) {
+            return back()->withErrors(['receipt_image' => 'تم إرسال صورة الإيصال هذه مسبقًا.'])->withInput();
+        }
+
+        $path = $receipt->store('wallet-deposits', 'local');
 
         WalletDeposit::create([
             'user_id' => $data['user_id'],
@@ -198,6 +208,7 @@ class WalletsController extends Controller
             'bank_name' => $data['bank_name'],
             'reference_number' => $data['reference_number'] ?? null,
             'receipt_path' => $path,
+            'receipt_sha256' => $receiptHash,
             'status' => 'pending',
             'note' => $data['note'] ?? null,
         ]);
@@ -212,7 +223,7 @@ class WalletsController extends Controller
         }
 
         $data = $request->validate([
-            'approved_amount' => ['nullable', 'numeric', 'min:1'],
+            'approved_amount' => ['nullable', 'decimal:0,2', 'min:1', 'max:100000'],
         ]);
 
         $approved = false;
@@ -230,6 +241,7 @@ class WalletsController extends Controller
             $user = User::query()->lockForUpdate()->findOrFail($walletDeposit->user_id);
 
             $user->increment('wallet_balance', $approvedAmount);
+            $user->refresh();
 
             $walletDeposit->update([
                 'amount' => $approvedAmount,
@@ -237,6 +249,16 @@ class WalletsController extends Controller
                 'reviewed_by' => auth()->id(),
                 'reviewed_at' => now(),
                 'wallet_credited_at' => now(),
+            ]);
+
+            WalletTransaction::create([
+                'user_id' => $user->id,
+                'wallet_deposit_id' => $walletDeposit->id,
+                'created_by' => auth()->id(),
+                'type' => 'deposit_credit',
+                'amount' => $approvedAmount,
+                'balance_after' => $user->wallet_balance,
+                'description' => 'Approved wallet deposit #'.$walletDeposit->id,
             ]);
 
             $approved = true;
@@ -281,6 +303,24 @@ class WalletsController extends Controller
         }
 
         return back()->with('status', 'تم رفض إشعار الإيداع.');
+    }
+
+    public function receipt(WalletDeposit $walletDeposit): StreamedResponse
+    {
+        abort_unless($walletDeposit->receipt_path, 404);
+
+        $path = $walletDeposit->receipt_path;
+        abort_unless(Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->response(
+            $path,
+            'wallet-receipt-'.$walletDeposit->id.'.'.pathinfo($path, PATHINFO_EXTENSION),
+            [
+                'Cache-Control' => 'private, no-store, max-age=0',
+                'Content-Security-Policy' => "default-src 'none'; sandbox",
+                'X-Content-Type-Options' => 'nosniff',
+            ],
+        );
     }
 
     private function validatePaymentAccount(Request $request): array

@@ -8,13 +8,12 @@ class WalletService {
 
   final ApiClient _api;
 
-  Future<WalletSummary> getWallet(int userId) async {
-    final result = await _api.get('customers/$userId/wallet');
+  Future<WalletSummary> getWallet() async {
+    final result = await _api.get('customers/me/wallet');
     return WalletSummary.fromJson(result);
   }
 
   Future<WalletDeposit> submitDeposit({
-    required int userId,
     required int paymentAccountId,
     required String amount,
     required File receipt,
@@ -30,7 +29,7 @@ class WalletService {
     };
 
     final result = await _api.postMultipart(
-      'customers/$userId/wallet/deposits',
+      'customers/me/wallet/deposits',
       fields: fields,
       fileField: 'receipt_image',
       file: receipt,

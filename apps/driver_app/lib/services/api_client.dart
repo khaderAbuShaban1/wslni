@@ -3,9 +3,17 @@ part of '../main.dart';
 const _apiBaseUrlOverride = String.fromEnvironment('API_BASE_URL');
 
 String _resolveBaseUrl(String? baseUrl) {
-  if (baseUrl != null && baseUrl.isNotEmpty) return baseUrl;
-  if (_apiBaseUrlOverride.isNotEmpty) return _apiBaseUrlOverride;
-  return 'http://10.0.0.3:8000/api';
+  final resolved = baseUrl != null && baseUrl.isNotEmpty
+      ? baseUrl
+      : _apiBaseUrlOverride.isNotEmpty
+      ? _apiBaseUrlOverride
+      : 'http://10.0.0.11:8000/api';
+
+  if (kReleaseMode && Uri.parse(resolved).scheme != 'https') {
+    throw StateError('API_BASE_URL must use HTTPS in release builds.');
+  }
+
+  return resolved;
 }
 
 HttpClient _createHttpClient() {

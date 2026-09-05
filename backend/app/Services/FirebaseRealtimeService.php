@@ -4,34 +4,108 @@ namespace App\Services;
 
 use App\Models\DriverWithdrawal;
 use App\Models\RideRequest;
+use App\Models\User;
 use Firebase\JWT\JWT;
 use Illuminate\Support\Facades\Http;
 
 class FirebaseRealtimeService
 {
+    private ?string $accessToken = null;
+    private int $accessTokenExpiresAt = 0;
+    /** Laravel authenticates users; this only grants Firebase read access. */
+    public function customToken(User $user): ?string
+    {
+        if (! $this->isEnabled()) return null;
+
+        try {
+            $credentials = $this->credentials();
+            $now = time();
+
+            return JWT::encode([
+                'iss' => $credentials['client_email'],
+                'sub' => $credentials['client_email'],
+                'aud' => 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
+                'iat' => $now,
+                'exp' => $now + 3600,
+                'uid' => (string) $user->id,
+                // Firebase transfers fields in `claims` to the resulting ID
+                // token, where Realtime Database exposes them as auth.token.*.
+                'claims' => [
+                    'role' => $user->role,
+                    'admin' => $user->isAdmin(),
+                ],
+            ], $credentials['private_key'], 'RS256');
+        } catch (\Throwable $exception) {
+            report($exception);
+            return null;
+        }
+    }
+
+    /** Publish only UI state: no phone numbers, account numbers, or balances. */
+    public function syncEntity(object $entity): void
+    {
+        if (! $this->isEnabled()) return;
+
+        $updatedAt = now()->getTimestampMs();
+        if ($entity instanceof User) {
+            $this->put("users/{$entity->id}/state", ['id' => $entity->id, 'role' => $entity->role, 'account_status' => $entity->account_status, 'updated_at' => $updatedAt]);
+        } elseif ($entity instanceof \App\Models\DriverProfile) {
+            $this->put("drivers/{$entity->user_id}/state", ['driver_id' => $entity->user_id, 'approval_status' => $entity->approval_status, 'is_online' => (bool) $entity->is_online, 'rating' => (float) $entity->rating, 'updated_at' => $updatedAt]);
+        } elseif ($entity instanceof \App\Models\WalletDeposit) {
+            $this->put("users/{$entity->user_id}/deposits/{$entity->id}", ['id' => $entity->id, 'status' => $entity->status, 'amount' => (float) $entity->amount, 'updated_at' => $updatedAt]);
+        } elseif ($entity instanceof DriverWithdrawal) {
+            $this->put("users/{$entity->driver_id}/withdrawals/{$entity->id}", ['id' => $entity->id, 'status' => $entity->status, 'amount' => (float) $entity->amount, 'updated_at' => $updatedAt]);
+        } elseif ($entity instanceof \App\Models\Complaint) {
+            $this->put("users/{$entity->user_id}/complaints/{$entity->id}", ['id' => $entity->id, 'status' => $entity->status, 'category' => $entity->category, 'updated_at' => $updatedAt]);
+        } elseif ($entity instanceof \App\Models\Promotion) {
+            $this->put("public/promotions/{$entity->id}", ['id' => $entity->id, 'title' => $entity->title, 'code' => $entity->code, 'type' => $entity->type, 'value' => (float) $entity->value, 'is_active' => (bool) $entity->is_active, 'updated_at' => $updatedAt]);
+        } else {
+            return;
+        }
+
+        $this->put('admin/events/'.class_basename($entity).'/'.$entity->getKey(), ['id' => $entity->getKey(), 'updated_at' => $updatedAt]);
+    }
+
     public function syncRide(RideRequest $ride): void
     {
         if (! $this->isEnabled()) return;
 
         $ride->loadMissing([
-            'customer:id,name,phone',
-            'driver:id,name,phone',
+            'customer:id,name',
+            'driver:id,name',
             'driver.driverProfile',
-            'offers.driver:id,name,phone',
+            'offers.driver:id,name',
             'offers.driver.driverProfile',
         ]);
 
-        $this->put("ride_requests/{$ride->id}", $this->ridePayload($ride));
+        $payload = $this->ridePayload($ride);
+        // Scoped copies let RTDB Rules authorize reads without granting access
+        // to the global ride feed. MySQL remains the authority.
+        $this->put("ride_requests/{$ride->id}", $payload);
+        $this->put("users/{$ride->customer_id}/rides/{$ride->id}", $payload);
+        if ($ride->driver_id !== null) {
+            $this->put("users/{$ride->driver_id}/rides/{$ride->id}", $payload);
+        }
+        if (in_array($ride->status, ['pending', 'requested', 'receiving_offers'], true)) {
+            $this->put("drivers/open_rides/{$ride->id}", $payload);
+        } else {
+            $this->request('delete', "drivers/open_rides/{$ride->id}");
+        }
+        $this->put("admin/events/RideRequest/{$ride->id}", [
+            'id' => $ride->id,
+            'status' => $ride->status,
+            'updated_at' => optional($ride->updated_at)->getTimestampMs(),
+        ]);
     }
 
     /** @return array<string, mixed> */
     private function ridePayload(RideRequest $ride): array
     {
         $ride->loadMissing([
-            'customer:id,name,phone',
-            'driver:id,name,phone',
+            'customer:id,name',
+            'driver:id,name',
             'driver.driverProfile',
-            'offers.driver:id,name,phone',
+            'offers.driver:id,name',
             'offers.driver.driverProfile',
         ]);
 
@@ -44,7 +118,6 @@ class FirebaseRealtimeService
                 'offer_id' => $offer->id,
                 'driver_id' => $offer->driver_id,
                 'driver_name' => $driver?->name ?? 'سائق',
-                'driver_phone' => $driver?->phone ?? '',
                 'vehicle' => $profile?->vehicle_type ?? 'سيارة',
                 'vehicle_plate' => $profile?->vehicle_plate ?? '',
                 'rating' => (string) ($profile?->rating ?? '5.0'),
@@ -61,11 +134,11 @@ class FirebaseRealtimeService
         return [
             'id' => $ride->id,
             'customer_id' => $ride->customer_id,
+            'customer_uid' => (string) $ride->customer_id,
             'customer_name' => $ride->customer?->name ?? 'زبون',
-            'customer_phone' => $ride->customer?->phone ?? '',
             'driver_id' => $ride->driver_id,
+            'driver_uid' => $ride->driver_id === null ? null : (string) $ride->driver_id,
             'driver_name' => $driver?->name ?? '',
-            'driver_phone' => $driver?->phone ?? '',
             'vehicle' => $profile?->vehicle_type ?? '',
             'vehicle_plate' => $profile?->vehicle_plate ?? '',
             'pickup_address' => $ride->pickup_address,
@@ -73,7 +146,6 @@ class FirebaseRealtimeService
             'notes' => $ride->notes ?? '',
             'status' => $ride->status,
             'actual_fare' => $ride->actual_fare === null ? null : (string) $ride->actual_fare,
-            'platform_fee' => $ride->platform_fee === null ? null : (string) $ride->platform_fee,
             'rating' => $ride->rating,
             'rating_comment' => $ride->rating_comment,
             'requested_at' => optional($ride->requested_at)->getTimestampMs(),
@@ -101,19 +173,26 @@ class FirebaseRealtimeService
 
     public function syncWithdrawal(DriverWithdrawal $withdrawal): void
     {
-        if (! $this->isEnabled()) return;
-        $this->put("driver_withdrawals/{$withdrawal->driver_id}/{$withdrawal->id}", [
-            'id' => $withdrawal->id,
-            'driver_id' => $withdrawal->driver_id,
-            'amount' => (float) $withdrawal->amount,
-            'method' => $withdrawal->method,
-            'account_name' => $withdrawal->account_name,
-            'account_number' => $withdrawal->account_number,
-            'status' => $withdrawal->status,
-            'wallet_balance' => (float) ($withdrawal->driver()->value('wallet_balance') ?? 0),
-            'created_at' => optional($withdrawal->created_at)->getTimestampMs(),
-            'reviewed_at' => optional($withdrawal->reviewed_at)->getTimestampMs(),
-        ]);
+        $this->syncEntity($withdrawal);
+    }
+
+    /** Removes a legacy path that previously carried financial details. */
+    public function clearLegacySensitiveBranches(): void
+    {
+        if ($this->isEnabled()) $this->request('delete', 'driver_withdrawals');
+    }
+
+    public function clearOpenRides(): void
+    {
+        if ($this->isEnabled()) $this->request('delete', 'drivers/open_rides');
+    }
+
+    /** Deploys the checked-in RTDB rules using the configured service account. */
+    public function deployRules(string $rules): void
+    {
+        $payload = json_decode($rules, true, 512, JSON_THROW_ON_ERROR);
+        $url = rtrim((string) config('services.firebase.database_url'), '/');
+        $this->authenticatedClient()->put($url.'/.settings/rules.json', $payload)->throw();
     }
 
     private function isEnabled(): bool
@@ -141,12 +220,11 @@ class FirebaseRealtimeService
 
     private function authenticatedClient(): \Illuminate\Http\Client\PendingRequest
     {
-        $path = (string) config('services.firebase.service_account_path');
-        if ($path === '' || ! is_file($path)) {
-            throw new \RuntimeException('Firebase service-account file is not configured.');
+        $credentials = $this->credentials();
+        if ($this->accessToken !== null && $this->accessTokenExpiresAt > time()) {
+            return Http::withToken($this->accessToken)->timeout(10);
         }
 
-        $credentials = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
         $now = time();
         $assertion = JWT::encode([
             'iss' => $credentials['client_email'],
@@ -154,7 +232,7 @@ class FirebaseRealtimeService
             'aud' => $credentials['token_uri'],
             'iat' => $now,
             'exp' => $now + 3600,
-            'scope' => 'https://www.googleapis.com/auth/firebase.database https://www.googleapis.com/auth/userinfo.email',
+            'scope' => 'https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/firebase.database https://www.googleapis.com/auth/userinfo.email',
         ], $credentials['private_key'], 'RS256');
 
         $token = Http::asForm()->timeout(10)->post($credentials['token_uri'], [
@@ -166,6 +244,20 @@ class FirebaseRealtimeService
             throw new \RuntimeException('Firebase access token could not be created.');
         }
 
-        return Http::withToken($token)->timeout(10);
+        $this->accessToken = $token;
+        $this->accessTokenExpiresAt = $now + 3300;
+
+        return Http::withToken($this->accessToken)->timeout(10);
+    }
+
+    /** @return array<string, string> */
+    private function credentials(): array
+    {
+        $path = (string) config('services.firebase.service_account_path');
+        if ($path === '' || ! is_file($path)) {
+            throw new \RuntimeException('Firebase service-account file is not configured.');
+        }
+
+        return json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
     }
 }

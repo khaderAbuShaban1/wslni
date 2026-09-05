@@ -17,7 +17,7 @@ class TripProgressScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<RideDraft?>(
-      stream: _realtime.watchRide(draft.id),
+      stream: _realtime.watchRide(draft.customerId, draft.id),
       initialData: draft,
       builder: (context, snapshot) {
         final ride = snapshot.data ?? draft;

@@ -8,14 +8,13 @@ use App\Models\WalletDeposit;
 use App\Models\WalletPaymentAccount;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class CustomerWalletController extends Controller
 {
-    public function show(User $customer): JsonResponse
+    public function show(Request $request): JsonResponse
     {
-        abort_unless($customer->role === 'customer', 404);
+        $customer = $this->customer($request);
 
         $paymentAccounts = WalletPaymentAccount::query()
             ->where('is_active', true)
@@ -39,23 +38,30 @@ class CustomerWalletController extends Controller
         ]);
     }
 
-    public function storeDeposit(Request $request, User $customer): JsonResponse
+    public function storeDeposit(Request $request): JsonResponse
     {
-        abort_unless($customer->role === 'customer', 404);
+        $customer = $this->customer($request);
 
         $data = $request->validate([
-            'amount' => ['required', 'numeric', 'min:1'],
+            'amount' => ['required', 'decimal:0,2', 'min:1', 'max:100000'],
             'wallet_payment_account_id' => [
                 'required',
                 Rule::exists('wallet_payment_accounts', 'id')->where('is_active', true),
             ],
-            'reference_number' => ['nullable', 'string', 'max:255', 'unique:wallet_deposits,reference_number'],
-            'receipt_image' => ['required', 'image', 'max:5120'],
-            'note' => ['nullable', 'string', 'max:5000'],
+            'reference_number' => ['nullable', 'string', 'max:100', 'unique:wallet_deposits,reference_number'],
+            'receipt_image' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'note' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $paymentAccount = WalletPaymentAccount::query()->findOrFail($data['wallet_payment_account_id']);
-        $path = $request->file('receipt_image')->store('wallet-deposits', 'public');
+        $receipt = $request->file('receipt_image');
+        $receiptHash = hash_file('sha256', $receipt->getRealPath());
+
+        if (WalletDeposit::query()->where('receipt_sha256', $receiptHash)->exists()) {
+            return response()->json(['message' => 'تم إرسال صورة الإيصال هذه مسبقًا.'], 422);
+        }
+
+        $path = $receipt->store('wallet-deposits', 'local');
 
         $deposit = WalletDeposit::create([
             'user_id' => $customer->id,
@@ -64,6 +70,7 @@ class CustomerWalletController extends Controller
             'bank_name' => $paymentAccount->name,
             'reference_number' => $data['reference_number'] ?? null,
             'receipt_path' => $path,
+            'receipt_sha256' => $receiptHash,
             'status' => 'pending',
             'note' => $data['note'] ?? null,
         ])->load('paymentAccount');
@@ -95,10 +102,17 @@ class CustomerWalletController extends Controller
             'amount' => (float) $deposit->amount,
             'payment_account_name' => $deposit->paymentAccount?->name ?? $deposit->bank_name,
             'reference_number' => $deposit->reference_number,
-            'receipt_url' => $deposit->receipt_path ? Storage::disk('public')->url($deposit->receipt_path) : null,
             'status' => $deposit->status,
             'note' => $deposit->note,
             'created_at' => $deposit->created_at,
         ];
+    }
+
+    private function customer(Request $request): User
+    {
+        $customer = $request->user();
+        abort_unless($customer?->role === 'customer' && $customer->isActive(), 403);
+
+        return $customer;
     }
 }

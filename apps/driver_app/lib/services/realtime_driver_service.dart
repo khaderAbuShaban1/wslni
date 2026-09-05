@@ -9,10 +9,11 @@ class RealtimeDriverService {
   bool get isEnabled => FirebaseRuntime.isReady;
 
   DatabaseReference get _ridesRef => _database.ref('ride_requests');
+  DatabaseReference get _openRidesRef => _database.ref('drivers/open_rides');
 
   Stream<List<Map<String, dynamic>>> watchWithdrawals(int driverId) {
     if (!isEnabled || driverId == 0) return const Stream.empty();
-    return _database.ref('driver_withdrawals/$driverId').onValue.map((event) {
+    return _database.ref('users/$driverId/withdrawals').onValue.map((event) {
       final rows = <Map<String, dynamic>>[];
       for (final raw in _rows(event.snapshot.value)) {
         rows.add(Map<String, dynamic>.from(raw));
@@ -29,7 +30,7 @@ class RealtimeDriverService {
   Stream<List<RideRequestItem>> watchOpenRides() {
     if (!isEnabled) return const Stream.empty();
 
-    return _ridesRef.onValue.map((event) {
+    return _openRidesRef.onValue.map((event) {
       final value = event.snapshot.value;
 
       final rides = <RideRequestItem>[];
@@ -48,7 +49,7 @@ class RealtimeDriverService {
   Stream<List<RideRequestItem>> watchActiveRides(int driverId) {
     if (!isEnabled) return const Stream.empty();
 
-    return _ridesRef.onValue.map((event) {
+    return _database.ref('users/$driverId/rides').onValue.map((event) {
       final value = event.snapshot.value;
 
       final rides = <RideRequestItem>[];
@@ -73,7 +74,7 @@ class RealtimeDriverService {
   Stream<List<RideRequestItem>> watchDriverRides(int driverId) {
     if (!isEnabled) return const Stream.empty();
 
-    return _ridesRef.onValue.map((event) {
+    return _database.ref('users/$driverId/rides').onValue.map((event) {
       final value = event.snapshot.value;
       final rides = <RideRequestItem>[];
       for (final raw in _rows(value)) {

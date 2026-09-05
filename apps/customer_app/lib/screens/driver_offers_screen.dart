@@ -82,7 +82,10 @@ class _DriverOffersScreenState extends State<DriverOffersScreen> {
             const SectionHeader(title: 'اختر أفضل عرض'),
             const SizedBox(height: 12),
             StreamBuilder<List<DriverOffer>>(
-              stream: widget.realtimeService.watchOffers(widget.draft.id),
+              stream: widget.realtimeService.watchOffers(
+                widget.draft.customerId,
+                widget.draft.id,
+              ),
               builder: (context, snapshot) {
                 final offers =
                     snapshot.data ?? widget.driverService.currentOffers();

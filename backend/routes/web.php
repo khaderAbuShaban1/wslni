@@ -19,7 +19,7 @@ Route::get('/', function () {
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('auth.login');
-    Route::post('/login', [AuthController::class, 'login'])->name('auth.login.store');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth')->name('auth.login.store');
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('auth.logout');
@@ -33,6 +33,9 @@ Route::get('/home', function () {
 })->middleware('auth')->name('home');
 
 Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(function () {
+    Route::get('/firebase/token', fn () => response()->json([
+        'token' => app(\App\Services\FirebaseRealtimeService::class)->customToken(auth()->user()),
+    ]))->name('firebase.token');
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/drivers', [DriversController::class, 'index'])->name('drivers.index');
@@ -47,17 +50,20 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
     Route::get('/rides', [RidesController::class, 'index'])->name('rides.index');
     Route::patch('/rides/{rideRequest}/status', [RidesController::class, 'updateStatus'])->name('rides.status');
 
-    Route::get('/wallets', [WalletsController::class, 'index'])->name('wallets.index');
-    Route::post('/wallets', [WalletsController::class, 'store'])->name('wallets.store');
-    Route::patch('/wallets/{walletDeposit}/approve', [WalletsController::class, 'approve'])->name('wallets.approve');
-    Route::patch('/wallets/{walletDeposit}/reject', [WalletsController::class, 'reject'])->name('wallets.reject');
-    Route::patch('/driver-withdrawals/{driverWithdrawal}/approve', [WalletsController::class, 'approveWithdrawal'])->name('driver-withdrawals.approve');
-    Route::patch('/driver-withdrawals/{driverWithdrawal}/reject', [WalletsController::class, 'rejectWithdrawal'])->name('driver-withdrawals.reject');
-    Route::get('/wallet-payment-accounts', [WalletsController::class, 'paymentAccounts'])->name('wallet-payment-accounts.index');
-    Route::post('/wallet-payment-accounts', [WalletsController::class, 'storePaymentAccount'])->name('wallet-payment-accounts.store');
-    Route::get('/wallet-payment-accounts/{walletPaymentAccount}/invoice', [WalletsController::class, 'paymentAccountInvoice'])->name('wallet-payment-accounts.invoice');
-    Route::patch('/wallet-payment-accounts/{walletPaymentAccount}', [WalletsController::class, 'updatePaymentAccount'])->name('wallet-payment-accounts.update');
-    Route::patch('/wallet-payment-accounts/{walletPaymentAccount}/toggle', [WalletsController::class, 'togglePaymentAccount'])->name('wallet-payment-accounts.toggle');
+    Route::middleware('financial')->group(function () {
+        Route::get('/wallets', [WalletsController::class, 'index'])->name('wallets.index');
+        Route::post('/wallets', [WalletsController::class, 'store'])->name('wallets.store');
+        Route::patch('/wallets/{walletDeposit}/approve', [WalletsController::class, 'approve'])->name('wallets.approve');
+        Route::patch('/wallets/{walletDeposit}/reject', [WalletsController::class, 'reject'])->name('wallets.reject');
+        Route::get('/wallets/{walletDeposit}/receipt', [WalletsController::class, 'receipt'])->name('wallets.receipt');
+        Route::patch('/driver-withdrawals/{driverWithdrawal}/approve', [WalletsController::class, 'approveWithdrawal'])->name('driver-withdrawals.approve');
+        Route::patch('/driver-withdrawals/{driverWithdrawal}/reject', [WalletsController::class, 'rejectWithdrawal'])->name('driver-withdrawals.reject');
+        Route::get('/wallet-payment-accounts', [WalletsController::class, 'paymentAccounts'])->name('wallet-payment-accounts.index');
+        Route::post('/wallet-payment-accounts', [WalletsController::class, 'storePaymentAccount'])->name('wallet-payment-accounts.store');
+        Route::get('/wallet-payment-accounts/{walletPaymentAccount}/invoice', [WalletsController::class, 'paymentAccountInvoice'])->name('wallet-payment-accounts.invoice');
+        Route::patch('/wallet-payment-accounts/{walletPaymentAccount}', [WalletsController::class, 'updatePaymentAccount'])->name('wallet-payment-accounts.update');
+        Route::patch('/wallet-payment-accounts/{walletPaymentAccount}/toggle', [WalletsController::class, 'togglePaymentAccount'])->name('wallet-payment-accounts.toggle');
+    });
 
     Route::get('/commission', [SettingsController::class, 'edit'])->name('commission.edit');
     Route::post('/commission', [SettingsController::class, 'update'])->name('commission.update');

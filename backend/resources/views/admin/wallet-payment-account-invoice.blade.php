@@ -6,17 +6,17 @@
     <title>فاتورة {{ $account->name }}</title>
     <style>
         :root {
-            --text: #0f172a;
-            --muted: #64748b;
-            --line: #d9e2ec;
-            --primary: #0f766e;
-            --soft: #f8fbfd;
+            --text: #111214;
+            --muted: #747880;
+            --line: #e7dfcf;
+            --primary: #e9b934;
+            --soft: #fcfaf4;
         }
         * { box-sizing: border-box; }
         body {
             margin: 0;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: #eef3f8;
+            background: #f5f2ea;
             color: var(--text);
         }
         .page {
@@ -26,7 +26,7 @@
             background: #fff;
             border: 1px solid var(--line);
             border-radius: 18px;
-            box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+            box-shadow: 0 18px 48px rgba(103, 99, 91, 0.12);
         }
         .topbar,
         .row,
@@ -61,8 +61,8 @@
             align-items: center;
             border-radius: 999px;
             padding: 7px 12px;
-            background: #dff5f1;
-            color: var(--primary);
+            background: #fff3cf;
+            color: #6f5200;
             font-weight: 800;
         }
         .section {
@@ -120,7 +120,7 @@
         }
         .btn.primary {
             background: var(--primary);
-            color: #fff;
+            color: #211a00;
             border-color: var(--primary);
         }
         @media print {
