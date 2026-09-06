@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Models\RideOffer;
 use App\Models\RideRequest;
 use App\Models\User;
-use App\Services\FirebaseRealtimeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,8 +68,6 @@ class RideOfferController extends Controller
             return response()->json(['message' => $result['error']], 422);
         }
 
-        app(FirebaseRealtimeService::class)->syncRide(RideRequest::findOrFail($ride->id));
-
         return response()->json([
             'message' => 'تم إرسال عرض السعر بنجاح.',
             'offer' => $result['offer'],
@@ -131,8 +128,6 @@ class RideOfferController extends Controller
         if (isset($result['error'])) {
             return response()->json(['message' => $result['error']], $result['status']);
         }
-
-        app(FirebaseRealtimeService::class)->syncRide($result['ride']->fresh());
 
         return response()->json([
             'message' => 'تم قبول عرض السائق بنجاح.',

@@ -6,6 +6,7 @@ use App\Models\DriverWithdrawal;
 use App\Models\RideRequest;
 use App\Models\User;
 use Firebase\JWT\JWT;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 class FirebaseRealtimeService
@@ -48,22 +49,31 @@ class FirebaseRealtimeService
 
         $updatedAt = now()->getTimestampMs();
         if ($entity instanceof User) {
-            $this->put("users/{$entity->id}/state", ['id' => $entity->id, 'role' => $entity->role, 'account_status' => $entity->account_status, 'updated_at' => $updatedAt]);
+            $path = "users/{$entity->id}/state";
+            $payload = ['id' => $entity->id, 'role' => $entity->role, 'account_status' => $entity->account_status, 'updated_at' => $updatedAt];
         } elseif ($entity instanceof \App\Models\DriverProfile) {
-            $this->put("drivers/{$entity->user_id}/state", ['driver_id' => $entity->user_id, 'approval_status' => $entity->approval_status, 'is_online' => (bool) $entity->is_online, 'rating' => (float) $entity->rating, 'updated_at' => $updatedAt]);
+            $path = "drivers/{$entity->user_id}/state";
+            $payload = ['driver_id' => $entity->user_id, 'approval_status' => $entity->approval_status, 'is_online' => (bool) $entity->is_online, 'rating' => (float) $entity->rating, 'updated_at' => $updatedAt];
         } elseif ($entity instanceof \App\Models\WalletDeposit) {
-            $this->put("users/{$entity->user_id}/deposits/{$entity->id}", ['id' => $entity->id, 'status' => $entity->status, 'amount' => (float) $entity->amount, 'updated_at' => $updatedAt]);
+            $path = "users/{$entity->user_id}/deposits/{$entity->id}";
+            $payload = ['id' => $entity->id, 'status' => $entity->status, 'amount' => (float) $entity->amount, 'updated_at' => $updatedAt];
         } elseif ($entity instanceof DriverWithdrawal) {
-            $this->put("users/{$entity->driver_id}/withdrawals/{$entity->id}", ['id' => $entity->id, 'status' => $entity->status, 'amount' => (float) $entity->amount, 'updated_at' => $updatedAt]);
+            $path = "users/{$entity->driver_id}/withdrawals/{$entity->id}";
+            $payload = ['id' => $entity->id, 'status' => $entity->status, 'amount' => (float) $entity->amount, 'updated_at' => $updatedAt];
         } elseif ($entity instanceof \App\Models\Complaint) {
-            $this->put("users/{$entity->user_id}/complaints/{$entity->id}", ['id' => $entity->id, 'status' => $entity->status, 'category' => $entity->category, 'updated_at' => $updatedAt]);
+            $path = "users/{$entity->user_id}/complaints/{$entity->id}";
+            $payload = ['id' => $entity->id, 'status' => $entity->status, 'category' => $entity->category, 'updated_at' => $updatedAt];
         } elseif ($entity instanceof \App\Models\Promotion) {
-            $this->put("public/promotions/{$entity->id}", ['id' => $entity->id, 'title' => $entity->title, 'code' => $entity->code, 'type' => $entity->type, 'value' => (float) $entity->value, 'is_active' => (bool) $entity->is_active, 'updated_at' => $updatedAt]);
+            $path = "public/promotions/{$entity->id}";
+            $payload = ['id' => $entity->id, 'title' => $entity->title, 'code' => $entity->code, 'type' => $entity->type, 'value' => (float) $entity->value, 'is_active' => (bool) $entity->is_active, 'updated_at' => $updatedAt];
         } else {
             return;
         }
 
-        $this->put('admin/events/'.class_basename($entity).'/'.$entity->getKey(), ['id' => $entity->getKey(), 'updated_at' => $updatedAt]);
+        $this->patch([
+            $path => $payload,
+            'admin/events/'.class_basename($entity).'/'.$entity->getKey() => ['id' => $entity->getKey(), 'updated_at' => $updatedAt],
+        ]);
     }
 
     public function syncRide(RideRequest $ride): void
@@ -79,23 +89,26 @@ class FirebaseRealtimeService
         ]);
 
         $payload = $this->ridePayload($ride);
-        // Scoped copies let RTDB Rules authorize reads without granting access
-        // to the global ride feed. MySQL remains the authority.
-        $this->put("ride_requests/{$ride->id}", $payload);
-        $this->put("users/{$ride->customer_id}/rides/{$ride->id}", $payload);
+        // A multi-location update reaches all subscribers atomically in one
+        // request. Sending these copies one by one delayed the API response.
+        $updates = [
+            "ride_requests/{$ride->id}" => $payload,
+            "users/{$ride->customer_id}/rides/{$ride->id}" => $payload,
+            "admin/events/RideRequest/{$ride->id}" => [
+                'id' => $ride->id,
+                'status' => $ride->status,
+                'updated_at' => optional($ride->updated_at)->getTimestampMs(),
+            ],
+        ];
         if ($ride->driver_id !== null) {
-            $this->put("users/{$ride->driver_id}/rides/{$ride->id}", $payload);
+            $updates["users/{$ride->driver_id}/rides/{$ride->id}"] = $payload;
         }
         if (in_array($ride->status, ['pending', 'requested', 'receiving_offers'], true)) {
-            $this->put("drivers/open_rides/{$ride->id}", $payload);
+            $updates["drivers/open_rides/{$ride->id}"] = $payload;
         } else {
-            $this->request('delete', "drivers/open_rides/{$ride->id}");
+            $updates["drivers/open_rides/{$ride->id}"] = null;
         }
-        $this->put("admin/events/RideRequest/{$ride->id}", [
-            'id' => $ride->id,
-            'status' => $ride->status,
-            'updated_at' => optional($ride->updated_at)->getTimestampMs(),
-        ]);
+        $this->patch($updates);
     }
 
     /** @return array<string, mixed> */
@@ -206,11 +219,18 @@ class FirebaseRealtimeService
         return $this->request('put', $path, $data);
     }
 
+    /** @param array<string, mixed> $updates */
+    private function patch(array $updates): bool
+    {
+        return $this->request('patch', '', $updates);
+    }
+
     private function request(string $method, string $path, ?array $data = null): bool
     {
         $url = rtrim((string) config('services.firebase.database_url'), '/');
         try {
-            $this->authenticatedClient()->{$method}("{$url}/{$path}.json", $data)->throw();
+            $endpoint = $path === '' ? "{$url}/.json" : "{$url}/{$path}.json";
+            $this->authenticatedClient()->{$method}($endpoint, $data)->throw();
             return true;
         } catch (\Throwable $exception) {
             report($exception);
@@ -222,6 +242,13 @@ class FirebaseRealtimeService
     {
         $credentials = $this->credentials();
         if ($this->accessToken !== null && $this->accessTokenExpiresAt > time()) {
+            return Http::withToken($this->accessToken)->timeout(10);
+        }
+
+        $cached = Cache::get('firebase.realtime.access-token');
+        if (is_array($cached) && isset($cached['token'], $cached['expires_at']) && $cached['expires_at'] > time()) {
+            $this->accessToken = $cached['token'];
+            $this->accessTokenExpiresAt = $cached['expires_at'];
             return Http::withToken($this->accessToken)->timeout(10);
         }
 
@@ -246,6 +273,10 @@ class FirebaseRealtimeService
 
         $this->accessToken = $token;
         $this->accessTokenExpiresAt = $now + 3300;
+        Cache::put('firebase.realtime.access-token', [
+            'token' => $this->accessToken,
+            'expires_at' => $this->accessTokenExpiresAt,
+        ], now()->addSeconds(3300));
 
         return Http::withToken($this->accessToken)->timeout(10);
     }

@@ -18,7 +18,6 @@ class _DriverHomePageState extends State<DriverHomePage> {
   int? _withdrawnOffersForRideId;
   RideRequestItem? _activeRide;
   StreamSubscription<List<RideRequestItem>>? _activeRideSubscription;
-  Timer? _activeRideRefreshTimer;
 
   late final List<Widget> _pages = [
     RequestsPage(user: widget.user),
@@ -30,11 +29,9 @@ class _DriverHomePageState extends State<DriverHomePage> {
   @override
   void initState() {
     super.initState();
+    // A single API read restores state when opening the app. All subsequent
+    // changes arrive from Firebase; polling would defeat realtime updates.
     unawaited(_loadActiveRideFromApi());
-    _activeRideRefreshTimer = Timer.periodic(
-      const Duration(seconds: 12),
-      (_) => unawaited(_loadActiveRideFromApi()),
-    );
     if (_realtime.isEnabled) {
       _activeRideSubscription = _realtime
           .watchActiveRides(widget.user.id)
@@ -86,7 +83,6 @@ class _DriverHomePageState extends State<DriverHomePage> {
   @override
   void dispose() {
     _activeRideSubscription?.cancel();
-    _activeRideRefreshTimer?.cancel();
     super.dispose();
   }
 

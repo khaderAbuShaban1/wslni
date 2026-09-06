@@ -8,7 +8,6 @@ use App\Models\DriverWithdrawal;
 use App\Models\WalletDeposit;
 use App\Models\WalletPaymentAccount;
 use App\Models\WalletTransaction;
-use App\Services\FirebaseRealtimeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -119,7 +118,6 @@ class WalletsController extends Controller
     {
         if ($driverWithdrawal->status !== 'pending') return back()->withErrors(['status' => 'تمت مراجعة طلب السحب مسبقًا.']);
         $driverWithdrawal->update(['status' => 'paid', 'reviewed_by' => auth()->id(), 'reviewed_at' => now()]);
-        app(FirebaseRealtimeService::class)->syncWithdrawal($driverWithdrawal->fresh());
         return back()->with('status', 'تم اعتماد طلب السحب وتحويله إلى مدفوع.');
     }
 
@@ -131,7 +129,6 @@ class WalletsController extends Controller
             User::query()->lockForUpdate()->findOrFail($withdrawal->driver_id)->increment('wallet_balance', $withdrawal->amount);
             $withdrawal->update(['status' => 'rejected', 'reviewed_by' => auth()->id(), 'reviewed_at' => now()]);
         });
-        app(FirebaseRealtimeService::class)->syncWithdrawal($driverWithdrawal->fresh());
         return back()->with('status', 'تم رفض طلب السحب وإعادة المبلغ لمحفظة السائق.');
     }
 

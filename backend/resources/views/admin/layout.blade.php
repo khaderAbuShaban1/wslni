@@ -447,6 +447,40 @@
             gap: 8px;
             flex-wrap: wrap;
         }
+        .realtime-indicator {
+            position: fixed;
+            left: 22px;
+            bottom: 22px;
+            z-index: 1000;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            max-width: min(360px, calc(100vw - 44px));
+            padding: 10px 14px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .96);
+            box-shadow: 0 12px 28px rgba(15, 23, 42, .12);
+            color: var(--muted);
+            font-size: 13px;
+            transition: opacity 180ms ease, transform 180ms ease;
+        }
+        .realtime-indicator::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 0 4px var(--success-soft);
+        }
+        .realtime-indicator.updating::before {
+            background: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-soft);
+        }
+        .realtime-indicator.offline::before {
+            background: var(--danger);
+            box-shadow: 0 0 0 4px var(--danger-soft);
+        }
         @media (max-width: 1100px) {
             .shell { grid-template-columns: 1fr; }
             .sidebar {
@@ -524,6 +558,9 @@
             </div>
         </main>
     </div>
+    <div id="realtime-indicator" class="realtime-indicator" role="status" aria-live="polite">
+        التحديث المباشر قيد الاتصال…
+    </div>
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js';
         import { getAuth, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
@@ -536,11 +573,79 @@
             projectId: 'wslni-527a2',
         });
 
+        const indicator = document.getElementById('realtime-indicator');
+        let initialized = false;
+        let refreshing = false;
+        let refreshTimer;
+
+        const setRealtimeStatus = (message, state = '') => {
+            indicator.textContent = message;
+            indicator.className = `realtime-indicator ${state}`.trim();
+        };
+
+        const isEditing = () => {
+            const active = document.activeElement;
+            return active instanceof HTMLInputElement ||
+                active instanceof HTMLTextAreaElement ||
+                active instanceof HTMLSelectElement;
+        };
+
+        const refreshPageContent = async () => {
+            if (refreshing) return;
+            if (isEditing()) {
+                setRealtimeStatus('وصل تحديث جديد — سيظهر بعد الانتهاء من الكتابة.', 'updating');
+                window.clearTimeout(refreshTimer);
+                refreshTimer = window.setTimeout(refreshPageContent, 2500);
+                return;
+            }
+
+            refreshing = true;
+            setRealtimeStatus('جارٍ تحديث البيانات مباشرة…', 'updating');
+            try {
+                const response = await fetch(window.location.href, {
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    headers: {
+                        Accept: 'text/html',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                if (!response.ok) throw new Error('Unable to refresh admin data.');
+
+                const documentFragment = new DOMParser().parseFromString(await response.text(), 'text/html');
+                const currentWrap = document.querySelector('.main .wrap');
+                const nextWrap = documentFragment.querySelector('.main .wrap');
+                if (!currentWrap || !nextWrap) throw new Error('Admin content was not found.');
+
+                // Replace only the server-rendered data region. Navigation,
+                // scroll position, and the Firebase connection stay intact.
+                currentWrap.replaceChildren(...Array.from(nextWrap.childNodes).map((node) => node.cloneNode(true)));
+                setRealtimeStatus('تم تحديث البيانات مباشرة.');
+            } catch (_) {
+                setRealtimeStatus('تعذر تحديث البيانات مباشرة.', 'offline');
+            } finally {
+                refreshing = false;
+            }
+        };
+
+        const scheduleRefresh = () => {
+            window.clearTimeout(refreshTimer);
+            refreshTimer = window.setTimeout(refreshPageContent, 150);
+        };
+
         fetch('{{ route('admin.firebase.token') }}', { headers: { Accept: 'application/json' } })
             .then((response) => response.ok ? response.json() : Promise.reject(response))
             .then(({ token }) => token && signInWithCustomToken(getAuth(app), token))
-            .then(() => onValue(ref(getDatabase(app), 'admin/events'), () => window.location.reload()))
-            .catch(() => { /* Server rendering works even if Firebase is unavailable. */ });
+            .then(() => onValue(ref(getDatabase(app), 'admin/events'), () => {
+                // The first callback is Firebase's initial snapshot, not a new update.
+                if (!initialized) {
+                    initialized = true;
+                    setRealtimeStatus('التحديث المباشر متصل.');
+                    return;
+                }
+                scheduleRefresh();
+            }, () => setRealtimeStatus('انقطع التحديث المباشر.', 'offline')))
+            .catch(() => setRealtimeStatus('التحديث المباشر غير متاح.', 'offline'));
     </script>
 </body>
 </html>

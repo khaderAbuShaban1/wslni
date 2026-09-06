@@ -10,7 +10,6 @@ use App\Models\RideOffer;
 use App\Models\RideRequest;
 use App\Models\User;
 use App\Models\WalletTransaction;
-use App\Services\FirebaseRealtimeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -71,8 +70,6 @@ class RideController extends Controller
             'notes' => $data['notes'] ?? null,
             'requested_at' => now(),
         ]);
-
-        app(FirebaseRealtimeService::class)->syncRide($ride);
 
         return response()->json([
             'message' => 'تم إرسال طلب السيارة بنجاح.',
@@ -203,7 +200,6 @@ class RideController extends Controller
         }
 
         $syncedRide = $result['ride']->fresh();
-        app(FirebaseRealtimeService::class)->syncRide($syncedRide);
 
         return response()->json([
             'message' => 'تم تحديث حالة الرحلة بنجاح.',
@@ -261,7 +257,6 @@ class RideController extends Controller
         }
 
         $syncedRide = $result['ride']->fresh();
-        app(FirebaseRealtimeService::class)->syncRide($syncedRide);
 
         return response()->json(['ride' => $syncedRide->load(['customer:id,name,phone', 'driver.driverProfile'])]);
     }
@@ -293,7 +288,6 @@ class RideController extends Controller
             ->update(['rating' => round((float) ($averageRating ?? 5), 2)]);
 
         $syncedRide = $ride->fresh();
-        app(FirebaseRealtimeService::class)->syncRide($syncedRide);
 
         return response()->json(['message' => 'تم حفظ تقييمك.', 'ride' => $syncedRide]);
     }

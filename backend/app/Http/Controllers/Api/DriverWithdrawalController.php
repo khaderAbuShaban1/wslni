@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\DriverWithdrawal;
 use App\Models\User;
-use App\Services\FirebaseRealtimeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +50,6 @@ class DriverWithdrawalController extends Controller
         });
 
         if (isset($result['error'])) return response()->json(['message' => $result['error']], 422);
-        app(FirebaseRealtimeService::class)->syncWithdrawal($result['withdrawal']);
         return response()->json($result + ['message' => 'تم إرسال طلب السحب للمراجعة.'], 201);
     }
 }
