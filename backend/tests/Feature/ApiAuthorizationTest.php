@@ -319,6 +319,68 @@ class ApiAuthorizationTest extends TestCase
     }
 
     // ----------------------------------------------------------------
+    // Customer cannot create duplicate active rides
+    // ----------------------------------------------------------------
+
+    public function test_customer_cannot_create_ride_while_one_is_active(): void
+    {
+        $customer = $this->customer();
+        $this->createRide(['customer_id' => $customer->id, 'status' => 'receiving_offers']);
+
+        Sanctum::actingAs($customer, ['customer']);
+
+        $this->postJson('api/rides', [
+            'pickup_address' => 'مكان جديد',
+            'dropoff_address' => 'وجهة جديدة',
+        ])->assertUnprocessable()
+            ->assertJsonPath('message', 'لديك رحلة نشطة بالفعل. أكملها أو ألغها قبل طلب رحلة جديدة.');
+    }
+
+    public function test_customer_can_create_ride_after_previous_completed(): void
+    {
+        $customer = $this->customer();
+        $this->createRide(['customer_id' => $customer->id, 'status' => 'trip_completed']);
+
+        Sanctum::actingAs($customer, ['customer']);
+
+        $this->postJson('api/rides', [
+            'pickup_address' => 'مكان جديد',
+            'dropoff_address' => 'وجهة جديدة',
+        ])->assertCreated();
+    }
+
+    // ----------------------------------------------------------------
+    // Accepting an offer re-checks driver approval
+    // ----------------------------------------------------------------
+
+    public function test_cannot_accept_offer_from_revoked_driver(): void
+    {
+        $customer = $this->customer();
+        $driver = User::factory()->create(['role' => 'driver']);
+        DriverProfile::create([
+            'user_id' => $driver->id,
+            'license_number' => 'L789',
+            'vehicle_type' => 'sedan',
+            'vehicle_plate' => 'P789',
+            'approval_status' => 'rejected',
+            'is_online' => false,
+        ]);
+        $ride = $this->createRide(['customer_id' => $customer->id, 'status' => 'receiving_offers']);
+        $offer = RideOffer::create([
+            'ride_request_id' => $ride->id,
+            'driver_id' => $driver->id,
+            'price' => 30,
+            'status' => 'pending',
+        ]);
+
+        Sanctum::actingAs($customer, ['customer']);
+
+        $this->patchJson("api/rides/{$ride->id}/offers/{$offer->id}/accept")
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'هذا السائق لم يعد معتمدًا. اختر سائقًا آخر.');
+    }
+
+    // ----------------------------------------------------------------
     // Auth routes remain public
     // ----------------------------------------------------------------
 

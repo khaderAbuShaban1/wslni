@@ -57,6 +57,22 @@ class RideController extends Controller
         $user = $request->user();
         abort_unless($user->role === 'customer', 403, 'يجب أن تكون زبونًا لطلب رحلة.');
 
+        $hasActiveRide = RideRequest::query()
+            ->where('customer_id', $user->id)
+            ->whereIn('status', [
+                RideStatus::Pending->value,
+                RideStatus::ReceivingOffers->value,
+                RideStatus::DriverSelected->value,
+                ...RideStatus::activeValues(),
+            ])
+            ->exists();
+
+        if ($hasActiveRide) {
+            return response()->json([
+                'message' => 'لديك رحلة نشطة بالفعل. أكملها أو ألغها قبل طلب رحلة جديدة.',
+            ], 422);
+        }
+
         $data = $request->validate([
             'pickup_address' => ['required', 'string', 'max:255'],
             'dropoff_address' => ['required', 'string', 'max:255'],

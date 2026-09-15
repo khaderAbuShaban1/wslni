@@ -106,6 +106,14 @@ class RideOfferController extends Controller
                 return ['error' => 'رصيد محفظتك غير كافٍ لقبول هذا العرض.', 'status' => 422];
             }
 
+            $driverProfile = \App\Models\DriverProfile::query()
+                ->where('user_id', $lockedOffer->driver_id)
+                ->first();
+
+            if (! $driverProfile || ! $driverProfile->isApproved()) {
+                return ['error' => 'هذا السائق لم يعد معتمدًا. اختر سائقًا آخر.', 'status' => 422];
+            }
+
             $hasActiveRide = RideRequest::query()
                 ->where('driver_id', $lockedOffer->driver_id)
                 ->where('id', '!=', $lockedRide->id)

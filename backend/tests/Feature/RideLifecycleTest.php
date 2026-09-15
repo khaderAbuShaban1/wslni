@@ -18,9 +18,9 @@ class RideLifecycleTest extends TestCase
     public function test_selecting_an_offer_waits_for_driver_confirmation_and_inactivates_other_ride_offers(): void
     {
         $customer = $this->customer();
-        $driver = User::factory()->create(['role' => 'driver']);
+        $driver = $this->approvedDriver();
         $ride = $this->createRide(['customer_id' => $customer->id]);
-        $otherDriver = User::factory()->create(['role' => 'driver']);
+        $otherDriver = $this->approvedDriver();
         $offer = RideOffer::create([
             'ride_request_id' => $ride->id,
             'driver_id' => $driver->id,
@@ -177,8 +177,8 @@ class RideLifecycleTest extends TestCase
     public function test_driver_rejection_returns_ride_to_receiving_offers(): void
     {
         $customer = $this->customer();
-        $driver = User::factory()->create(['role' => 'driver']);
-        $otherDriver = User::factory()->create(['role' => 'driver']);
+        $driver = $this->approvedDriver();
+        $otherDriver = $this->approvedDriver();
         $ride = $this->createRide(['customer_id' => $customer->id, 'status' => 'receiving_offers']);
         $selected = RideOffer::create([
             'ride_request_id' => $ride->id,
@@ -244,6 +244,21 @@ class RideLifecycleTest extends TestCase
             'account_status' => 'active',
             'email_verified_at' => now(),
         ], $attributes));
+    }
+
+    private function approvedDriver(array $attributes = []): User
+    {
+        $driver = User::factory()->create(array_merge(['role' => 'driver'], $attributes));
+        DriverProfile::create([
+            'user_id' => $driver->id,
+            'license_number' => 'L' . $driver->id,
+            'vehicle_type' => 'sedan',
+            'vehicle_plate' => 'P' . $driver->id,
+            'approval_status' => 'approved',
+            'is_online' => true,
+        ]);
+
+        return $driver;
     }
 
     private function createRide(array $attributes = []): RideRequest
