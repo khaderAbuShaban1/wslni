@@ -26,13 +26,27 @@ class SyncFirebaseRides extends Command
             ->get();
 
         if ($this->option('fresh')) {
+            // `drivers/open_rides` is the exact branch consumed by the driver
+            // app. Clear it first so deleted or completed rides cannot linger.
+            if (! $firebase->clearOpenRides()) {
+                $this->error('Firebase rejected clearing the open-rides branch. Check the backend connection and credentials.');
+
+                return self::FAILURE;
+            }
+
             if (! $firebase->replaceRides($rides)) {
                 $this->error('Firebase rejected the sync. Configure backend Firebase credentials and rules first.');
 
                 return self::FAILURE;
             }
-        } else {
-            foreach ($rides as $ride) $firebase->syncRide($ride);
+        }
+
+        foreach ($rides as $ride) {
+            if (! $firebase->syncRide($ride)) {
+                $this->error("Firebase rejected syncing ride {$ride->id}. Check the backend connection and credentials.");
+
+                return self::FAILURE;
+            }
         }
 
         $this->info("Synchronized {$rides->count()} MySQL rides to Firebase.");

@@ -10,6 +10,7 @@ use App\Models\RideOffer;
 use App\Models\RideRequest;
 use App\Models\User;
 use App\Models\WalletTransaction;
+use App\Services\FirebaseRealtimeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -44,7 +45,7 @@ class RideController extends Controller
         );
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, FirebaseRealtimeService $firebase): JsonResponse
     {
         $data = $request->validate([
             'customer_id' => ['required', 'exists:users,id'],
@@ -70,6 +71,12 @@ class RideController extends Controller
             'notes' => $data['notes'] ?? null,
             'requested_at' => now(),
         ]);
+
+        // The driver queue must receive a new request immediately. The
+        // observer still mirrors subsequent state changes, while this direct
+        // publish avoids relying on a terminating callback in PHP's local
+        // development server.
+        $firebase->syncRide($ride);
 
         return response()->json([
             'message' => 'تم إرسال طلب السيارة بنجاح.',

@@ -1,26 +1,63 @@
 part of '../main.dart';
 
-class _EarningsPage extends StatelessWidget {
+class _EarningsPage extends StatefulWidget {
   _EarningsPage({required this.user});
 
   final DriverUser user;
-  final RealtimeDriverService _realtime = RealtimeDriverService();
+
+  @override
+  State<_EarningsPage> createState() => _EarningsPageState();
+}
+
+class _EarningsPageState extends State<_EarningsPage> {
+  final _api = ApiClient();
+  final _realtime = RealtimeDriverService();
+  List<RideRequestItem> _completed = const [];
+  bool _loading = true;
+  StreamSubscription<List<RideRequestItem>>? _subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    _subscription = _realtime
+        .watchDriverRides(widget.user.id)
+        .listen((_) => unawaited(_load()));
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final rows = await _api.getList(
+        'rides?driver_id=${widget.user.id}&status=all',
+      );
+      final completed = rows
+          .whereType<Map>()
+          .map((row) => RideRequestItem.fromJson(Map<String, dynamic>.from(row)))
+          .where(
+            (ride) =>
+                ride.status == RideStatuses.tripCompleted ||
+                ride.status == RideStatuses.rated,
+          )
+          .toList()
+        ..sort((a, b) => b.id.compareTo(a.id));
+      if (mounted) setState(() => _completed = completed);
+    } catch (_) {
+      // Preserve the last verified earnings if the server is temporarily down.
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<RideRequestItem>>(
-      stream: _realtime.watchDriverRides(user.id),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const _SkeletonList();
-        }
-        final completed = (snapshot.data ?? const <RideRequestItem>[])
-            .where(
-              (ride) =>
-                  ride.status == RideStatuses.tripCompleted ||
-                  ride.status == RideStatuses.rated,
-            )
-            .toList();
+    if (_loading) return const _SkeletonList();
+    final completed = _completed;
         final gross = completed.fold<double>(
           0,
           (sum, ride) => sum + _amount(ride.actualFare),
@@ -68,7 +105,7 @@ class _EarningsPage extends StatelessWidget {
             const SizedBox(height: 18),
             _NetEarningsCard(net: net),
             const SizedBox(height: 12),
-            _WithdrawalPanel(user: user),
+            _WithdrawalPanel(user: widget.user),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -118,8 +155,6 @@ class _EarningsPage extends StatelessWidget {
               ],
           ],
         );
-      },
-    );
   }
 
   double _amount(String value) => double.tryParse(value) ?? 0;

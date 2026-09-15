@@ -13,11 +13,58 @@ class _RequestsPageState extends State<RequestsPage> {
   final _api = ApiClient();
   final _realtime = RealtimeDriverService();
   late Stream<List<RideRequestItem>> _rideStream;
+  List<RideRequestItem> _initialRides = const [];
+  bool _loadingInitialRides = true;
 
   @override
   void initState() {
     super.initState();
     _rideStream = _realtime.watchOpenRides();
+    _loadInitialRides();
+  }
+
+  /// Hydrates the screen once from Laravel. Subsequent updates come directly
+  /// from Firebase; this is deliberately not a polling loop.
+  Future<void> _loadInitialRides() async {
+    try {
+      final rows = await _api.getList('rides?status=open');
+      final rides = rows
+          .whereType<Map>()
+          .map((row) => RideRequestItem.fromJson(Map<String, dynamic>.from(row)))
+          .toList()
+        ..sort((a, b) => b.id.compareTo(a.id));
+      if (mounted) setState(() => _initialRides = rides);
+    } catch (_) {
+      // Firebase remains the live source. The screen has its existing error
+      // state if neither source is available.
+    } finally {
+      if (mounted) setState(() => _loadingInitialRides = false);
+    }
+  }
+
+  List<RideRequestItem> _mergeRealtimeRides(
+    List<RideRequestItem> realtimeRides,
+  ) {
+    // Laravel is the source of truth for the list that existed when this
+    // screen opened. Firebase then contributes only newer requests. This
+    // prevents an incomplete cached Firebase branch from hiding valid rides.
+    final ridesById = {
+      for (final ride in _initialRides) ride.id: ride,
+    };
+    final newestInitialId = _initialRides.fold<int>(
+      0,
+      (latest, ride) => ride.id > latest ? ride.id : latest,
+    );
+
+    for (final ride in realtimeRides) {
+      if (ridesById.containsKey(ride.id) || ride.id > newestInitialId) {
+        ridesById[ride.id] = ride;
+      }
+    }
+
+    final rides = ridesById.values.toList()
+      ..sort((a, b) => b.id.compareTo(a.id));
+    return rides;
   }
 
   Future<bool> _sendOffer(
@@ -149,18 +196,22 @@ class _RequestsPageState extends State<RequestsPage> {
     return StreamBuilder<List<RideRequestItem>>(
       stream: _rideStream,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            _loadingInitialRides) {
           return const _SkeletonList();
         }
-        if (snapshot.hasError) {
+        if (snapshot.hasError && _initialRides.isEmpty) {
           return const _EmptyStateCard(
             icon: Icons.cloud_off_outlined,
             title: 'انقطع الاتصال المباشر',
             message: 'تحقق من اتصال Firebase ثم أعد فتح التطبيق.',
           );
         }
+        final rides = snapshot.hasData
+            ? _mergeRealtimeRides(snapshot.data!)
+            : _initialRides;
         return _RequestsList(
-          rides: snapshot.data ?? const <RideRequestItem>[],
+          rides: rides,
           onOffer: _openOfferSheet,
         );
       },

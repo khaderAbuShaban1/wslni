@@ -35,19 +35,9 @@ class _DriverHomePageState extends State<DriverHomePage> {
     if (_realtime.isEnabled) {
       _activeRideSubscription = _realtime
           .watchActiveRides(widget.user.id)
-          .listen((rides) {
-            if (!mounted) return;
-            final activeRide = rides.isEmpty ? _activeRide : rides.first;
-            setState(() {
-              _activeRide = activeRide;
-              _initializing = false;
-            });
-            if (activeRide != null &&
-                _withdrawnOffersForRideId != activeRide.id) {
-              _withdrawnOffersForRideId = activeRide.id;
-              unawaited(_withdrawOtherOffers(activeRide.id));
-            }
-          });
+          // Firebase is the realtime signal. Verify its update against
+          // Laravel so an old cached Firebase ride can never lock the app.
+          .listen((_) => unawaited(_loadActiveRideFromApi()));
     } else {
       // The API load above remains available even without Firebase.
     }

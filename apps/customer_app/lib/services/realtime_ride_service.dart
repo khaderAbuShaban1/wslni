@@ -13,8 +13,6 @@ class RealtimeRideService {
 
   bool get isEnabled => FirebaseRuntime.isReady;
 
-  DatabaseReference get _ridesRef => _database.ref('ride_requests');
-
   Future<void> publishRide({
     required RideDraft ride,
     required int customerId,

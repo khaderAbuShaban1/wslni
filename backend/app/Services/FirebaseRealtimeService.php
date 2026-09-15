@@ -76,9 +76,9 @@ class FirebaseRealtimeService
         ]);
     }
 
-    public function syncRide(RideRequest $ride): void
+    public function syncRide(RideRequest $ride): bool
     {
-        if (! $this->isEnabled()) return;
+        if (! $this->isEnabled()) return false;
 
         $ride->loadMissing([
             'customer:id,name',
@@ -108,7 +108,7 @@ class FirebaseRealtimeService
         } else {
             $updates["drivers/open_rides/{$ride->id}"] = null;
         }
-        $this->patch($updates);
+        return $this->patch($updates);
     }
 
     /** @return array<string, mixed> */
@@ -195,9 +195,9 @@ class FirebaseRealtimeService
         if ($this->isEnabled()) $this->request('delete', 'driver_withdrawals');
     }
 
-    public function clearOpenRides(): void
+    public function clearOpenRides(): bool
     {
-        if ($this->isEnabled()) $this->request('delete', 'drivers/open_rides');
+        return $this->isEnabled() && $this->request('delete', 'drivers/open_rides');
     }
 
     /** Deploys the checked-in RTDB rules using the configured service account. */

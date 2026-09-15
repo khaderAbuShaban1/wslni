@@ -8,7 +8,6 @@ class RealtimeDriverService {
 
   bool get isEnabled => FirebaseRuntime.isReady;
 
-  DatabaseReference get _ridesRef => _database.ref('ride_requests');
   DatabaseReference get _openRidesRef => _database.ref('drivers/open_rides');
 
   Stream<List<Map<String, dynamic>>> watchWithdrawals(int driverId) {

@@ -91,4 +91,5 @@ class AuthService {
           'password_confirmation': passwordConfirmation,
         })
         .then((_) {});
+  }
 }

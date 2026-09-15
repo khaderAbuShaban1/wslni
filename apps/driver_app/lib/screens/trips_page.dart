@@ -10,62 +10,84 @@ class _TripsPage extends StatefulWidget {
 }
 
 class _TripsPageState extends State<_TripsPage> {
+  final _api = ApiClient();
   final _realtime = RealtimeDriverService();
-  late Stream<List<RideRequestItem>> _rideStream;
+  List<RideRequestItem> _rides = const [];
+  bool _loading = true;
+  StreamSubscription<List<RideRequestItem>>? _subscription;
 
   @override
   void initState() {
     super.initState();
-    _rideStream = _realtime.watchDriverRides(widget.user.id);
+    _load();
+    _subscription = _realtime
+        .watchDriverRides(widget.user.id)
+        .listen((_) => unawaited(_load()));
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final rows = await _api.getList(
+        'rides?driver_id=${widget.user.id}&status=all',
+      );
+      final rides = rows
+          .whereType<Map>()
+          .map((row) => RideRequestItem.fromJson(Map<String, dynamic>.from(row)))
+          .where(
+            (ride) =>
+                ride.status == RideStatuses.tripCompleted ||
+                ride.status == RideStatuses.rated ||
+                ride.status == RideStatuses.cancelled,
+          )
+          .toList()
+        ..sort((a, b) => b.id.compareTo(a.id));
+      if (mounted) setState(() => _rides = rides);
+    } catch (_) {
+      // Keep the last verified data visible if the local API is unavailable.
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<RideRequestItem>>(
-      stream: _rideStream,
-      builder: (context, realtimeSnapshot) {
-        if (realtimeSnapshot.connectionState == ConnectionState.waiting) {
-          return const _SkeletonList();
-        }
-        final rides = (realtimeSnapshot.data ?? const <RideRequestItem>[])
-            .where(
-              (ride) =>
-                  ride.status == RideStatuses.tripCompleted ||
-                  ride.status == RideStatuses.rated ||
-                  ride.status == RideStatuses.cancelled,
-            )
-            .toList();
+    if (_loading) return const _SkeletonList();
+    final rides = _rides;
 
-        if (rides.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: const _EmptyStateCard(
-                icon: Icons.route_outlined,
-                title: 'لا يوجد سجل رحلات بعد',
-                message: 'الرحلات المكتملة والملغاة ستظهر هنا.',
-              ),
+    if (rides.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: _EmptyStateCard(
+            icon: Icons.route_outlined,
+            title: 'لا يوجد سجل رحلات بعد',
+            message: 'الرحلات المكتملة والملغاة ستظهر هنا.',
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: rides.length + 1,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Text(
+            'سجل الرحلات',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w900,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           );
         }
-
-        return ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: rides.length + 1,
-          separatorBuilder: (_, _) => const SizedBox(height: 10),
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return Text(
-                'سجل الرحلات',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              );
-            }
-            return _AcceptedRideCard(ride: rides[index - 1]);
-          },
-        );
+        return _AcceptedRideCard(ride: rides[index - 1]);
       },
     );
   }
