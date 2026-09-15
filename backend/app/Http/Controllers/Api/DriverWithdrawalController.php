@@ -12,18 +12,22 @@ use Illuminate\Validation\Rule;
 
 class DriverWithdrawalController extends Controller
 {
-    public function index(User $driver): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        abort_unless($driver->role === 'driver', 404);
+        $user = $request->user();
+        abort_unless($user->role === 'driver', 403, 'هذا الإجراء متاح للسائقين فقط.');
+
         return response()->json([
-            'wallet_balance' => (float) $driver->wallet_balance,
-            'withdrawals' => DriverWithdrawal::query()->where('driver_id', $driver->id)->latest()->get(),
+            'wallet_balance' => (float) $user->wallet_balance,
+            'withdrawals' => DriverWithdrawal::query()->where('driver_id', $user->id)->latest()->get(),
         ]);
     }
 
-    public function store(Request $request, User $driver): JsonResponse
+    public function store(Request $request): JsonResponse
     {
-        abort_unless($driver->role === 'driver', 404);
+        $user = $request->user();
+        abort_unless($user->role === 'driver', 403, 'هذا الإجراء متاح للسائقين فقط.');
+
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:10'],
             'method' => ['required', Rule::in(['bank', 'mobile_wallet'])],
@@ -31,8 +35,8 @@ class DriverWithdrawalController extends Controller
             'account_number' => ['required', 'string', 'max:100'],
         ]);
 
-        $result = DB::transaction(function () use ($driver, $data): array {
-            $lockedDriver = User::query()->lockForUpdate()->findOrFail($driver->id);
+        $result = DB::transaction(function () use ($user, $data): array {
+            $lockedDriver = User::query()->lockForUpdate()->findOrFail($user->id);
             $amount = round((float) $data['amount'], 2);
             if ((float) $lockedDriver->wallet_balance < $amount) {
                 return ['error' => 'رصيد الأرباح المتاح غير كافٍ.'];
@@ -46,10 +50,14 @@ class DriverWithdrawalController extends Controller
                 'account_number' => $data['account_number'],
                 'status' => 'pending',
             ]);
+
             return ['withdrawal' => $withdrawal, 'wallet_balance' => (float) $lockedDriver->fresh()->wallet_balance];
         });
 
-        if (isset($result['error'])) return response()->json(['message' => $result['error']], 422);
+        if (isset($result['error'])) {
+            return response()->json(['message' => $result['error']], 422);
+        }
+
         return response()->json($result + ['message' => 'تم إرسال طلب السحب للمراجعة.'], 201);
     }
 }

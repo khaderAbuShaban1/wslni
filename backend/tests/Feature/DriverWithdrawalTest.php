@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class DriverWithdrawalTest extends TestCase
@@ -13,8 +14,9 @@ class DriverWithdrawalTest extends TestCase
     public function test_driver_can_request_withdrawal_and_amount_is_reserved(): void
     {
         $driver = User::factory()->create(['role' => 'driver', 'wallet_balance' => 100]);
+        Sanctum::actingAs($driver, ['driver']);
 
-        $this->postJson("api/drivers/{$driver->id}/withdrawals", [
+        $this->postJson('api/drivers/me/withdrawals', [
             'amount' => 60,
             'method' => 'mobile_wallet',
             'account_name' => 'Driver Name',
@@ -28,8 +30,9 @@ class DriverWithdrawalTest extends TestCase
     public function test_driver_cannot_withdraw_more_than_available_balance(): void
     {
         $driver = User::factory()->create(['role' => 'driver', 'wallet_balance' => 20]);
+        Sanctum::actingAs($driver, ['driver']);
 
-        $this->postJson("api/drivers/{$driver->id}/withdrawals", [
+        $this->postJson('api/drivers/me/withdrawals', [
             'amount' => 30,
             'method' => 'bank',
             'account_name' => 'Driver Name',

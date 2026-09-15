@@ -215,19 +215,16 @@ class AuthController extends Controller
     public function changePassword(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'user_id' => ['required', 'integer', 'exists:users,id'],
             'current_password' => ['required', 'string'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ], [
-            'user_id.required' => 'تعذر تحديد الحساب.',
-            'user_id.exists' => 'الحساب غير موجود.',
             'current_password.required' => 'أدخل كلمة المرور الحالية.',
             'password.required' => 'أدخل كلمة المرور الجديدة.',
             'password.min' => 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل.',
             'password.confirmed' => 'تأكيد كلمة المرور غير متطابق.',
         ]);
 
-        $user = User::findOrFail($data['user_id']);
+        $user = $request->user();
 
         if (! Hash::check($data['current_password'], $user->password)) {
             throw ValidationException::withMessages([

@@ -1,7 +1,7 @@
 part of '../main.dart';
 
 class _EarningsPage extends StatefulWidget {
-  _EarningsPage({required this.user});
+  const _EarningsPage({required this.user});
 
   final DriverUser user;
 
@@ -33,9 +33,7 @@ class _EarningsPageState extends State<_EarningsPage> {
 
   Future<void> _load() async {
     try {
-      final rows = await _api.getList(
-        'rides?driver_id=${widget.user.id}&status=all',
-      );
+      final rows = await _api.getList('rides?status=all');
       final completed = rows
           .whereType<Map>()
           .map((row) => RideRequestItem.fromJson(Map<String, dynamic>.from(row)))
@@ -206,7 +204,7 @@ class _WithdrawalPanelState extends State<_WithdrawalPanel> {
 
   Future<void> _load() async {
     try {
-      final data = await _api.get('drivers/${widget.user.id}/withdrawals');
+      final data = await _api.get('drivers/me/withdrawals');
       if (mounted) {
         setState(() {
           _balance =
@@ -315,7 +313,7 @@ class _WithdrawalPanelState extends State<_WithdrawalPanel> {
     if (submitted == null) return;
     try {
       final result = await _api.post(
-        'drivers/${widget.user.id}/withdrawals',
+        'drivers/me/withdrawals',
         submitted,
       );
       if (!mounted) return;

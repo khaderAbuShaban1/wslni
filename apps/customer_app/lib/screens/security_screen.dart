@@ -38,7 +38,6 @@ class _SecurityScreenState extends State<SecurityScreen> {
     setState(() => _changingPassword = true);
     try {
       await _authService.changePassword(
-        userId: widget.user.id,
         currentPassword: _currentPassword.text,
         password: _newPassword.text,
         passwordConfirmation: _confirmation.text,

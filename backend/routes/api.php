@@ -18,33 +18,49 @@ Route::prefix('auth')->middleware('throttle:auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
     Route::post('resend-otp', [AuthController::class, 'resendOtp']);
-    Route::post('change-password', [AuthController::class, 'changePassword'])
-        ->middleware('throttle:6,1');
 });
 
-Route::apiResource('rides', RideController::class);
-Route::post('rides/{ride}/offers', [RideOfferController::class, 'store']);
-Route::patch('rides/{ride}/offers/{offer}/accept', [RideOfferController::class, 'accept']);
-Route::patch('rides/{ride}/drivers/{driver}/accept', [RideOfferController::class, 'acceptDriverOffer']);
-Route::patch('rides/{ride}/driver-confirmation', [RideController::class, 'driverConfirmation']);
-Route::post('rides/{ride}/rating', [RideController::class, 'rate']);
-Route::get('drivers/available', [DriverController::class, 'available']);
-Route::get('drivers/{driver}/ratings', [DriverController::class, 'ratings']);
-Route::patch('drivers/{driver}/status', [DriverController::class, 'updateStatus']);
-Route::get('drivers/{driver}/withdrawals', [DriverWithdrawalController::class, 'index']);
-Route::post('drivers/{driver}/withdrawals', [DriverWithdrawalController::class, 'store']);
-Route::get('customers/me', [CustomerController::class, 'me']);
-Route::patch('customers/{customer}', [CustomerController::class, 'update']);
-Route::middleware(['auth:sanctum', 'financial'])->group(function () {
-    Route::get('customers/me/wallet', [CustomerWalletController::class, 'show'])
-        ->middleware('throttle:wallet-read');
-    Route::post('customers/me/wallet/deposits', [CustomerWalletController::class, 'storeDeposit'])
-        ->middleware('throttle:wallet-deposit');
-});
-
+/*
+|--------------------------------------------------------------------------
+| Authenticated API Routes
+|--------------------------------------------------------------------------
+| Every route below requires a valid Sanctum token. The identity of the
+| acting user is ALWAYS derived from $request->user() — never from a
+| client-supplied ID in the request body or URL.
+*/
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post('auth/change-password', [AuthController::class, 'changePassword'])
+        ->middleware('throttle:6,1');
+
+    // Rides — scoped by the authenticated user's role.
+    Route::apiResource('rides', RideController::class);
+    Route::post('rides/{ride}/offers', [RideOfferController::class, 'store']);
+    Route::patch('rides/{ride}/offers/{offer}/accept', [RideOfferController::class, 'accept']);
+    Route::patch('rides/{ride}/drivers/{driver}/accept', [RideOfferController::class, 'acceptDriverOffer']);
+    Route::patch('rides/{ride}/driver-confirmation', [RideController::class, 'driverConfirmation']);
+    Route::post('rides/{ride}/rating', [RideController::class, 'rate']);
+
+    // Drivers
+    Route::get('drivers/available', [DriverController::class, 'available']);
+    Route::get('drivers/{driver}/ratings', [DriverController::class, 'ratings']);
+    Route::patch('drivers/me/status', [DriverController::class, 'updateStatus']);
+    Route::get('drivers/me/withdrawals', [DriverWithdrawalController::class, 'index']);
+    Route::post('drivers/me/withdrawals', [DriverWithdrawalController::class, 'store']);
+
+    // Customer profile
+    Route::get('customers/me', [CustomerController::class, 'me']);
+    Route::patch('customers/me', [CustomerController::class, 'update']);
+
+    // Wallet (additional financial middleware)
+    Route::middleware('financial')->group(function () {
+        Route::get('customers/me/wallet', [CustomerWalletController::class, 'show'])
+            ->middleware('throttle:wallet-read');
+        Route::post('customers/me/wallet/deposits', [CustomerWalletController::class, 'storeDeposit'])
+            ->middleware('throttle:wallet-deposit');
+    });
+
+    // Firebase custom token
     Route::get('firebase/token', fn (\Illuminate\Http\Request $request) => response()->json([
         'token' => app(\App\Services\FirebaseRealtimeService::class)->customToken($request->user()),
     ]));
-    Route::patch('customers/me', [CustomerController::class, 'update']);
 });

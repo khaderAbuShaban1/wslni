@@ -15,29 +15,27 @@ class RideOfferController extends Controller
 {
     public function store(Request $request, RideRequest $ride): JsonResponse
     {
+        $user = $request->user();
+        abort_unless($user->role === 'driver', 403, 'تقديم العروض متاح للسائقين فقط.');
+
         $data = $request->validate([
-            'driver_id' => ['required', 'exists:users,id'],
             'price' => ['required', 'numeric', 'min:1', 'max:99999'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ], [
-            'driver_id.required' => 'بيانات السائق مطلوبة.',
-            'driver_id.exists' => 'حساب السائق غير موجود.',
             'price.required' => 'السعر مطلوب.',
             'price.numeric' => 'السعر يجب أن يكون رقمًا.',
             'price.min' => 'السعر يجب أن يكون أكبر من صفر.',
         ]);
 
-        $result = DB::transaction(function () use ($ride, $data): array {
+        $result = DB::transaction(function () use ($ride, $data, $user): array {
             $lockedRide = RideRequest::query()->lockForUpdate()->findOrFail($ride->id);
 
             if (! in_array($lockedRide->status, [RideStatus::Pending->value, RideStatus::ReceivingOffers->value], true)) {
                 return ['error' => 'لا يمكن تقديم عرض على هذا الطلب حاليًا.'];
             }
 
-            User::query()->lockForUpdate()->findOrFail($data['driver_id']);
-
             $hasActiveRide = RideRequest::query()
-                ->where('driver_id', $data['driver_id'])
+                ->where('driver_id', $user->id)
                 ->whereIn('status', RideStatus::activeValues())
                 ->exists();
 
@@ -48,7 +46,7 @@ class RideOfferController extends Controller
             $offer = RideOffer::updateOrCreate(
                 [
                     'ride_request_id' => $lockedRide->id,
-                    'driver_id' => $data['driver_id'],
+                    'driver_id' => $user->id,
                 ],
                 [
                     'price' => $data['price'],
@@ -74,9 +72,13 @@ class RideOfferController extends Controller
         ], 201);
     }
 
-    public function accept(RideRequest $ride, RideOffer $offer): JsonResponse
+    public function accept(Request $request, RideRequest $ride, RideOffer $offer): JsonResponse
     {
-        $result = DB::transaction(function () use ($ride, $offer): array {
+        $user = $request->user();
+        abort_unless($user->role === 'customer', 403, 'قبول العروض متاح للزبائن فقط.');
+        abort_unless((int) $ride->customer_id === $user->id, 403, 'هذه الرحلة ليست رحلتك.');
+
+        $result = DB::transaction(function () use ($ride, $offer, $user): array {
             $lockedRide = RideRequest::query()->lockForUpdate()->findOrFail($ride->id);
             $lockedOffer = RideOffer::query()->lockForUpdate()->findOrFail($offer->id);
 
@@ -144,13 +146,13 @@ class RideOfferController extends Controller
         ]);
     }
 
-    public function acceptDriverOffer(RideRequest $ride, int $driver): JsonResponse
+    public function acceptDriverOffer(Request $request, RideRequest $ride, int $driver): JsonResponse
     {
         $offer = RideOffer::query()
             ->where('ride_request_id', $ride->id)
             ->where('driver_id', $driver)
             ->firstOrFail();
 
-        return $this->accept($ride, $offer);
+        return $this->accept($request, $ride, $offer);
     }
 }

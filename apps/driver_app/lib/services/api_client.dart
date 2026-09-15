@@ -33,6 +33,7 @@ class ApiClient {
     final request = await client.postUrl(Uri.parse('$baseUrl/$path'));
     request.headers.contentType = ContentType.json;
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+    await _authorize(request);
     request.write(jsonEncode(body));
     final response = await request.close();
     final text = await response.transform(utf8.decoder).join();
@@ -54,6 +55,7 @@ class ApiClient {
     final request = await client.patchUrl(Uri.parse('$baseUrl/$path'));
     request.headers.contentType = ContentType.json;
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+    await _authorize(request);
     request.write(jsonEncode(body));
     final response = await request.close();
     final text = await response.transform(utf8.decoder).join();
@@ -71,6 +73,7 @@ class ApiClient {
     final client = _createHttpClient();
     final request = await client.getUrl(Uri.parse('$baseUrl/$path'));
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+    await _authorize(request);
     final response = await request.close();
     final text = await response.transform(utf8.decoder).join();
     client.close();
@@ -87,6 +90,7 @@ class ApiClient {
     final client = _createHttpClient();
     final request = await client.getUrl(Uri.parse('$baseUrl/$path'));
     request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+    await _authorize(request);
     final response = await request.close();
     final text = await response.transform(utf8.decoder).join();
     client.close();
@@ -95,6 +99,13 @@ class ApiClient {
       throw ApiException(_message(decoded), response.statusCode, decoded);
     }
     return decoded;
+  }
+
+  Future<void> _authorize(HttpClientRequest request) async {
+    final token = await ApiTokenStore.read();
+    if (token != null && token.isNotEmpty) {
+      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+    }
   }
 
   Map<String, dynamic> _decode(String text) {
@@ -124,4 +135,24 @@ class ApiException implements Exception {
   final String message;
   final int statusCode;
   final Map<String, dynamic> body;
+}
+
+class ApiTokenStore {
+  static const _storage = FlutterSecureStorage();
+  static const _key = 'wslni_driver_api_token';
+  static String? _cached;
+
+  static Future<String?> read() async {
+    return _cached ??= await _storage.read(key: _key);
+  }
+
+  static Future<void> write(String token) async {
+    _cached = token;
+    await _storage.write(key: _key, value: token);
+  }
+
+  static Future<void> clear() async {
+    _cached = null;
+    await _storage.delete(key: _key);
+  }
 }

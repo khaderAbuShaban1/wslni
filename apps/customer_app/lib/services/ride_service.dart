@@ -12,7 +12,7 @@ class RideService {
   final RealtimeRideService _realtime;
 
   Future<List<RideDraft>> listCustomerRides(int customerId) async {
-    final rows = await _api.getList('rides?customer_id=$customerId&status=all');
+    final rows = await _api.getList('rides?status=all');
     return rows
         .whereType<Map<String, dynamic>>()
         .map(RideDraft.fromJson)
@@ -44,7 +44,6 @@ class RideService {
     required String destination,
   }) async {
     final result = await _api.post('rides', {
-      'customer_id': customerId,
       'pickup_address': pickup,
       'dropoff_address': destination,
     });

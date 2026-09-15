@@ -56,6 +56,7 @@ class _AuthPageState extends State<AuthPage> {
       _requireDriverAccount(result);
       final user = DriverUser.fromJson(result['user'] as Map<String, dynamic>);
       if (user.id == 0) throw ApiException('بيانات السائق غير صحيحة.', 422, {});
+      await _saveToken(result);
       await _signInToFirebase(result);
       _openHome(user);
     });
@@ -90,9 +91,17 @@ class _AuthPageState extends State<AuthPage> {
         'otp': _otp.text.trim(),
       });
       _requireDriverAccount(result);
+      await _saveToken(result);
       await _signInToFirebase(result);
       _openHome(DriverUser.fromJson(result['user'] as Map<String, dynamic>));
     });
+  }
+
+  Future<void> _saveToken(Map<String, dynamic> result) async {
+    final token = result['token']?.toString() ?? '';
+    if (token.isNotEmpty) {
+      await ApiTokenStore.write(token);
+    }
   }
 
   Future<void> _signInToFirebase(Map<String, dynamic> result) async {

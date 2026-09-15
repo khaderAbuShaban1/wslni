@@ -19,8 +19,7 @@ class RideController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $customerId = $request->query('customer_id');
-        $driverId = $request->query('driver_id');
+        $user = $request->user();
         $status = $request->query('status', RideStatus::Pending->value);
 
         return response()->json(
@@ -32,14 +31,22 @@ class RideController extends Controller
                     'offers.driver:id,name,phone',
                     'offers.driver.driverProfile',
                 ])
-                ->when($status === 'active', fn ($query) => $query->whereIn('status', RideStatus::activeValues()))
+                // Open rides are visible to any authenticated user (drivers browse them).
                 ->when($status === 'open', fn ($query) => $query->whereIn('status', [
                     RideStatus::Pending->value,
                     RideStatus::ReceivingOffers->value,
                 ]))
-                ->when(! in_array($status, ['all', 'active', 'open'], true), fn ($query) => $query->where('status', $status))
-                ->when($customerId, fn ($query) => $query->where('customer_id', $customerId))
-                ->when($driverId, fn ($query) => $query->where('driver_id', $driverId))
+                // All other queries are scoped to the authenticated user's own rides.
+                ->when($status !== 'open', function ($query) use ($user, $status) {
+                    $column = $user->role === 'driver' ? 'driver_id' : 'customer_id';
+                    $query->where($column, $user->id);
+
+                    return match ($status) {
+                        'active' => $query->whereIn('status', RideStatus::activeValues()),
+                        'all' => $query,
+                        default => $query->where('status', $status),
+                    };
+                })
                 ->latest()
                 ->get()
         );
@@ -47,20 +54,20 @@ class RideController extends Controller
 
     public function store(Request $request, FirebaseRealtimeService $firebase): JsonResponse
     {
+        $user = $request->user();
+        abort_unless($user->role === 'customer', 403, 'يجب أن تكون زبونًا لطلب رحلة.');
+
         $data = $request->validate([
-            'customer_id' => ['required', 'exists:users,id'],
             'pickup_address' => ['required', 'string', 'max:255'],
             'dropoff_address' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ], [
-            'customer_id.required' => 'بيانات الزبون مطلوبة.',
-            'customer_id.exists' => 'حساب الزبون غير موجود.',
             'pickup_address.required' => 'عنوان الانطلاق مطلوب.',
             'dropoff_address.required' => 'الوجهة مطلوبة.',
         ]);
 
         $ride = RideRequest::create([
-            'customer_id' => $data['customer_id'],
+            'customer_id' => $user->id,
             'status' => RideStatus::Pending->value,
             'pickup_address' => $data['pickup_address'],
             'pickup_lat' => 0,
@@ -72,10 +79,6 @@ class RideController extends Controller
             'requested_at' => now(),
         ]);
 
-        // The driver queue must receive a new request immediately. The
-        // observer still mirrors subsequent state changes, while this direct
-        // publish avoids relying on a terminating callback in PHP's local
-        // development server.
         $firebase->syncRide($ride);
 
         return response()->json([
@@ -84,8 +87,15 @@ class RideController extends Controller
         ], 201);
     }
 
-    public function show(RideRequest $ride): JsonResponse
+    public function show(Request $request, RideRequest $ride): JsonResponse
     {
+        $user = $request->user();
+        abort_unless(
+            (int) $ride->customer_id === $user->id || (int) $ride->driver_id === $user->id,
+            403,
+            'ليس لديك صلاحية لعرض هذه الرحلة.',
+        );
+
         return response()->json(
             $ride->load([
                 'customer:id,name,phone',
@@ -101,20 +111,20 @@ class RideController extends Controller
 
     public function update(Request $request, RideRequest $ride): JsonResponse
     {
+        $user = $request->user();
+        abort_unless($user->role === 'driver', 403, 'هذا الإجراء متاح للسائقين فقط.');
+
         $data = $request->validate([
-            'driver_id' => ['required', 'exists:users,id'],
             'status' => ['required', 'in:driver_on_the_way,driver_arrived,trip_started,trip_completed,cancelled'],
         ], [
-            'driver_id.required' => 'بيانات السائق مطلوبة.',
-            'driver_id.exists' => 'حساب السائق غير موجود.',
             'status.required' => 'حالة الرحلة مطلوبة.',
             'status.in' => 'حالة الرحلة غير صالحة.',
         ]);
 
-        $result = DB::transaction(function () use ($ride, $data): array {
+        $result = DB::transaction(function () use ($ride, $data, $user): array {
             $lockedRide = RideRequest::query()->lockForUpdate()->findOrFail($ride->id);
 
-            if ((int) $lockedRide->driver_id !== (int) $data['driver_id']) {
+            if ((int) $lockedRide->driver_id !== $user->id) {
                 return ['error' => 'هذه الرحلة غير مرتبطة بهذا السائق.', 'status' => 403];
             }
 
@@ -194,7 +204,7 @@ class RideController extends Controller
             if ($data['status'] === 'cancelled') {
                 RideOffer::query()
                     ->where('ride_request_id', $lockedRide->id)
-                    ->where('driver_id', $data['driver_id'])
+                    ->where('driver_id', $user->id)
                     ->where('status', 'accepted')
                     ->update(['status' => 'cancelled']);
             }
@@ -221,20 +231,22 @@ class RideController extends Controller
 
     public function driverConfirmation(Request $request, RideRequest $ride): JsonResponse
     {
+        $user = $request->user();
+        abort_unless($user->role === 'driver', 403, 'هذا الإجراء متاح للسائقين فقط.');
+
         $data = $request->validate([
-            'driver_id' => ['required', 'exists:users,id'],
             'accepted' => ['required', 'boolean'],
         ]);
 
-        $result = DB::transaction(function () use ($ride, $data): array {
+        $result = DB::transaction(function () use ($ride, $data, $user): array {
             $lockedRide = RideRequest::query()->lockForUpdate()->findOrFail($ride->id);
-            if ($lockedRide->status !== RideStatus::DriverSelected->value || (int) $lockedRide->driver_id !== (int) $data['driver_id']) {
+            if ($lockedRide->status !== RideStatus::DriverSelected->value || (int) $lockedRide->driver_id !== $user->id) {
                 return ['error' => 'لا يمكن الرد على هذا الطلب في حالته الحالية.', 'status' => 422];
             }
 
             $selectedOffer = RideOffer::query()
                 ->where('ride_request_id', $lockedRide->id)
-                ->where('driver_id', $data['driver_id'])
+                ->where('driver_id', $user->id)
                 ->firstOrFail();
 
             if ($data['accepted']) {
@@ -270,13 +282,15 @@ class RideController extends Controller
 
     public function rate(Request $request, RideRequest $ride): JsonResponse
     {
+        $user = $request->user();
+        abort_unless($user->role === 'customer', 403, 'التقييم متاح للزبائن فقط.');
+
         $data = $request->validate([
-            'customer_id' => ['required', 'exists:users,id'],
             'rating' => ['required', 'integer', 'between:1,5'],
             'comment' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        if ((int) $ride->customer_id !== (int) $data['customer_id'] || $ride->status !== RideStatus::TripCompleted->value) {
+        if ((int) $ride->customer_id !== $user->id || $ride->status !== RideStatus::TripCompleted->value) {
             return response()->json(['message' => 'لا يمكن تقييم هذه الرحلة في حالتها الحالية.'], 422);
         }
 

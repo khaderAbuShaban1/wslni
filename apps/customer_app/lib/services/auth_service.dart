@@ -78,14 +78,12 @@ class AuthService {
   }
 
   Future<void> changePassword({
-    required int userId,
     required String currentPassword,
     required String password,
     required String passwordConfirmation,
   }) {
     return _api
         .post('auth/change-password', {
-          'user_id': userId,
           'current_password': currentPassword,
           'password': password,
           'password_confirmation': passwordConfirmation,

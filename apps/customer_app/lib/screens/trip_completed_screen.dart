@@ -35,7 +35,6 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
     setState(() => _saving = true);
     try {
       await _api.post('rides/${widget.draft.id}/rating', {
-        'customer_id': widget.draft.customerId,
         'rating': _rating,
         'comment': _comment.text.trim().isEmpty ? null : _comment.text.trim(),
       });

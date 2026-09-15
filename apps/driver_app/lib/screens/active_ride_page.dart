@@ -70,7 +70,6 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
 
     try {
       final result = await _api.patch('rides/${_ride.id}', {
-        'driver_id': widget.user.id,
         'status': status,
       });
       final rawRide = result['ride'];
@@ -128,7 +127,6 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
     setState(() => _updating = true);
     try {
       final result = await _api.patch('rides/${_ride.id}/driver-confirmation', {
-        'driver_id': widget.user.id,
         'accepted': accepted,
       });
       final rawRide = result['ride'];

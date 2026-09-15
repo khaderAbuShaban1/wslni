@@ -33,9 +33,7 @@ class _TripsPageState extends State<_TripsPage> {
 
   Future<void> _load() async {
     try {
-      final rows = await _api.getList(
-        'rides?driver_id=${widget.user.id}&status=all',
-      );
+      final rows = await _api.getList('rides?status=all');
       final rides = rows
           .whereType<Map>()
           .map((row) => RideRequestItem.fromJson(Map<String, dynamic>.from(row)))

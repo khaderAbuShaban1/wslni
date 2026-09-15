@@ -80,7 +80,6 @@ class _RequestsPageState extends State<RequestsPage> {
     }
     try {
       final result = await _api.post('rides/${ride.id}/offers', {
-        'driver_id': widget.user.id,
         'price': price,
         'notes': notes.isEmpty ? null : notes,
       });

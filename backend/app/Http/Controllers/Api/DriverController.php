@@ -18,12 +18,23 @@ class DriverController extends Controller
         ]);
     }
 
-    public function updateStatus(Request $request, DriverProfile $driver): JsonResponse
+    public function updateStatus(Request $request): JsonResponse
     {
+        $user = $request->user();
+        abort_unless($user->role === 'driver', 403, 'هذا الإجراء متاح للسائقين فقط.');
+
+        $profile = $user->driverProfile;
+        abort_unless($profile !== null, 404, 'لم يتم العثور على ملف السائق.');
+
+        $data = $request->validate([
+            'is_online' => ['required', 'boolean'],
+        ]);
+
+        $profile->update(['is_online' => $data['is_online']]);
+
         return response()->json([
-            'message' => 'Driver status endpoint is ready for integration.',
-            'driver' => $driver,
-            'payload' => $request->all(),
+            'message' => $data['is_online'] ? 'أنت متصل الآن.' : 'تم إيقاف الاتصال.',
+            'driver' => $profile->fresh(),
         ]);
     }
 

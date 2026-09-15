@@ -45,9 +45,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
 
   Future<void> _loadActiveRideFromApi() async {
     try {
-      final rows = await _api.getList(
-        'rides?driver_id=${widget.user.id}&status=active',
-      );
+      final rows = await _api.getList('rides?status=active');
       final rides = rows
           .whereType<Map<String, dynamic>>()
           .map(RideRequestItem.fromJson)
@@ -96,7 +94,9 @@ class _DriverHomePageState extends State<DriverHomePage> {
     });
   }
 
-  void _signOut() {
+  Future<void> _signOut() async {
+    await ApiTokenStore.clear();
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const AuthPage()),
       (route) => false,

@@ -29,6 +29,8 @@ class _DriverProfilePageState extends State<_DriverProfilePage> {
     });
     try {
       final data = await _api.get('drivers/${widget.user.id}/ratings');
+      // Note: this endpoint still uses the driver ID in the URL — it's
+      // read-only and useful for viewing any driver's public ratings.
       if (!mounted) return;
       final rows = data['ratings'];
       setState(() {
