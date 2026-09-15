@@ -85,6 +85,24 @@ class ApiClient {
     return _send('PATCH', path, body);
   }
 
+  Future<Map<String, dynamic>> delete(String path) async {
+    final client = _createHttpClient();
+    final uri = Uri.parse('$baseUrl/$path');
+    final request = await client.deleteUrl(uri);
+    await _authorize(request);
+    request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+
+    final response = await request.close();
+    final text = await response.transform(utf8.decoder).join();
+    client.close();
+    final decoded = _decode(text);
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException(_message(decoded), response.statusCode, decoded);
+    }
+    return decoded;
+  }
+
   Future<Map<String, dynamic>> _send(
     String method,
     String path,

@@ -1,26 +1,91 @@
 import 'package:flutter/material.dart';
 
 import '../models/ride_model.dart';
+import '../services/api_client.dart';
 import '../services/realtime_ride_service.dart';
+import '../services/ride_service.dart';
 import '../utils/constants.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/premium_card.dart';
 import 'trip_completed_screen.dart';
 import 'driver_offers_screen.dart';
 
-class TripProgressScreen extends StatelessWidget {
-  TripProgressScreen({required this.draft, super.key});
+class TripProgressScreen extends StatefulWidget {
+  const TripProgressScreen({required this.draft, super.key});
 
   final RideDraft draft;
+
+  @override
+  State<TripProgressScreen> createState() => _TripProgressScreenState();
+}
+
+class _TripProgressScreenState extends State<TripProgressScreen> {
   final RealtimeRideService _realtime = RealtimeRideService();
+  final RideService _rideService = RideService();
+  bool _cancelling = false;
+
+  bool _canCancel(String status) => {
+    RideStatuses.pending,
+    RideStatuses.receivingOffers,
+    RideStatuses.driverSelected,
+  }.contains(status);
+
+  Future<void> _confirmCancel(RideDraft ride) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إلغاء الرحلة؟'),
+        content: const Text('هل أنت متأكد من إلغاء هذه الرحلة؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('لا'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('نعم، إلغاء'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _cancelling = true);
+    try {
+      await _rideService.cancelRide(ride);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم إلغاء الرحلة بنجاح.')),
+      );
+      Navigator.of(context).pop();
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر إلغاء الرحلة. حاول مرة أخرى.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _cancelling = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<RideDraft?>(
-      stream: _realtime.watchRide(draft.customerId, draft.id),
-      initialData: draft,
+      stream: _realtime.watchRide(widget.draft.customerId, widget.draft.id),
+      initialData: widget.draft,
       builder: (context, snapshot) {
-        final ride = snapshot.data ?? draft;
+        final ride = snapshot.data ?? widget.draft;
         return PopScope(
           canPop: true,
           child: AppScaffold(
@@ -117,6 +182,25 @@ class TripProgressScreen extends StatelessWidget {
                     ),
                     icon: const Icon(Icons.local_offer_outlined),
                     label: const Text('اختيار سائق آخر'),
+                  ),
+                ],
+                if (_canCancel(ride.status)) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.error.withValues(alpha: .4),
+                      ),
+                    ),
+                    onPressed: _cancelling ? null : () => _confirmCancel(ride),
+                    icon: _cancelling
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.cancel_outlined),
+                    label: Text(_cancelling ? 'جاري الإلغاء...' : 'إلغاء الرحلة'),
                   ),
                 ],
               ],

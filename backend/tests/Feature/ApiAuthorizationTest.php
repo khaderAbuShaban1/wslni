@@ -199,6 +199,126 @@ class ApiAuthorizationTest extends TestCase
     }
 
     // ----------------------------------------------------------------
+    // Customer ride cancellation
+    // ----------------------------------------------------------------
+
+    public function test_customer_can_cancel_a_pending_ride(): void
+    {
+        $customer = $this->customer();
+        $ride = $this->createRide(['customer_id' => $customer->id, 'status' => 'pending']);
+        Sanctum::actingAs($customer, ['customer']);
+
+        $this->deleteJson("api/rides/{$ride->id}")
+            ->assertOk()
+            ->assertJsonPath('message', 'تم إلغاء الرحلة بنجاح.');
+
+        $this->assertDatabaseHas('ride_requests', ['id' => $ride->id, 'status' => 'cancelled']);
+    }
+
+    public function test_customer_can_cancel_a_ride_with_offers(): void
+    {
+        $customer = $this->customer();
+        $driver = User::factory()->create(['role' => 'driver']);
+        $ride = $this->createRide(['customer_id' => $customer->id, 'status' => 'receiving_offers']);
+        $offer = RideOffer::create([
+            'ride_request_id' => $ride->id,
+            'driver_id' => $driver->id,
+            'price' => 30,
+            'status' => 'pending',
+        ]);
+
+        Sanctum::actingAs($customer, ['customer']);
+
+        $this->deleteJson("api/rides/{$ride->id}")
+            ->assertOk();
+
+        $this->assertDatabaseHas('ride_requests', ['id' => $ride->id, 'status' => 'cancelled', 'driver_id' => null]);
+        $this->assertDatabaseHas('ride_offers', ['id' => $offer->id, 'status' => 'cancelled']);
+    }
+
+    public function test_customer_cannot_cancel_ride_after_driver_confirmed(): void
+    {
+        $customer = $this->customer();
+        $driver = User::factory()->create(['role' => 'driver']);
+        $ride = $this->createRide([
+            'customer_id' => $customer->id,
+            'driver_id' => $driver->id,
+            'status' => 'driver_confirmed',
+        ]);
+
+        Sanctum::actingAs($customer, ['customer']);
+
+        $this->deleteJson("api/rides/{$ride->id}")
+            ->assertUnprocessable();
+
+        $this->assertDatabaseHas('ride_requests', ['id' => $ride->id, 'status' => 'driver_confirmed']);
+    }
+
+    public function test_customer_cannot_cancel_another_customers_ride(): void
+    {
+        $customerA = $this->customer();
+        $customerB = $this->customer();
+        $ride = $this->createRide(['customer_id' => $customerA->id, 'status' => 'pending']);
+
+        Sanctum::actingAs($customerB, ['customer']);
+
+        $this->deleteJson("api/rides/{$ride->id}")
+            ->assertForbidden();
+    }
+
+    public function test_driver_cannot_cancel_ride_via_delete(): void
+    {
+        $driver = User::factory()->create(['role' => 'driver']);
+        $ride = $this->createRide(['status' => 'pending']);
+
+        Sanctum::actingAs($driver, ['driver']);
+
+        $this->deleteJson("api/rides/{$ride->id}")
+            ->assertForbidden();
+    }
+
+    // ----------------------------------------------------------------
+    // Driver approval_status enforcement
+    // ----------------------------------------------------------------
+
+    public function test_unapproved_driver_cannot_submit_offer(): void
+    {
+        $driver = User::factory()->create(['role' => 'driver']);
+        DriverProfile::create([
+            'user_id' => $driver->id,
+            'license_number' => 'L123',
+            'vehicle_type' => 'sedan',
+            'vehicle_plate' => 'P123',
+            'approval_status' => 'pending',
+            'is_online' => false,
+        ]);
+        $ride = $this->createRide(['status' => 'receiving_offers']);
+
+        Sanctum::actingAs($driver, ['driver']);
+
+        $this->postJson("api/rides/{$ride->id}/offers", ['price' => 30])
+            ->assertForbidden();
+    }
+
+    public function test_unapproved_driver_cannot_go_online(): void
+    {
+        $driver = User::factory()->create(['role' => 'driver']);
+        DriverProfile::create([
+            'user_id' => $driver->id,
+            'license_number' => 'L456',
+            'vehicle_type' => 'sedan',
+            'vehicle_plate' => 'P456',
+            'approval_status' => 'pending',
+            'is_online' => false,
+        ]);
+
+        Sanctum::actingAs($driver, ['driver']);
+
+        $this->patchJson('api/drivers/me/status', ['is_online' => true])
+            ->assertForbidden();
+    }
+
+    // ----------------------------------------------------------------
     // Auth routes remain public
     // ----------------------------------------------------------------
 

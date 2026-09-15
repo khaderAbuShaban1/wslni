@@ -18,6 +18,11 @@ class RideOfferController extends Controller
         $user = $request->user();
         abort_unless($user->role === 'driver', 403, 'تقديم العروض متاح للسائقين فقط.');
 
+        $profile = $user->driverProfile;
+        if (! $profile || ! $profile->isApproved()) {
+            return response()->json(['message' => 'حسابك كسائق لم يُعتمد بعد. لا يمكنك تقديم عروض.'], 403);
+        }
+
         $data = $request->validate([
             'price' => ['required', 'numeric', 'min:1', 'max:99999'],
             'notes' => ['nullable', 'string', 'max:1000'],

@@ -140,6 +140,11 @@ class RealtimeRideService {
     return;
   }
 
+  Future<void> cancelRide(RideDraft ride) async {
+    // The API cancels the ride and the backend mirrors the state to Firebase.
+    return;
+  }
+
   Future<void> markRated(int rideId, int rating, String comment) async {
     // Rating is persisted by the API and mirrored by the backend.
     return;

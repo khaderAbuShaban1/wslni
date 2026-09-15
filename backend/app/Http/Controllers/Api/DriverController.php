@@ -14,7 +14,11 @@ class DriverController extends Controller
     public function available(): JsonResponse
     {
         return response()->json([
-            'drivers' => DriverProfile::query()->where('is_online', true)->latest()->get(),
+            'drivers' => DriverProfile::query()
+                ->where('is_online', true)
+                ->where('approval_status', 'approved')
+                ->latest()
+                ->get(),
         ]);
     }
 
@@ -25,6 +29,10 @@ class DriverController extends Controller
 
         $profile = $user->driverProfile;
         abort_unless($profile !== null, 404, 'لم يتم العثور على ملف السائق.');
+
+        if (! $profile->isApproved()) {
+            return response()->json(['message' => 'حسابك كسائق لم يُعتمد بعد. لا يمكنك تغيير حالة الاتصال.'], 403);
+        }
 
         $data = $request->validate([
             'is_online' => ['required', 'boolean'],

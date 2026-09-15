@@ -313,8 +313,43 @@ class RideController extends Controller
         return response()->json(['message' => 'تم حفظ تقييمك.', 'ride' => $syncedRide]);
     }
 
-    public function destroy(RideRequest $ride): JsonResponse
+    public function destroy(Request $request, RideRequest $ride): JsonResponse
     {
-        return response()->json(['message' => 'Ride deletion stub.', 'ride_id' => $ride->id]);
+        $user = $request->user();
+        abort_unless($user->role === 'customer', 403, 'إلغاء الرحلة متاح للزبائن فقط.');
+        abort_unless((int) $ride->customer_id === $user->id, 403, 'هذه الرحلة ليست رحلتك.');
+
+        $customerCancellable = [
+            RideStatus::Pending->value,
+            RideStatus::ReceivingOffers->value,
+            RideStatus::DriverSelected->value,
+        ];
+
+        if (! in_array($ride->status, $customerCancellable, true)) {
+            return response()->json([
+                'message' => 'لا يمكن إلغاء الرحلة في حالتها الحالية. تواصل مع الدعم.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($ride) {
+            $lockedRide = RideRequest::query()->lockForUpdate()->findOrFail($ride->id);
+
+            // Deactivate all pending/selected offers
+            RideOffer::query()
+                ->where('ride_request_id', $lockedRide->id)
+                ->whereIn('status', ['pending', 'selected', 'inactive'])
+                ->update(['status' => 'cancelled']);
+
+            $lockedRide->update([
+                'status' => RideStatus::Cancelled->value,
+                'driver_id' => null,
+                'actual_fare' => null,
+            ]);
+        });
+
+        return response()->json([
+            'message' => 'تم إلغاء الرحلة بنجاح.',
+            'ride' => $ride->fresh(),
+        ]);
     }
 }

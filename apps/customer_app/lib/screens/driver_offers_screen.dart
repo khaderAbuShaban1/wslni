@@ -36,6 +36,7 @@ class DriverOffersScreen extends StatefulWidget {
 
 class _DriverOffersScreenState extends State<DriverOffersScreen> {
   int? _acceptingDriverId;
+  bool _cancelling = false;
 
   Future<void> _acceptOffer(DriverOffer offer) async {
     setState(() => _acceptingDriverId = offer.driverId);
@@ -61,6 +62,55 @@ class _DriverOffersScreenState extends State<DriverOffersScreen> {
       ).showSnackBar(SnackBar(content: Text(message)));
     } finally {
       if (mounted) setState(() => _acceptingDriverId = null);
+    }
+  }
+
+  Future<void> _confirmCancel() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إلغاء الرحلة؟'),
+        content: const Text('هل أنت متأكد من إلغاء هذه الرحلة؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('لا'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('نعم، إلغاء'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _cancelling = true);
+    try {
+      await widget.rideService.cancelRide(widget.draft);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم إلغاء الرحلة بنجاح.')),
+      );
+      Navigator.of(context).pop();
+    } on ApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر إلغاء الرحلة. حاول مرة أخرى.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _cancelling = false);
     }
   }
 
@@ -114,6 +164,24 @@ class _DriverOffersScreenState extends State<DriverOffersScreen> {
                   ],
                 );
               },
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.error.withValues(alpha: .4),
+                ),
+                minimumSize: const Size(double.infinity, 48),
+              ),
+              onPressed: _cancelling ? null : _confirmCancel,
+              icon: _cancelling
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.cancel_outlined),
+              label: Text(_cancelling ? 'جاري الإلغاء...' : 'إلغاء الرحلة'),
             ),
           ],
         ),

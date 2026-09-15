@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\AppSetting;
+use App\Models\DriverProfile;
 use App\Models\RideOffer;
 use App\Models\RideRequest;
 use App\Models\User;
@@ -62,6 +63,14 @@ class RideLifecycleTest extends TestCase
     {
         $customer = $this->customer();
         $driver = User::factory()->create(['role' => 'driver']);
+        DriverProfile::create([
+            'user_id' => $driver->id,
+            'license_number' => 'L999',
+            'vehicle_type' => 'sedan',
+            'vehicle_plate' => 'P999',
+            'approval_status' => 'approved',
+            'is_online' => true,
+        ]);
         $this->createRide([
             'customer_id' => $customer->id,
             'driver_id' => $driver->id,

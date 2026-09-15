@@ -61,6 +61,11 @@ class RideService {
     return createDraft(pickup: pickup, destination: destination);
   }
 
+  Future<void> cancelRide(RideDraft ride) async {
+    await _api.delete('rides/${ride.id}');
+    await _realtime.cancelRide(ride);
+  }
+
   RideDraft createDraft({required String pickup, required String destination}) {
     return RideDraft(
       id: 0,
