@@ -12,11 +12,6 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (DB::connection()->getDriverName() === 'sqlite') {
-            // The column is already nullable in the create-table migration.
-            return;
-        }
-
         DB::statement('ALTER TABLE wallet_transactions MODIFY ride_request_id BIGINT UNSIGNED NULL');
     }
 
