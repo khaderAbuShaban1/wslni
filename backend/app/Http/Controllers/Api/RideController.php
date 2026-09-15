@@ -10,7 +10,6 @@ use App\Models\RideOffer;
 use App\Models\RideRequest;
 use App\Models\User;
 use App\Models\WalletTransaction;
-use App\Services\FirebaseRealtimeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -52,7 +51,7 @@ class RideController extends Controller
         );
     }
 
-    public function store(Request $request, FirebaseRealtimeService $firebase): JsonResponse
+    public function store(Request $request): JsonResponse
     {
         $user = $request->user();
         abort_unless($user->role === 'customer', 403, 'يجب أن تكون زبونًا لطلب رحلة.');
@@ -95,7 +94,7 @@ class RideController extends Controller
             'requested_at' => now(),
         ]);
 
-        $firebase->syncRide($ride);
+        // Firebase sync is handled automatically by FirebaseRealtimeObserver.
 
         return response()->json([
             'message' => 'تم إرسال طلب السيارة بنجاح.',

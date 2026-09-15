@@ -80,14 +80,6 @@ class FirebaseRealtimeService
     {
         if (! $this->isEnabled()) return false;
 
-        $ride->loadMissing([
-            'customer:id,name',
-            'driver:id,name',
-            'driver.driverProfile',
-            'offers.driver:id,name',
-            'offers.driver.driverProfile',
-        ]);
-
         $payload = $this->ridePayload($ride);
         // A multi-location update reaches all subscribers atomically in one
         // request. Sending these copies one by one delayed the API response.

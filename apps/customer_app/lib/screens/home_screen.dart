@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/user_model.dart';
 import '../models/ride_model.dart';
+import '../services/api_client.dart';
 import '../services/realtime_ride_service.dart';
 import '../services/ride_service.dart';
 import '../utils/constants.dart';
@@ -63,8 +64,14 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       _showMessage('تم إرسال الطلب ونقله إلى رحلاتي.');
       widget.onOpenTrips();
+    } on ApiException catch (error) {
+      if (error.statusCode == 401) {
+        _showMessage('انتهت الجلسة. سجل دخول مرة أخرى.');
+      } else {
+        _showMessage(error.message);
+      }
     } catch (_) {
-      _showMessage('تعذر إرسال الطلب. تأكد أن الخادم يعمل على 8000.');
+      _showMessage('تعذر الاتصال بالخادم. تأكد أن الخادم يعمل على 8000.');
     } finally {
       if (mounted) setState(() => _requesting = false);
     }

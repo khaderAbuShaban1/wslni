@@ -243,17 +243,26 @@ class AuthController extends Controller
     {
         $otp = (string) random_int(100000, 999999);
 
-        Mail::raw(
-            "رمز التحقق الخاص بتطبيق وصلني هو {$otp}. ينتهي خلال 10 دقائق.",
-            fn ($message) => $message
-                ->to($user->email)
-                ->subject('رمز التحقق من وصلني')
-        );
-
+        // Save the OTP first so the response is not blocked by email delivery.
         $user->forceFill([
             'email_otp_code' => Hash::make($otp),
             'email_otp_expires_at' => Carbon::now()->addMinutes(10),
         ])->save();
+
+        // Send the email after the response is sent (non-blocking).
+        $email = $user->email;
+        app()->terminating(static function () use ($email, $otp): void {
+            try {
+                Mail::raw(
+                    "رمز التحقق الخاص بتطبيق وصلني هو {$otp}. ينتهي خلال 10 دقائق.",
+                    fn ($message) => $message
+                        ->to($email)
+                        ->subject('رمز التحقق من وصلني')
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        });
     }
 
     private function userPayload(User $user): array

@@ -17,13 +17,15 @@ class SyncFirebaseProjection implements ShouldQueue, ShouldBeUnique
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
-    public int $timeout = 30;
-    public int $uniqueFor = 10;
+    public int $timeout = 15;
+    public int $uniqueFor = 5;
+
     public function __construct(
         public string $modelClass,
         public int $modelId,
     ) {
         $this->afterCommit();
+        $this->onQueue('firebase');
     }
 
     public function uniqueId(): string
