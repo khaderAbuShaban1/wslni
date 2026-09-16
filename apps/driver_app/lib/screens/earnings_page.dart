@@ -178,22 +178,10 @@ class _WithdrawalPanelState extends State<_WithdrawalPanel> {
   void initState() {
     super.initState();
     _load();
-    _withdrawalSubscription = _realtime.watchWithdrawals(widget.user.id).listen(
-      (rows) {
-        if (mounted) {
-          setState(() {
-            _withdrawals = rows;
-            if (rows.isNotEmpty) {
-              _balance =
-                  double.tryParse(
-                    rows.first['wallet_balance']?.toString() ?? '',
-                  ) ??
-                  _balance;
-            }
-          });
-        }
-      },
-    );
+    _withdrawalSubscription = _realtime
+        .watchWithdrawals(widget.user.id)
+        .skip(1)
+        .listen((_) => unawaited(_load()));
   }
 
   @override

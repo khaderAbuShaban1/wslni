@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +11,7 @@ import '../models/wallet_model.dart';
 import '../services/api_client.dart';
 import '../services/wallet_service.dart';
 import '../utils/constants.dart';
+import '../utils/firebase_runtime.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
@@ -26,6 +29,7 @@ class WalletScreen extends StatefulWidget {
 
 class _WalletScreenState extends State<WalletScreen> {
   final _walletService = WalletService();
+  StreamSubscription<DatabaseEvent>? _depositsSub;
 
   late Future<WalletSummary> _walletFuture;
 
@@ -33,6 +37,24 @@ class _WalletScreenState extends State<WalletScreen> {
   void initState() {
     super.initState();
     _walletFuture = _walletService.getWallet();
+    _listenToDeposits();
+  }
+
+  @override
+  void dispose() {
+    _depositsSub?.cancel();
+    super.dispose();
+  }
+
+  void _listenToDeposits() {
+    if (!FirebaseRuntime.isReady) return;
+    final uid = widget.user.id;
+    if (uid == 0) return;
+    _depositsSub = FirebaseDatabase.instance
+        .ref('users/$uid/deposits')
+        .onValue
+        .skip(1)
+        .listen((_) => _reload());
   }
 
   void _reload() {
