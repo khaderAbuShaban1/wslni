@@ -11,7 +11,7 @@ import '../widgets/driver_card.dart';
 import '../widgets/empty_state_card.dart';
 import '../widgets/ride_card.dart';
 import '../widgets/section_header.dart';
-import 'ride_confirmation_screen.dart';
+import 'trip_progress_screen.dart';
 
 class DriverOffersScreen extends StatefulWidget {
   DriverOffersScreen({
@@ -48,8 +48,7 @@ class _DriverOffersScreenState extends State<DriverOffersScreen> {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) =>
-              RideConfirmationScreen(draft: acceptedRide, offer: offer),
+          builder: (_) => TripProgressScreen(draft: acceptedRide),
         ),
       );
     } catch (error) {

@@ -21,11 +21,44 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
   final _realtime = RealtimeDriverService();
   late RideRequestItem _ride;
   bool _updating = false;
+  StreamSubscription<DatabaseEvent>? _rideSub;
 
   @override
   void initState() {
     super.initState();
     _ride = widget.ride;
+    _listenToRide();
+  }
+
+  @override
+  void dispose() {
+    _rideSub?.cancel();
+    super.dispose();
+  }
+
+  void _listenToRide() {
+    if (!_realtime.isEnabled) return;
+    _rideSub = FirebaseDatabase.instance
+        .ref('users/${widget.user.id}/rides/${_ride.id}')
+        .onValue
+        .skip(1)
+        .listen((event) {
+      final raw = event.snapshot.value;
+      if (raw is! Map) return;
+      final status = RideStatuses.normalize(
+        raw['status']?.toString() ?? '',
+      );
+      if (status == RideStatuses.cancelled) {
+        if (mounted) {
+          _showMessage('تم إلغاء الرحلة من قبل الزبون.');
+          widget.onReleased();
+        }
+      } else if (status != _ride.status && mounted) {
+        setState(() => _ride = RideRequestItem.fromJson(
+          Map<String, dynamic>.from(raw),
+        ));
+      }
+    });
   }
 
   @override
@@ -146,7 +179,13 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
       setState(() => _ride = updated);
       _showMessage('تم تأكيد الرحلة.');
     } on ApiException catch (error) {
-      if (mounted) _showMessage(error.message);
+      if (mounted) {
+        _showMessage(error.message);
+        if (error.statusCode == 409 || error.statusCode == 422) {
+          widget.onReleased();
+          return;
+        }
+      }
     } finally {
       if (mounted) setState(() => _updating = false);
     }

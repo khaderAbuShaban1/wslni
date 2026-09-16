@@ -96,11 +96,6 @@ class _WalletScreenState extends State<WalletScreen> {
     return AppScaffold(
       title: 'المحفظة',
       showBack: widget.showBack,
-      trailing: IconButton(
-        tooltip: 'تحديث',
-        onPressed: _reload,
-        icon: const Icon(Icons.refresh_rounded),
-      ),
       child: FutureBuilder<WalletSummary>(
         future: _walletFuture,
         builder: (context, snapshot) {

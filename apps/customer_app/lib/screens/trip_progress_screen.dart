@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/ride_model.dart';
@@ -23,6 +25,28 @@ class _TripProgressScreenState extends State<TripProgressScreen> {
   final RealtimeRideService _realtime = RealtimeRideService();
   final RideService _rideService = RideService();
   bool _cancelling = false;
+  late RideDraft _ride = widget.draft;
+  StreamSubscription<RideDraft?>? _rideSub;
+
+  static const _statusOrder = [
+    RideStatuses.pending,
+    RideStatuses.receivingOffers,
+    RideStatuses.driverSelected,
+    RideStatuses.driverConfirmed,
+    RideStatuses.driverOnTheWay,
+    RideStatuses.driverArrived,
+    RideStatuses.tripStarted,
+    RideStatuses.tripCompleted,
+    RideStatuses.rated,
+  ];
+
+  bool _isProgression(String incoming) {
+    if (incoming == RideStatuses.cancelled) return true;
+    final current = _statusOrder.indexOf(_ride.status);
+    final next = _statusOrder.indexOf(incoming);
+    if (current == -1 || next == -1) return true;
+    return next >= current;
+  }
 
   bool _canCancel(String status) => {
     RideStatuses.pending,
@@ -80,134 +104,146 @@ class _TripProgressScreenState extends State<TripProgressScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _rideSub = _realtime
+        .watchRide(widget.draft.customerId, widget.draft.id)
+        .listen((update) {
+      if (update != null && _isProgression(update.status) && mounted) {
+        setState(() => _ride = update);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _rideSub?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return StreamBuilder<RideDraft?>(
-      stream: _realtime.watchRide(widget.draft.customerId, widget.draft.id),
-      initialData: widget.draft,
-      builder: (context, snapshot) {
-        final ride = snapshot.data ?? widget.draft;
-        return PopScope(
-          canPop: true,
-          child: AppScaffold(
-            showBack: true,
-            title: 'حالة الرحلة',
-            child: Column(
-              children: [
-                _StatusHero(status: ride.status, label: ride.statusLabel),
-                const SizedBox(height: 18),
-                PremiumCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _statusMessage(ride.status),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      if (!_isFinalStatus(ride.status)) ...[
-                        const SizedBox(height: 22),
-                        _RideTimeline(status: ride.status),
-                      ],
-                      if (ride.driverName.isNotEmpty) ...[
-                        const Divider(height: 34),
-                        _SectionLabel(
-                          icon: Icons.person_outline_rounded,
-                          label: 'بيانات السائق',
-                        ),
-                        const SizedBox(height: 12),
-                        _InfoTile(
-                          icon: Icons.person_outline_rounded,
-                          label: 'السائق',
-                          value: ride.driverName,
-                        ),
-                        _InfoTile(
-                          icon: Icons.phone_outlined,
-                          label: 'الهاتف',
-                          value: ride.driverPhone.isEmpty
-                              ? 'غير متوفر'
-                              : ride.driverPhone,
-                        ),
-                        _InfoTile(
-                          icon: Icons.directions_car_outlined,
-                          label: 'السيارة',
-                          value: [
-                            ride.driverCar,
-                            ride.driverPlate,
-                          ].where((value) => value.isNotEmpty).join(' - '),
-                        ),
-                      ],
-                      const Divider(height: 34),
-                      _SectionLabel(
-                        icon: Icons.route_outlined,
-                        label: 'مسار الرحلة',
-                      ),
-                      const SizedBox(height: 12),
-                      _RouteStop(
-                        icon: Icons.trip_origin_rounded,
-                        label: 'نقطة الانطلاق',
-                        value: ride.pickup,
-                      ),
-                      _RouteStop(
-                        icon: Icons.location_on_rounded,
-                        label: 'الوجهة',
-                        value: ride.destination,
-                        isLast: true,
-                      ),
-                    ],
+    final ride = _ride;
+    return PopScope(
+      canPop: true,
+      child: AppScaffold(
+        showBack: true,
+        title: 'حالة الرحلة',
+        child: Column(
+          children: [
+            _StatusHero(status: ride.status, label: ride.statusLabel),
+            const SizedBox(height: 18),
+            PremiumCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _statusMessage(ride.status),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (!_isFinalStatus(ride.status)) ...[
+                    const SizedBox(height: 22),
+                    _RideTimeline(status: ride.status),
+                  ],
+                  if (ride.driverName.isNotEmpty) ...[
+                    const Divider(height: 34),
+                    _SectionLabel(
+                      icon: Icons.person_outline_rounded,
+                      label: 'بيانات السائق',
+                    ),
+                    const SizedBox(height: 12),
+                    _InfoTile(
+                      icon: Icons.person_outline_rounded,
+                      label: 'السائق',
+                      value: ride.driverName,
+                    ),
+                    _InfoTile(
+                      icon: Icons.phone_outlined,
+                      label: 'الهاتف',
+                      value: ride.driverPhone.isEmpty
+                          ? 'غير متوفر'
+                          : ride.driverPhone,
+                    ),
+                    _InfoTile(
+                      icon: Icons.directions_car_outlined,
+                      label: 'السيارة',
+                      value: [
+                        ride.driverCar,
+                        ride.driverPlate,
+                      ].where((value) => value.isNotEmpty).join(' - '),
+                    ),
+                  ],
+                  const Divider(height: 34),
+                  _SectionLabel(
+                    icon: Icons.route_outlined,
+                    label: 'مسار الرحلة',
+                  ),
+                  const SizedBox(height: 12),
+                  _RouteStop(
+                    icon: Icons.trip_origin_rounded,
+                    label: 'نقطة الانطلاق',
+                    value: ride.pickup,
+                  ),
+                  _RouteStop(
+                    icon: Icons.location_on_rounded,
+                    label: 'الوجهة',
+                    value: ride.destination,
+                    isLast: true,
+                  ),
+                ],
+              ),
+            ),
+            if (ride.status == RideStatuses.tripCompleted) ...[
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => TripCompletedScreen(draft: ride),
                   ),
                 ),
-                if (ride.status == RideStatuses.tripCompleted) ...[
-                  const SizedBox(height: 20),
-                  FilledButton.icon(
-                    onPressed: () => Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (_) => TripCompletedScreen(draft: ride),
-                      ),
+                icon: const Icon(Icons.star_outline_rounded),
+                label: const Text('عرض الملخص وتقييم السائق'),
+              ),
+            ],
+            if (ride.status == RideStatuses.receivingOffers) ...[
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: () => Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => DriverOffersScreen(
+                      draft: ride,
+                      lockNavigation: true,
                     ),
-                    icon: const Icon(Icons.star_outline_rounded),
-                    label: const Text('عرض الملخص وتقييم السائق'),
                   ),
-                ],
-                if (ride.status == RideStatuses.receivingOffers) ...[
-                  const SizedBox(height: 20),
-                  FilledButton.icon(
-                    onPressed: () => Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (_) => DriverOffersScreen(
-                          draft: ride,
-                          lockNavigation: true,
-                        ),
-                      ),
-                    ),
-                    icon: const Icon(Icons.local_offer_outlined),
-                    label: const Text('اختيار سائق آخر'),
+                ),
+                icon: const Icon(Icons.local_offer_outlined),
+                label: const Text('اختيار سائق آخر'),
+              ),
+            ],
+            if (_canCancel(ride.status)) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.error.withValues(alpha: .4),
                   ),
-                ],
-                if (_canCancel(ride.status)) ...[
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.error,
-                      side: BorderSide(
-                        color: Theme.of(context).colorScheme.error.withValues(alpha: .4),
-                      ),
-                    ),
-                    onPressed: _cancelling ? null : () => _confirmCancel(ride),
-                    icon: _cancelling
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.cancel_outlined),
-                    label: Text(_cancelling ? 'جاري الإلغاء...' : 'إلغاء الرحلة'),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
+                ),
+                onPressed: _cancelling ? null : () => _confirmCancel(ride),
+                icon: _cancelling
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.cancel_outlined),
+                label: Text(_cancelling ? 'جاري الإلغاء...' : 'إلغاء الرحلة'),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
