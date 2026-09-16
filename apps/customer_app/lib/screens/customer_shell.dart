@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/user_model.dart';
+import '../services/notification_service.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'trip_history_screen.dart';
@@ -20,6 +21,7 @@ class _CustomerShellState extends State<CustomerShell> {
   late AppUser _user = widget.user;
   int _index = 0;
   void _signOut() {
+    NotificationService.instance.unregisterToken();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,

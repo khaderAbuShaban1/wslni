@@ -28,6 +28,7 @@ class User extends Authenticatable
         'role',
         'account_status',
         'wallet_balance',
+        'fcm_token',
     ];
 
     /**
@@ -41,6 +42,7 @@ class User extends Authenticatable
         'email_otp_code',
         'email_otp_expires_at',
         'wallet_balance',
+        'fcm_token',
     ];
 
     /**

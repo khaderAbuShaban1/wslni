@@ -95,6 +95,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
   }
 
   Future<void> _signOut() async {
+    await NotificationService.instance.unregisterToken();
     await ApiTokenStore.clear();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(

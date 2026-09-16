@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import '../utils/firebase_runtime.dart';
 import 'api_client.dart';
+import 'notification_service.dart';
 
 class AuthService {
   AuthService({ApiClient? api}) : _api = api ?? ApiClient();
@@ -74,6 +75,10 @@ class AuthService {
         // failure must never prevent an otherwise valid application login.
       }
     }
+
+    // Register FCM token for push notifications.
+    NotificationService.instance.registerToken();
+
     return user;
   }
 

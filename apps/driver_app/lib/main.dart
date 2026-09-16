@@ -5,7 +5,9 @@ import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -25,6 +27,7 @@ part 'screens/requests_page.dart';
 part 'screens/support_page.dart';
 part 'screens/trips_page.dart';
 part 'services/api_client.dart';
+part 'services/notification_service.dart';
 part 'services/realtime_driver_service.dart';
 part 'utils/constants.dart';
 part 'utils/firebase_runtime.dart';
@@ -36,5 +39,8 @@ part 'widgets/skeleton_loader.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseRuntime.initialize();
+  if (FirebaseRuntime.isReady) {
+    await NotificationService.instance.initialize();
+  }
   runApp(const DriverRideApp());
 }

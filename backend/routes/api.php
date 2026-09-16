@@ -63,4 +63,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('firebase/token', fn (\Illuminate\Http\Request $request) => response()->json([
         'token' => app(\App\Services\FirebaseRealtimeService::class)->customToken($request->user()),
     ]));
+
+    // FCM device token registration
+    Route::post('fcm/token', function (\Illuminate\Http\Request $request) {
+        $request->validate(['token' => ['required', 'string', 'max:512']]);
+        $request->user()->update(['fcm_token' => $request->input('token')]);
+        return response()->json(['message' => 'تم تسجيل التوكن بنجاح.']);
+    });
+
+    Route::delete('fcm/token', function (\Illuminate\Http\Request $request) {
+        $request->user()->update(['fcm_token' => null]);
+        return response()->json(['message' => 'تم إلغاء تسجيل التوكن.']);
+    });
 });

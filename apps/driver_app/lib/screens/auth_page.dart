@@ -113,6 +113,9 @@ class _AuthPageState extends State<AuthPage> {
         // The API session remains valid even while Firebase is unavailable.
       }
     }
+
+    // Register FCM token for push notifications.
+    NotificationService.instance.registerToken();
   }
 
   void _requireDriverAccount(Map<String, dynamic> result) {

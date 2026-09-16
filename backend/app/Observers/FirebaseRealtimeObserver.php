@@ -3,10 +3,15 @@
 namespace App\Observers;
 
 use App\Jobs\SyncFirebaseProjection;
+use App\Services\NotificationDispatcher;
 use Illuminate\Database\Eloquent\Model;
 
 class FirebaseRealtimeObserver
 {
+    public function __construct(
+        private readonly NotificationDispatcher $notificationDispatcher,
+    ) {}
+
     public function saved(Model $model): void
     {
         $modelClass = $model::class;
@@ -17,5 +22,8 @@ class FirebaseRealtimeObserver
         // the database transaction commits (afterCommit is set in the job
         // constructor), so Firebase never sees uncommitted state.
         SyncFirebaseProjection::dispatch($modelClass, $modelId);
+
+        // Dispatch FCM push notifications based on the model changes.
+        $this->notificationDispatcher->dispatch($model);
     }
 }

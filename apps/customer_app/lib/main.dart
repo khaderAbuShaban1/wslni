@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app.dart';
+import 'services/notification_service.dart';
 import 'utils/firebase_runtime.dart';
 import 'utils/theme_mode_controller.dart';
 export 'app.dart';
@@ -10,6 +11,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await loadThemeMode();
   await FirebaseRuntime.initialize();
+  if (FirebaseRuntime.isReady) {
+    await NotificationService.instance.initialize();
+  }
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
