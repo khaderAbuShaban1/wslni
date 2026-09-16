@@ -34,11 +34,14 @@ class TripHistoryScreen extends StatefulWidget {
 
 class _TripHistoryScreenState extends State<TripHistoryScreen> {
   late Stream<List<RideDraft>> _realtimeRides;
+  List<RideDraft> _apiRides = const [];
+  bool _loadingApi = true;
 
   @override
   void initState() {
     super.initState();
     _realtimeRides = widget.realtimeService.watchCustomerRides(widget.user.id);
+    _loadFromApi();
   }
 
   @override
@@ -48,7 +51,29 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
       _realtimeRides = widget.realtimeService.watchCustomerRides(
         widget.user.id,
       );
+      _loadFromApi();
     }
+  }
+
+  Future<void> _loadFromApi() async {
+    try {
+      final rides = await widget.rideService.listCustomerRides(widget.user.id);
+      rides.sort((a, b) => b.id.compareTo(a.id));
+      if (mounted) setState(() => _apiRides = rides);
+    } catch (_) {
+      // Firebase remains the live fallback.
+    } finally {
+      if (mounted) setState(() => _loadingApi = false);
+    }
+  }
+
+  List<RideDraft> _merge(List<RideDraft> realtimeRides) {
+    final byId = {for (final ride in _apiRides) ride.id: ride};
+    for (final ride in realtimeRides) {
+      byId[ride.id] = ride;
+    }
+    final merged = byId.values.toList()..sort((a, b) => b.id.compareTo(a.id));
+    return merged;
   }
 
   @override
@@ -59,10 +84,13 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
       child: StreamBuilder<List<RideDraft>>(
         stream: _realtimeRides,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              _loadingApi) {
             return const SkeletonList();
           }
-          final rides = snapshot.data ?? const <RideDraft>[];
+          final rides = snapshot.hasData
+              ? _merge(snapshot.data!)
+              : _apiRides;
 
           if (rides.isEmpty) {
             return const EmptyStateCard(
