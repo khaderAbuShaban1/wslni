@@ -107,8 +107,8 @@ class FirebaseRealtimeService
     private function ridePayload(RideRequest $ride): array
     {
         $ride->loadMissing([
-            'customer:id,name',
-            'driver:id,name',
+            'customer:id,name,phone',
+            'driver:id,name,phone',
             'driver.driverProfile',
             'offers.driver:id,name',
             'offers.driver.driverProfile',
@@ -141,9 +141,11 @@ class FirebaseRealtimeService
             'customer_id' => $ride->customer_id,
             'customer_uid' => (string) $ride->customer_id,
             'customer_name' => $ride->customer?->name ?? 'زبون',
+            'customer_phone' => $ride->customer?->phone ?? '',
             'driver_id' => $ride->driver_id,
             'driver_uid' => $ride->driver_id === null ? null : (string) $ride->driver_id,
             'driver_name' => $driver?->name ?? '',
+            'driver_phone' => $driver?->phone ?? '',
             'vehicle' => $profile?->vehicle_type ?? '',
             'vehicle_plate' => $profile?->vehicle_plate ?? '',
             'pickup_address' => $ride->pickup_address,
@@ -151,6 +153,7 @@ class FirebaseRealtimeService
             'notes' => $ride->notes ?? '',
             'status' => $ride->status,
             'actual_fare' => $ride->actual_fare === null ? null : (string) $ride->actual_fare,
+            'platform_fee' => $ride->platform_fee === null ? null : (string) $ride->platform_fee,
             'rating' => $ride->rating,
             'rating_comment' => $ride->rating_comment,
             'requested_at' => optional($ride->requested_at)->getTimestampMs(),
