@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'api_client.dart';
@@ -13,7 +13,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('FCM background message: ${message.messageId}');
 }
 
-class NotificationService {
+class NotificationService with WidgetsBindingObserver {
   NotificationService._();
 
   static final NotificationService instance = NotificationService._();
@@ -74,7 +74,29 @@ class NotificationService {
     if (initialMessage != null) {
       _handleNotificationOpen(initialMessage);
     }
+
+    // A device has one FCM token, so another account signing in on this device
+    // takes it over. Re-claiming it on every resume keeps it bound to whoever
+    // is currently signed in here.
+    WidgetsBinding.instance.addObserver(this);
+    await _registerIfSignedIn();
   }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _registerIfSignedIn();
+    }
+  }
+
+  Future<void> _registerIfSignedIn() async {
+    final authToken = await ApiTokenStore.read();
+    if (authToken != null && authToken.isNotEmpty) {
+      await registerToken();
+    }
+  }
+
+  bool _tokenListenerActive = false;
 
   /// Get the current FCM token and register it with the backend.
   Future<void> registerToken() async {
@@ -84,8 +106,10 @@ class NotificationService {
         await _sendTokenToBackend(token);
       }
 
-      // Listen for token refreshes.
-      _messaging.onTokenRefresh.listen(_sendTokenToBackend);
+      if (!_tokenListenerActive) {
+        _tokenListenerActive = true;
+        _messaging.onTokenRefresh.listen(_sendTokenToBackend);
+      }
     } catch (e) {
       debugPrint('FCM token registration error: $e');
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/user_model.dart';
+import '../services/api_client.dart';
 import '../services/notification_service.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
@@ -20,8 +21,10 @@ class CustomerShell extends StatefulWidget {
 class _CustomerShellState extends State<CustomerShell> {
   late AppUser _user = widget.user;
   int _index = 0;
-  void _signOut() {
-    NotificationService.instance.unregisterToken();
+  Future<void> _signOut() async {
+    await NotificationService.instance.unregisterToken();
+    await ApiTokenStore.clear();
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,

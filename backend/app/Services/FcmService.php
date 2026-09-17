@@ -84,6 +84,11 @@ class FcmService
                 ->post($url, $message);
 
             if ($response->successful()) {
+                Log::info('FCM send OK', [
+                    'title' => $title,
+                    'token_tail' => substr($token, -12),
+                    'response' => $response->json(),
+                ]);
                 return true;
             }
 

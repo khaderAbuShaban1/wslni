@@ -5,40 +5,17 @@ namespace App\Jobs;
 use App\Models\RideOffer;
 use App\Models\RideRequest;
 use App\Services\FirebaseRealtimeService;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 
-class SyncFirebaseProjection implements ShouldQueue, ShouldBeUnique
+class SyncFirebaseProjection
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    public int $tries = 3;
-    public int $timeout = 15;
-    public int $uniqueFor = 5;
+    use Dispatchable;
 
     public function __construct(
         public string $modelClass,
         public int $modelId,
-    ) {
-        $this->afterCommit();
-        $this->onQueue('firebase');
-    }
+    ) {}
 
-    public function uniqueId(): string
-    {
-        if (is_a($this->modelClass, RideOffer::class, true)) {
-            $offer = RideOffer::find($this->modelId);
-            return 'ride:'.($offer?->ride_request_id ?? $this->modelId);
-        }
-
-        return is_a($this->modelClass, RideRequest::class, true)
-            ? 'ride:'.$this->modelId
-            : $this->modelClass.':'.$this->modelId;
-    }
 
     public function handle(FirebaseRealtimeService $firebase): void
     {

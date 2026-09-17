@@ -77,7 +77,7 @@ class AuthService {
     }
 
     // Register FCM token for push notifications.
-    NotificationService.instance.registerToken();
+    await NotificationService.instance.registerToken();
 
     return user;
   }

@@ -115,7 +115,7 @@ class _AuthPageState extends State<AuthPage> {
     }
 
     // Register FCM token for push notifications.
-    NotificationService.instance.registerToken();
+    await NotificationService.instance.registerToken();
   }
 
   void _requireDriverAccount(Map<String, dynamic> result) {

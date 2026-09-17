@@ -2,16 +2,18 @@
 
 namespace App\Services;
 
-use App\Jobs\SendFcmNotification;
 use App\Models\DriverProfile;
 use App\Models\DriverWithdrawal;
 use App\Models\RideOffer;
 use App\Models\RideRequest;
+use App\Models\User;
 use App\Models\WalletDeposit;
 use Illuminate\Database\Eloquent\Model;
 
 class NotificationDispatcher
 {
+    public function __construct(private FcmService $fcm) {}
+
     /**
      * Dispatch push notifications based on model changes.
      * Called from the observer after each saved event.
@@ -134,6 +136,16 @@ class NotificationDispatcher
 
     private function handleDeposit(WalletDeposit $deposit): void
     {
+        if ($deposit->wasRecentlyCreated && $deposit->status === 'pending') {
+            $this->notify(
+                $deposit->user_id,
+                'تم استلام طلب الإيداع 📩',
+                "تم استلام طلب إيداعك بمبلغ {$deposit->amount} شيكل وسيتم مراجعته من الإدارة.",
+                ['type' => 'wallet', 'action' => 'deposit_pending', 'deposit_id' => (string) $deposit->id],
+            );
+            return;
+        }
+
         if (! $deposit->wasChanged('status')) return;
 
         match ($deposit->status) {
@@ -197,6 +209,9 @@ class NotificationDispatcher
 
     private function notify(int $userId, string $title, string $body, array $data = []): void
     {
-        SendFcmNotification::dispatch($userId, $title, $body, $data);
+        $user = User::find($userId);
+        if ($user && $user->fcm_token) {
+            $this->fcm->sendToUser($user, $title, $body, $data);
+        }
     }
 }

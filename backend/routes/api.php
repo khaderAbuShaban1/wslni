@@ -67,7 +67,16 @@ Route::middleware('auth:sanctum')->group(function () {
     // FCM device token registration
     Route::post('fcm/token', function (\Illuminate\Http\Request $request) {
         $request->validate(['token' => ['required', 'string', 'max:512']]);
-        $request->user()->update(['fcm_token' => $request->input('token')]);
+        $token = $request->input('token');
+        // Clear this token from any other user (same device, different account).
+        \App\Models\User::where('fcm_token', $token)
+            ->where('id', '!=', $request->user()->id)
+            ->update(['fcm_token' => null]);
+        // Apps re-claim the token on every resume, so skip the write (and the
+        // model observers it triggers) when nothing actually changed.
+        if ($request->user()->fcm_token !== $token) {
+            $request->user()->update(['fcm_token' => $token]);
+        }
         return response()->json(['message' => 'تم تسجيل التوكن بنجاح.']);
     });
 
