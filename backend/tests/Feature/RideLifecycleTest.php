@@ -217,6 +217,18 @@ class RideLifecycleTest extends TestCase
             ->assertJsonFragment(['id' => $ride->id, 'status' => 'receiving_offers']);
     }
 
+    public function test_customer_cannot_browse_open_rides_of_other_customers(): void
+    {
+        // The open list exposes the requesting customer's name and phone, so a
+        // customer must not be able to read it and harvest other customers.
+        $this->createRide(['status' => 'receiving_offers']);
+        $customer = $this->customer();
+
+        Sanctum::actingAs($customer, ['customer']);
+
+        $this->getJson('api/rides?status=open')->assertForbidden();
+    }
+
     public function test_customer_can_rate_only_a_completed_trip(): void
     {
         $customer = $this->customer();

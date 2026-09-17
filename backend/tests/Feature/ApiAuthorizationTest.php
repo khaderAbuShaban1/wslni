@@ -6,6 +6,7 @@ use App\Models\DriverProfile;
 use App\Models\RideOffer;
 use App\Models\RideRequest;
 use App\Models\User;
+use App\Services\FcmService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -234,6 +235,39 @@ class ApiAuthorizationTest extends TestCase
 
         $this->assertDatabaseHas('ride_requests', ['id' => $ride->id, 'status' => 'cancelled', 'driver_id' => null]);
         $this->assertDatabaseHas('ride_offers', ['id' => $offer->id, 'status' => 'cancelled']);
+    }
+
+    public function test_driver_is_notified_when_customer_cancels_a_selected_ride(): void
+    {
+        $customer = $this->customer();
+        $driver = User::factory()->create([
+            'role' => 'driver',
+            'fcm_token' => 'driver-device-token',
+        ]);
+        $ride = $this->createRide([
+            'customer_id' => $customer->id,
+            'driver_id' => $driver->id,
+            'status' => 'driver_selected',
+        ]);
+
+        $notified = [];
+        $this->mock(FcmService::class, function ($mock) use (&$notified) {
+            $mock->shouldReceive('sendToUser')
+                ->andReturnUsing(function (User $user) use (&$notified) {
+                    $notified[] = (int) $user->id;
+
+                    return true;
+                });
+        });
+
+        Sanctum::actingAs($customer, ['customer']);
+        $this->deleteJson("api/rides/{$ride->id}")->assertOk();
+
+        $this->assertContains(
+            $driver->id,
+            $notified,
+            'The waiting driver must be told the customer cancelled.',
+        );
     }
 
     public function test_customer_cannot_cancel_ride_after_driver_confirmed(): void

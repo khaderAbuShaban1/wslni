@@ -15,11 +15,15 @@ class SettingsController extends Controller
     public function edit(): View
     {
         $commission = (float) (AppSetting::query()->where('key', 'commission_percent')->value('value') ?? 15);
+        // Only settled rides earned a fee. Summing every row counted fees left
+        // on cancelled rides as revenue, which disagreed with the analytics page.
+        $settledRides = RideRequest::query()
+            ->whereIn('status', [RideStatus::TripCompleted->value, RideStatus::Rated->value]);
 
         return view('admin.commission', [
             'commission' => $commission,
-            'totalRevenue' => RideRequest::query()->sum('platform_fee'),
-            'completedRides' => RideRequest::query()->whereIn('status', [RideStatus::TripCompleted->value, RideStatus::Rated->value])->count(),
+            'totalRevenue' => (clone $settledRides)->sum('platform_fee'),
+            'completedRides' => (clone $settledRides)->count(),
         ]);
     }
 

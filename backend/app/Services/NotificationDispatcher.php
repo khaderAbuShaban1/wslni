@@ -101,9 +101,30 @@ class NotificationDispatcher
         }
     }
 
+    /**
+     * Customer-initiated cancellation. The controller clears driver_id in the
+     * same update that sets the status, so by the time the observer runs the
+     * driver is no longer reachable from the model and must be passed in.
+     */
+    public function rideCancelledByCustomer(RideRequest $ride, int $driverId): void
+    {
+        if ($driverId <= 0) {
+            return;
+        }
+
+        $this->notify(
+            $driverId,
+            'ألغى الزبون الرحلة ❌',
+            'ألغى الزبون هذه الرحلة. يمكنك استقبال طلبات جديدة الآن.',
+            ['type' => 'ride_status', 'ride_id' => (string) $ride->id, 'status' => 'cancelled'],
+        );
+    }
+
     private function notifyCancellation(RideRequest $ride): void
     {
-        // Notify the other party about the cancellation.
+        // Only reached when driver_id survived the cancellation, which means
+        // the driver (or an admin) cancelled — a customer cancellation clears
+        // it and is announced by rideCancelledByCustomer() instead.
         if ($ride->driver_id) {
             $this->notify(
                 $ride->customer_id,

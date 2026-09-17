@@ -10,6 +10,7 @@ use App\Models\RideOffer;
 use App\Models\RideRequest;
 use App\Models\User;
 use App\Models\WalletTransaction;
+use App\Services\NotificationDispatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,14 @@ class RideController extends Controller
         $user = $request->user();
         $status = $request->query('status', RideStatus::Pending->value);
 
+        // The open list carries the requesting customer's name and phone, so it
+        // is limited to drivers, matching what the Firebase rules already
+        // enforce on drivers/open_rides. Without this any customer could
+        // enumerate every other customer's contact details.
+        if ($status === 'open') {
+            abort_unless($user->role === 'driver', 403, 'تصفح الطلبات المفتوحة متاح للسائقين فقط.');
+        }
+
         return response()->json(
             RideRequest::query()
                 ->with([
@@ -30,7 +39,6 @@ class RideController extends Controller
                     'offers.driver:id,name,phone',
                     'offers.driver.driverProfile',
                 ])
-                // Open rides are visible to any authenticated user (drivers browse them).
                 ->when($status === 'open', fn ($query) => $query->whereIn('status', [
                     RideStatus::Pending->value,
                     RideStatus::ReceivingOffers->value,
@@ -214,6 +222,15 @@ class RideController extends Controller
                 $updates['completed_at'] = now();
             }
 
+            if ($data['status'] === RideStatus::Cancelled->value) {
+                // A cancelled ride charges nobody, so the agreed fare must not
+                // linger on the record. Money only moves at completion, and
+                // completion cannot transition to cancelled, so there is
+                // nothing to refund here.
+                $updates['actual_fare'] = null;
+                $updates['platform_fee'] = null;
+            }
+
             $lockedRide->update($updates);
 
             if ($data['status'] === 'cancelled') {
@@ -328,8 +345,11 @@ class RideController extends Controller
         return response()->json(['message' => 'تم حفظ تقييمك.', 'ride' => $syncedRide]);
     }
 
-    public function destroy(Request $request, RideRequest $ride): JsonResponse
-    {
+    public function destroy(
+        Request $request,
+        RideRequest $ride,
+        NotificationDispatcher $notifications,
+    ): JsonResponse {
         $user = $request->user();
         abort_unless($user->role === 'customer', 403, 'إلغاء الرحلة متاح للزبائن فقط.');
         abort_unless((int) $ride->customer_id === $user->id, 403, 'هذه الرحلة ليست رحلتك.');
@@ -346,6 +366,11 @@ class RideController extends Controller
             ], 422);
         }
 
+        // Read before the transaction clears it below; a driver already waiting
+        // on this ride has to be told, and the observer can no longer see who
+        // they were once driver_id is null.
+        $previousDriverId = (int) $ride->driver_id;
+
         DB::transaction(function () use ($ride) {
             $lockedRide = RideRequest::query()->lockForUpdate()->findOrFail($ride->id);
 
@@ -359,8 +384,11 @@ class RideController extends Controller
                 'status' => RideStatus::Cancelled->value,
                 'driver_id' => null,
                 'actual_fare' => null,
+                'platform_fee' => null,
             ]);
         });
+
+        $notifications->rideCancelledByCustomer($ride, $previousDriverId);
 
         return response()->json([
             'message' => 'تم إلغاء الرحلة بنجاح.',
