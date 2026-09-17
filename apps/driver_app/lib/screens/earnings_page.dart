@@ -34,16 +34,20 @@ class _EarningsPageState extends State<_EarningsPage> {
   Future<void> _load() async {
     try {
       final rows = await _api.getList('rides?status=all');
-      final completed = rows
-          .whereType<Map>()
-          .map((row) => RideRequestItem.fromJson(Map<String, dynamic>.from(row)))
-          .where(
-            (ride) =>
-                ride.status == RideStatuses.tripCompleted ||
-                ride.status == RideStatuses.rated,
-          )
-          .toList()
-        ..sort((a, b) => b.id.compareTo(a.id));
+      final completed =
+          rows
+              .whereType<Map>()
+              .map(
+                (row) =>
+                    RideRequestItem.fromJson(Map<String, dynamic>.from(row)),
+              )
+              .where(
+                (ride) =>
+                    ride.status == RideStatuses.tripCompleted ||
+                    ride.status == RideStatuses.rated,
+              )
+              .toList()
+            ..sort((a, b) => b.id.compareTo(a.id));
       if (mounted) setState(() => _completed = completed);
     } catch (_) {
       // Preserve the last verified earnings if the server is temporarily down.
@@ -56,103 +60,104 @@ class _EarningsPageState extends State<_EarningsPage> {
   Widget build(BuildContext context) {
     if (_loading) return const _SkeletonList();
     final completed = _completed;
-        final gross = completed.fold<double>(
-          0,
-          (sum, ride) => sum + _amount(ride.actualFare),
-        );
-        final commission = completed.fold<double>(
-          0,
-          (sum, ride) => sum + _amount(ride.platformFee),
-        );
-        final net = gross - commission;
+    final gross = completed.fold<double>(
+      0,
+      (sum, ride) => sum + _amount(ride.actualFare),
+    );
+    final commission = completed.fold<double>(
+      0,
+      (sum, ride) => sum + _amount(ride.platformFee),
+    );
+    final net = gross - commission;
 
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
+      children: [
+        Row(
           children: [
-            Row(
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: _emerald.withValues(alpha: .16),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.account_balance_wallet_rounded,
+                color: _emerald,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: _emerald.withValues(alpha: .16),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(
-                    Icons.account_balance_wallet_rounded,
-                    color: _emerald,
+                Text(
+                  'أرباحي',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'أرباحي',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w900),
-                    ),
-                    const Text(
-                      'ملخص الرحلات المكتملة',
-                      style: TextStyle(color: _muted),
-                    ),
-                  ],
+                const Text(
+                  'ملخص الرحلات المكتملة',
+                  style: TextStyle(color: _muted),
                 ),
               ],
             ),
-            const SizedBox(height: 18),
-            _NetEarningsCard(net: net),
-            const SizedBox(height: 12),
-            _WithdrawalPanel(user: widget.user),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _MetricCard(
-                    icon: Icons.payments_outlined,
-                    label: 'إجمالي الأجرة',
-                    value: '${gross.toStringAsFixed(2)} ش',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _MetricCard(
-                    icon: Icons.percent_rounded,
-                    label: 'عمولة التطبيق',
-                    value: '${commission.toStringAsFixed(2)} ش',
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _MetricCard(
-                    icon: Icons.route_rounded,
-                    label: 'الرحلات',
-                    value: completed.length.toString(),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'تفاصيل الأرباح',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 10),
-            if (completed.isEmpty)
-              const _EmptyStateCard(
-                icon: Icons.payments_outlined,
-                title: 'لا توجد أرباح بعد',
-                message: 'بعد إكمال الرحلات ستظهر أرباحك هنا مباشرة.',
-              )
-            else
-              for (final ride in completed) ...[
-                _TripEarningCard(ride: ride),
-                const SizedBox(height: 10),
-              ],
           ],
-        );
+        ),
+        const SizedBox(height: 18),
+        _NetEarningsCard(net: net),
+        const SizedBox(height: 12),
+        _WithdrawalPanel(user: widget.user),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _MetricCard(
+                icon: Icons.payments_outlined,
+                label: 'إجمالي الأجرة',
+                value: '${gross.toStringAsFixed(2)} ش',
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _MetricCard(
+                icon: Icons.percent_rounded,
+                label: 'عمولة التطبيق',
+                value: '${commission.toStringAsFixed(2)} ش',
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _MetricCard(
+                icon: Icons.route_rounded,
+                label: 'الرحلات',
+                value: completed.length.toString(),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'تفاصيل الأرباح',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 10),
+        if (completed.isEmpty)
+          const _EmptyStateCard(
+            icon: Icons.payments_outlined,
+            title: 'لا توجد أرباح بعد',
+            message: 'بعد إكمال الرحلات ستظهر أرباحك هنا مباشرة.',
+          )
+        else
+          for (final ride in completed) ...[
+            _TripEarningCard(ride: ride),
+            const SizedBox(height: 10),
+          ],
+      ],
+    );
   }
 
   double _amount(String value) => double.tryParse(value) ?? 0;
@@ -300,10 +305,7 @@ class _WithdrawalPanelState extends State<_WithdrawalPanel> {
     );
     if (submitted == null) return;
     try {
-      final result = await _api.post(
-        'drivers/me/withdrawals',
-        submitted,
-      );
+      final result = await _api.post('drivers/me/withdrawals', submitted);
       if (!mounted) return;
       setState(() {
         _balance =

@@ -6,8 +6,9 @@
             <h1>الرحلات</h1>
             <p class="subtitle">راقب الرحلات النشطة، وراجع الرحلات المكتملة، وحدّث الحالة مباشرة.</p>
         </div>
+        @php($statusOptions = ['all' => 'الكل'] + \App\Enums\RideStatus::labels())
         <div class="topline">
-            @foreach (['all' => 'الكل', 'pending' => 'معلقة', 'receiving_offers' => 'تستقبل عروض', 'driver_selected' => 'تم اختيار سائق', 'driver_confirmed' => 'مؤكدة', 'driver_on_the_way' => 'السائق في الطريق', 'driver_arrived' => 'وصل السائق', 'trip_started' => 'قيد التنفيذ', 'trip_completed' => 'مكتملة', 'rated' => 'مقيّمة'] as $key => $label)
+            @foreach ($statusOptions as $key => $label)
                 <a class="pill {{ $status === $key ? 'active' : '' }}" href="{{ route('admin.rides.index', ['status' => $key, 'search' => $search]) }}">{{ $label }}</a>
             @endforeach
         </div>
@@ -17,7 +18,7 @@
         <div class="metric"><div class="label">مطلوبة</div><div class="value">{{ $requestedCount }}</div><div class="hint">بانتظار التوزيع</div></div>
         <div class="metric"><div class="label">قيد التنفيذ</div><div class="value">{{ $inProgressCount }}</div><div class="hint">تتحرك الآن</div></div>
         <div class="metric"><div class="label">مكتملة</div><div class="value">{{ $completedCount }}</div><div class="hint">أغلقت بنجاح</div></div>
-        <div class="metric"><div class="label">الفلتر الحالي</div><div class="value">{{ strtoupper($status) }}</div><div class="hint">نطاق القائمة</div></div>
+        <div class="metric"><div class="label">الفلتر الحالي</div><div class="value">{{ $statusOptions[$status] ?? $status }}</div><div class="hint">نطاق القائمة</div></div>
     </section>
 
     <div class="panel">
@@ -47,20 +48,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @php
-                        $statusLabels = [
-                            'pending' => 'معلقة',
-                            'receiving_offers' => 'تستقبل عروض',
-                            'driver_selected' => 'تم اختيار سائق',
-                            'driver_confirmed' => 'مؤكدة',
-                            'driver_on_the_way' => 'السائق في الطريق',
-                            'driver_arrived' => 'وصل السائق',
-                            'trip_started' => 'قيد التنفيذ',
-                            'trip_completed' => 'مكتملة',
-                            'rated' => 'مقيّمة',
-                            'cancelled' => 'ملغاة',
-                        ];
-                    @endphp
+                    @php($statusLabels = \App\Enums\RideStatus::labels())
                     @foreach ($rides as $ride)
                         <tr>
                             <td>

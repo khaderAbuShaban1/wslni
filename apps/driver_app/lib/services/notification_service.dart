@@ -31,8 +31,9 @@ class NotificationService with WidgetsBindingObserver {
     );
 
     // Set up local notifications for foreground display.
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const initSettings = InitializationSettings(android: androidSettings);
 
     await _localNotifications.initialize(
@@ -43,7 +44,8 @@ class NotificationService with WidgetsBindingObserver {
     // Create the Android notification channel.
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(
           const AndroidNotificationChannel(
             'wslni_notifications',
@@ -126,12 +128,16 @@ class NotificationService with WidgetsBindingObserver {
     }
   }
 
+  // Seeded off the clock so a restart does not reuse ids that notifications
+  // still on screen are holding.
+  int _nextNotificationId = DateTime.now().millisecondsSinceEpoch % 100000;
+
   void _handleForegroundMessage(RemoteMessage message) {
     final notification = message.notification;
     if (notification == null) return;
 
     _localNotifications.show(
-      message.hashCode,
+      _nextNotificationId++,
       notification.title,
       notification.body,
       const NotificationDetails(

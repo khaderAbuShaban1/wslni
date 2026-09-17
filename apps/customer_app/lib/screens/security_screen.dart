@@ -57,7 +57,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
 
   void _message(String value) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(value)));
     }
   }
 
@@ -71,17 +73,50 @@ class _SecurityScreenState extends State<SecurityScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('تغيير كلمة المرور', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+              Text(
+                'تغيير كلمة المرور',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              ),
               const SizedBox(height: 6),
               const Text('استخدم كلمة مرور قوية من 8 أحرف أو أكثر.'),
               const SizedBox(height: 18),
-              CustomTextField(controller: _currentPassword, label: 'كلمة المرور الحالية', icon: Icons.lock_outline_rounded, obscureText: true, validator: requiredField),
+              CustomTextField(
+                controller: _currentPassword,
+                label: 'كلمة المرور الحالية',
+                icon: Icons.lock_outline_rounded,
+                obscureText: true,
+                validator: requiredField,
+              ),
               const SizedBox(height: 12),
-              CustomTextField(controller: _newPassword, label: 'كلمة المرور الجديدة', icon: Icons.password_rounded, obscureText: true, validator: (value) => value != null && value.length >= 8 ? null : 'أدخل 8 أحرف على الأقل'),
+              CustomTextField(
+                controller: _newPassword,
+                label: 'كلمة المرور الجديدة',
+                icon: Icons.password_rounded,
+                obscureText: true,
+                validator: (value) => value != null && value.length >= 8
+                    ? null
+                    : 'أدخل 8 أحرف على الأقل',
+              ),
               const SizedBox(height: 12),
-              CustomTextField(controller: _confirmation, label: 'تأكيد كلمة المرور الجديدة', icon: Icons.lock_reset_rounded, obscureText: true, validator: (value) => value == _newPassword.text ? requiredField(value) : 'كلمتا المرور غير متطابقتين'),
+              CustomTextField(
+                controller: _confirmation,
+                label: 'تأكيد كلمة المرور الجديدة',
+                icon: Icons.lock_reset_rounded,
+                obscureText: true,
+                validator: (value) => value == _newPassword.text
+                    ? requiredField(value)
+                    : 'كلمتا المرور غير متطابقتين',
+              ),
               const SizedBox(height: 18),
-              CustomButton(label: _changingPassword ? 'جاري الحفظ...' : 'تغيير كلمة المرور', icon: Icons.key_rounded, onPressed: _changingPassword ? null : _changePassword),
+              CustomButton(
+                label: _changingPassword
+                    ? 'جاري الحفظ...'
+                    : 'تغيير كلمة المرور',
+                icon: Icons.key_rounded,
+                onPressed: _changingPassword ? null : _changePassword,
+              ),
             ],
           ),
         ),

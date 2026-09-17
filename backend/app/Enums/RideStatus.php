@@ -15,6 +15,37 @@ enum RideStatus: string
     case Rated = 'rated';
     case Cancelled = 'cancelled';
 
+    public function label(): string
+    {
+        return match ($this) {
+            self::Pending => 'معلقة',
+            self::ReceivingOffers => 'تستقبل عروض',
+            self::DriverSelected => 'تم اختيار سائق',
+            self::DriverConfirmed => 'مؤكدة',
+            self::DriverOnTheWay => 'السائق في الطريق',
+            self::DriverArrived => 'وصل السائق',
+            self::TripStarted => 'قيد التنفيذ',
+            self::TripCompleted => 'مكتملة',
+            self::Rated => 'مقيّمة',
+            self::Cancelled => 'ملغاة',
+        };
+    }
+
+    /** @return array<string, string> value => Arabic label */
+    public static function labels(): array
+    {
+        return array_column(
+            array_map(fn (self $case) => ['value' => $case->value, 'label' => $case->label()], self::cases()),
+            'label',
+            'value',
+        );
+    }
+
+    public static function labelFor(?string $value): string
+    {
+        return self::tryFrom((string) $value)?->label() ?? (string) $value;
+    }
+
     public function next(): ?self
     {
         return match ($this) {

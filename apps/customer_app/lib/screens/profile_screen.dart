@@ -245,9 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             subtitle: 'تغيير كلمة المرور وحماية حسابك',
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => SecurityScreen(
-                  user: widget.user,
-                ),
+                builder: (_) => SecurityScreen(user: widget.user),
               ),
             ),
           ),

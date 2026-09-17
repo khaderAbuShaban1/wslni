@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Jobs\SyncFirebaseProjection;
 use App\Services\NotificationDispatcher;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class FirebaseRealtimeObserver
 {
@@ -23,7 +24,12 @@ class FirebaseRealtimeObserver
         // constructor), so Firebase never sees uncommitted state.
         SyncFirebaseProjection::dispatch($modelClass, $modelId);
 
-        // Dispatch FCM push notifications based on the model changes.
-        $this->notificationDispatcher->dispatch($model);
+        // FCM delivery is a network call. Running it inline would hold the
+        // lockForUpdate() row locks open for the duration of the request to
+        // Google, and a later rollback would leave a notification already sent
+        // for a change that never landed. Deferring past the commit avoids
+        // both. Outside a transaction this runs immediately.
+        $dispatcher = $this->notificationDispatcher;
+        DB::afterCommit(static fn () => $dispatcher->dispatch($model));
     }
 }

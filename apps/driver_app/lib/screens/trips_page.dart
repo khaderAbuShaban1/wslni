@@ -34,17 +34,21 @@ class _TripsPageState extends State<_TripsPage> {
   Future<void> _load() async {
     try {
       final rows = await _api.getList('rides?status=all');
-      final rides = rows
-          .whereType<Map>()
-          .map((row) => RideRequestItem.fromJson(Map<String, dynamic>.from(row)))
-          .where(
-            (ride) =>
-                ride.status == RideStatuses.tripCompleted ||
-                ride.status == RideStatuses.rated ||
-                ride.status == RideStatuses.cancelled,
-          )
-          .toList()
-        ..sort((a, b) => b.id.compareTo(a.id));
+      final rides =
+          rows
+              .whereType<Map>()
+              .map(
+                (row) =>
+                    RideRequestItem.fromJson(Map<String, dynamic>.from(row)),
+              )
+              .where(
+                (ride) =>
+                    ride.status == RideStatuses.tripCompleted ||
+                    ride.status == RideStatuses.rated ||
+                    ride.status == RideStatuses.cancelled,
+              )
+              .toList()
+            ..sort((a, b) => b.id.compareTo(a.id));
       if (mounted) setState(() => _rides = rides);
     } catch (_) {
       // Keep the last verified data visible if the local API is unavailable.

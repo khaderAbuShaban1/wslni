@@ -7,7 +7,7 @@ String _resolveBaseUrl(String? baseUrl) {
       ? baseUrl
       : _apiBaseUrlOverride.isNotEmpty
       ? _apiBaseUrlOverride
-      : 'http://10.0.0.11:8000/api';
+      : 'http://192.168.1.11:8000/api';
 
   if (kReleaseMode && Uri.parse(resolved).scheme != 'https') {
     throw StateError('API_BASE_URL must use HTTPS in release builds.');

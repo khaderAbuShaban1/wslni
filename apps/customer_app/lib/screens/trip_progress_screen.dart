@@ -82,15 +82,15 @@ class _TripProgressScreenState extends State<TripProgressScreen> {
     try {
       await _rideService.cancelRide(ride);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إلغاء الرحلة بنجاح.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تم إلغاء الرحلة بنجاح.')));
       Navigator.of(context).pop();
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } catch (_) {
       if (mounted) {
@@ -109,10 +109,10 @@ class _TripProgressScreenState extends State<TripProgressScreen> {
     _rideSub = _realtime
         .watchRide(widget.draft.customerId, widget.draft.id)
         .listen((update) {
-      if (update != null && _isProgression(update.status) && mounted) {
-        setState(() => _ride = update);
-      }
-    });
+          if (update != null && _isProgression(update.status) && mounted) {
+            setState(() => _ride = update);
+          }
+        });
   }
 
   @override
@@ -212,10 +212,8 @@ class _TripProgressScreenState extends State<TripProgressScreen> {
               FilledButton.icon(
                 onPressed: () => Navigator.of(context).pushReplacement(
                   MaterialPageRoute(
-                    builder: (_) => DriverOffersScreen(
-                      draft: ride,
-                      lockNavigation: true,
-                    ),
+                    builder: (_) =>
+                        DriverOffersScreen(draft: ride, lockNavigation: true),
                   ),
                 ),
                 icon: const Icon(Icons.local_offer_outlined),
@@ -228,7 +226,9 @@ class _TripProgressScreenState extends State<TripProgressScreen> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.error,
                   side: BorderSide(
-                    color: Theme.of(context).colorScheme.error.withValues(alpha: .4),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.error.withValues(alpha: .4),
                   ),
                 ),
                 onPressed: _cancelling ? null : () => _confirmCancel(ride),

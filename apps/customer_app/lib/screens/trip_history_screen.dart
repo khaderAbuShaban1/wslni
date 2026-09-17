@@ -88,9 +88,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
               _loadingApi) {
             return const SkeletonList();
           }
-          final rides = snapshot.hasData
-              ? _merge(snapshot.data!)
-              : _apiRides;
+          final rides = snapshot.hasData ? _merge(snapshot.data!) : _apiRides;
 
           if (rides.isEmpty) {
             return const EmptyStateCard(

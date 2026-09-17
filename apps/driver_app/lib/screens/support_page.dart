@@ -12,7 +12,9 @@ class _DriverSupportPage extends StatelessWidget {
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تعذر فتح التطبيق المطلوب على هذا الجهاز.')),
+        const SnackBar(
+          content: Text('تعذر فتح التطبيق المطلوب على هذا الجهاز.'),
+        ),
       );
     }
   }

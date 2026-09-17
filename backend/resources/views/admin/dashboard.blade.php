@@ -8,7 +8,7 @@
         </div>
         <div class="topline">
             <a class="pill {{ $activeStatus === 'all' ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">كل الرحلات</a>
-            @foreach (['requested' => 'مطلوبة', 'accepted' => 'مقبولة', 'in_progress' => 'قيد التنفيذ', 'completed' => 'مكتملة'] as $key => $label)
+            @foreach (\App\Enums\RideStatus::labels() as $key => $label)
                 <a class="pill {{ $activeStatus === $key ? 'active' : '' }}" href="{{ route('admin.dashboard', ['status' => $key, 'search' => $search]) }}">{{ $label }}</a>
             @endforeach
         </div>
@@ -70,16 +70,6 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @php
-                            $statusLabels = [
-                                'requested' => 'مطلوبة',
-                                'accepted' => 'مقبولة',
-                                'arrived' => 'وصل',
-                                'in_progress' => 'قيد التنفيذ',
-                                'completed' => 'مكتملة',
-                                'cancelled' => 'ملغاة',
-                            ];
-                        @endphp
                         @foreach ($recentRides as $ride)
                             <tr>
                                 <td>
@@ -91,10 +81,11 @@
                                     <div class="muted">إلى {{ $ride->dropoff_address }}</div>
                                 </td>
                                 <td>
-                                    <span class="status {{ $ride->status }}">{{ $statusLabels[$ride->status] ?? $ride->status }}</span>
+                                    <span class="status {{ $ride->status }}">{{ \App\Enums\RideStatus::labelFor($ride->status) }}</span>
                                 </td>
                                 <td>
-                                    <strong>{{ $ride->fare_estimate ? number_format((float) $ride->fare_estimate, 2) . ' ₪' : 'قيد التقدير' }}</strong>
+                                    @php($fare = $ride->actual_fare ?? $ride->fare_estimate)
+                                    <strong>{{ $fare ? number_format((float) $fare, 2) . ' ₪' : 'قيد التقدير' }}</strong>
                                     <div class="muted">{{ optional($ride->requested_at)->format('M d, H:i') ?? 'الآن' }}</div>
                                 </td>
                             </tr>
@@ -115,7 +106,7 @@
                     </div>
                 </div>
                 <div class="list">
-                    @foreach (['requested' => 'مطلوبة', 'accepted' => 'مقبولة', 'arrived' => 'وصل', 'in_progress' => 'قيد التنفيذ', 'completed' => 'مكتملة'] as $key => $label)
+                    @foreach (\App\Enums\RideStatus::labels() as $key => $label)
                         <div class="list-item">
                             <div>
                                 <strong>{{ $label }}</strong>

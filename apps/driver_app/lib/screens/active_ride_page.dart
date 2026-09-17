@@ -43,22 +43,24 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
         .onValue
         .skip(1)
         .listen((event) {
-      final raw = event.snapshot.value;
-      if (raw is! Map) return;
-      final status = RideStatuses.normalize(
-        raw['status']?.toString() ?? '',
-      );
-      if (status == RideStatuses.cancelled) {
-        if (mounted) {
-          _showMessage('تم إلغاء الرحلة من قبل الزبون.');
-          widget.onReleased();
-        }
-      } else if (status != _ride.status && mounted) {
-        setState(() => _ride = RideRequestItem.fromJson(
-          Map<String, dynamic>.from(raw),
-        ));
-      }
-    });
+          final raw = event.snapshot.value;
+          if (raw is! Map) return;
+          final status = RideStatuses.normalize(
+            raw['status']?.toString() ?? '',
+          );
+          if (status == RideStatuses.cancelled) {
+            if (mounted) {
+              _showMessage('تم إلغاء الرحلة من قبل الزبون.');
+              widget.onReleased();
+            }
+          } else if (status != _ride.status && mounted) {
+            setState(
+              () => _ride = RideRequestItem.fromJson(
+                Map<String, dynamic>.from(raw),
+              ),
+            );
+          }
+        });
   }
 
   @override
@@ -102,9 +104,7 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
     setState(() => _updating = true);
 
     try {
-      final result = await _api.patch('rides/${_ride.id}', {
-        'status': status,
-      });
+      final result = await _api.patch('rides/${_ride.id}', {'status': status});
       final rawRide = result['ride'];
       final updatedRide = rawRide is Map<String, dynamic>
           ? RideRequestItem.fromJson(rawRide)

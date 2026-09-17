@@ -28,11 +28,15 @@ class _RequestsPageState extends State<RequestsPage> {
   Future<void> _loadInitialRides() async {
     try {
       final rows = await _api.getList('rides?status=open');
-      final rides = rows
-          .whereType<Map>()
-          .map((row) => RideRequestItem.fromJson(Map<String, dynamic>.from(row)))
-          .toList()
-        ..sort((a, b) => b.id.compareTo(a.id));
+      final rides =
+          rows
+              .whereType<Map>()
+              .map(
+                (row) =>
+                    RideRequestItem.fromJson(Map<String, dynamic>.from(row)),
+              )
+              .toList()
+            ..sort((a, b) => b.id.compareTo(a.id));
       if (mounted) setState(() => _initialRides = rides);
     } catch (_) {
       // Firebase remains the live source. The screen has its existing error
@@ -48,9 +52,7 @@ class _RequestsPageState extends State<RequestsPage> {
     // Laravel is the source of truth for the list that existed when this
     // screen opened. Firebase then contributes only newer requests. This
     // prevents an incomplete cached Firebase branch from hiding valid rides.
-    final ridesById = {
-      for (final ride in _initialRides) ride.id: ride,
-    };
+    final ridesById = {for (final ride in _initialRides) ride.id: ride};
     final newestInitialId = _initialRides.fold<int>(
       0,
       (latest, ride) => ride.id > latest ? ride.id : latest,
@@ -209,10 +211,7 @@ class _RequestsPageState extends State<RequestsPage> {
         final rides = snapshot.hasData
             ? _mergeRealtimeRides(snapshot.data!)
             : _initialRides;
-        return _RequestsList(
-          rides: rides,
-          onOffer: _openOfferSheet,
-        );
+        return _RequestsList(rides: rides, onOffer: _openOfferSheet);
       },
     );
   }

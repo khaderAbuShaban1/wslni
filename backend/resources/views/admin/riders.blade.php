@@ -6,8 +6,9 @@
             <h1>الركاب</h1>
             <p class="subtitle">راجع حسابات العملاء وأوقف أو فعّل الحساب عند الحاجة.</p>
         </div>
+        @php($statusOptions = ['all' => 'الكل', 'active' => 'نشط', 'suspended' => 'موقوف'])
         <div class="topline">
-            @foreach (['all' => 'الكل', 'active' => 'نشط', 'suspended' => 'موقوف'] as $key => $label)
+            @foreach ($statusOptions as $key => $label)
                 <a class="pill {{ $status === $key ? 'active' : '' }}" href="{{ route('admin.riders.index', ['status' => $key, 'search' => $search]) }}">{{ $label }}</a>
             @endforeach
         </div>
@@ -17,7 +18,7 @@
         <div class="metric"><div class="label">نشط</div><div class="value">{{ $activeCount }}</div><div class="hint">جاهز للحجز</div></div>
         <div class="metric"><div class="label">موقوف</div><div class="value">{{ $suspendedCount }}</div><div class="hint">موقوف مؤقتًا</div></div>
         <div class="metric"><div class="label">إجمالي الركاب</div><div class="value">{{ $riders->count() }}</div><div class="hint">في العرض الحالي</div></div>
-        <div class="metric"><div class="label">الفلتر</div><div class="value">{{ strtoupper($status) }}</div><div class="hint">النطاق الحالي</div></div>
+        <div class="metric"><div class="label">الفلتر</div><div class="value">{{ $statusOptions[$status] ?? $status }}</div><div class="hint">النطاق الحالي</div></div>
     </section>
 
     <div class="panel">

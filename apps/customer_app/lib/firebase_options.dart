@@ -20,7 +20,8 @@ class DefaultFirebaseOptions {
     appId: '1:507815627313:android:ecb457f100c22c52fce310',
     messagingSenderId: '507815627313',
     projectId: 'wslni-527a2',
-    databaseURL: 'https://wslni-527a2-default-rtdb.europe-west1.firebasedatabase.app',
+    databaseURL:
+        'https://wslni-527a2-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'wslni-527a2.firebasestorage.app',
   );
 
@@ -29,7 +30,8 @@ class DefaultFirebaseOptions {
     appId: '1:507815627313:ios:e5c4f1ffa240363ffce310',
     messagingSenderId: '507815627313',
     projectId: 'wslni-527a2',
-    databaseURL: 'https://wslni-527a2-default-rtdb.europe-west1.firebasedatabase.app',
+    databaseURL:
+        'https://wslni-527a2-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'wslni-527a2.firebasestorage.app',
     iosBundleId: 'com.wslni.customer',
   );

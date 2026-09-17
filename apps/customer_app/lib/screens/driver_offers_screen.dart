@@ -92,15 +92,15 @@ class _DriverOffersScreenState extends State<DriverOffersScreen> {
     try {
       await widget.rideService.cancelRide(widget.draft);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إلغاء الرحلة بنجاح.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تم إلغاء الرحلة بنجاح.')));
       Navigator.of(context).pop();
     } on ApiException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
     } catch (_) {
       if (mounted) {
@@ -169,7 +169,9 @@ class _DriverOffersScreenState extends State<DriverOffersScreen> {
               style: OutlinedButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.error,
                 side: BorderSide(
-                  color: Theme.of(context).colorScheme.error.withValues(alpha: .4),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.error.withValues(alpha: .4),
                 ),
                 minimumSize: const Size(double.infinity, 48),
               ),

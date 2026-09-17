@@ -78,7 +78,7 @@
                                     <strong>{{ $offer->title }}</strong>
                                     <div class="muted">{{ $offer->code }} · {{ $offer->value }}</div>
                                 </td>
-                                <td>{{ $offer->type }}</td>
+                                <td>{{ ['discount' => 'خصم', 'fixed' => 'مبلغ ثابت', 'free_ride' => 'رحلة مجانية'][$offer->type] ?? $offer->type }}</td>
                                 <td><span class="status {{ $offer->is_active ? 'active' : 'inactive' }}">{{ $offer->is_active ? 'نشط' : 'متوقف' }}</span></td>
                                 <td>
                                     <form method="post" action="{{ route('admin.offers.toggle', $offer) }}">
