@@ -8,6 +8,7 @@ use App\Models\AppSetting;
 use App\Models\RideRequest;
 use App\Models\User;
 use App\Models\WalletTransaction;
+use App\Services\NotificationDispatcher;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -45,8 +46,11 @@ class RidesController extends Controller
         ]);
     }
 
-    public function updateStatus(Request $request, RideRequest $rideRequest): RedirectResponse
-    {
+    public function updateStatus(
+        Request $request,
+        RideRequest $rideRequest,
+        NotificationDispatcher $notifications,
+    ): RedirectResponse {
         $data = $request->validate([
             'status' => ['required', Rule::enum(RideStatus::class)],
             'actual_fare' => ['nullable', 'numeric', 'min:0'],
@@ -61,7 +65,7 @@ class RidesController extends Controller
         }
 
         if ($requestedStatus === RideStatus::Cancelled) {
-            return $this->cancel($rideRequest, $currentStatus);
+            return $this->cancel($rideRequest, $currentStatus, $notifications);
         }
 
         $commissionPercent = (float) (AppSetting::query()->where('key', 'commission_percent')->value('value') ?? 15);
@@ -85,9 +89,13 @@ class RidesController extends Controller
      * A cancelled ride must leave nobody paid: no fare, no commission, and any
      * money a settled ride already moved is returned to where it came from.
      */
-    private function cancel(RideRequest $rideRequest, ?RideStatus $currentStatus): RedirectResponse
-    {
+    private function cancel(
+        RideRequest $rideRequest,
+        ?RideStatus $currentStatus,
+        NotificationDispatcher $notifications,
+    ): RedirectResponse {
         $wasSettled = in_array($currentStatus, [RideStatus::TripCompleted, RideStatus::Rated], true);
+        $driverId = (int) $rideRequest->driver_id;
         $error = null;
 
         DB::transaction(function () use ($rideRequest, $wasSettled, &$error): void {
@@ -162,6 +170,8 @@ class RidesController extends Controller
         if ($error !== null) {
             return back()->withErrors(['status' => $error]);
         }
+
+        $notifications->rideCancelledByAdmin($rideRequest, $driverId);
 
         return back()->with('status', $wasSettled
             ? 'تم إلغاء الرحلة وإرجاع الأجرة للزبون وسحب الأرباح من السائق.'

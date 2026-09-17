@@ -71,7 +71,10 @@ class NotificationDispatcher
             ),
             'driver_selected' => $this->notifyDriverSelected($ride),
             'receiving_offers' => $this->notifyReceivingOffers($ride),
-            'cancelled' => $this->notifyCancellation($ride),
+            // Cancellation is announced by the controller that performed it.
+            // Who cancelled cannot be read off the model, and guessing it from
+            // driver_id told customers the driver had cancelled when it was an
+            // admin, and reached nobody at all when it was the customer.
             default => null,
         };
     }
@@ -102,9 +105,8 @@ class NotificationDispatcher
     }
 
     /**
-     * Customer-initiated cancellation. The controller clears driver_id in the
-     * same update that sets the status, so by the time the observer runs the
-     * driver is no longer reachable from the model and must be passed in.
+     * Customer cancelled. The controller clears driver_id in the same update
+     * that sets the status, so the driver must be passed in.
      */
     public function rideCancelledByCustomer(RideRequest $ride, int $driverId): void
     {
@@ -116,23 +118,45 @@ class NotificationDispatcher
             $driverId,
             'ألغى الزبون الرحلة ❌',
             'ألغى الزبون هذه الرحلة. يمكنك استقبال طلبات جديدة الآن.',
-            ['type' => 'ride_status', 'ride_id' => (string) $ride->id, 'status' => 'cancelled'],
+            $this->cancellationData($ride),
         );
     }
 
-    private function notifyCancellation(RideRequest $ride): void
+    /** Driver cancelled: only the customer needs telling. */
+    public function rideCancelledByDriver(RideRequest $ride): void
     {
-        // Only reached when driver_id survived the cancellation, which means
-        // the driver (or an admin) cancelled — a customer cancellation clears
-        // it and is announced by rideCancelledByCustomer() instead.
-        if ($ride->driver_id) {
+        $this->notify(
+            $ride->customer_id,
+            'تم إلغاء الرحلة ❌',
+            'ألغى السائق الرحلة. يمكنك طلب رحلة جديدة الآن.',
+            $this->cancellationData($ride),
+        );
+    }
+
+    /** Admin cancelled: neither side chose this, so both are told. */
+    public function rideCancelledByAdmin(RideRequest $ride, int $driverId): void
+    {
+        $this->notify(
+            $ride->customer_id,
+            'تم إلغاء الرحلة ❌',
+            'ألغت الإدارة هذه الرحلة. تواصل مع الدعم لمزيد من التفاصيل.',
+            $this->cancellationData($ride),
+        );
+
+        if ($driverId > 0) {
             $this->notify(
-                $ride->customer_id,
+                $driverId,
                 'تم إلغاء الرحلة ❌',
-                'السائق ألغى الرحلة.',
-                ['type' => 'ride_status', 'ride_id' => (string) $ride->id, 'status' => 'cancelled'],
+                'ألغت الإدارة هذه الرحلة. يمكنك استقبال طلبات جديدة الآن.',
+                $this->cancellationData($ride),
             );
         }
+    }
+
+    /** @return array<string, string> */
+    private function cancellationData(RideRequest $ride): array
+    {
+        return ['type' => 'ride_status', 'ride_id' => (string) $ride->id, 'status' => 'cancelled'];
     }
 
     private function handleOffer(RideOffer $offer): void

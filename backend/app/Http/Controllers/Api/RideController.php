@@ -132,8 +132,11 @@ class RideController extends Controller
         );
     }
 
-    public function update(Request $request, RideRequest $ride): JsonResponse
-    {
+    public function update(
+        Request $request,
+        RideRequest $ride,
+        NotificationDispatcher $notifications,
+    ): JsonResponse {
         $user = $request->user();
         abort_unless($user->role === 'driver', 403, 'هذا الإجراء متاح للسائقين فقط.');
 
@@ -246,6 +249,10 @@ class RideController extends Controller
 
         if (isset($result['error'])) {
             return response()->json(['message' => $result['error']], $result['status']);
+        }
+
+        if ($data['status'] === RideStatus::Cancelled->value) {
+            $notifications->rideCancelledByDriver($result['ride']);
         }
 
         $syncedRide = $result['ride']->fresh();

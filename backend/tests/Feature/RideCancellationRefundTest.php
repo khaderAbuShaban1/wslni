@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\RideRequest;
 use App\Models\User;
+use App\Services\FcmService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
@@ -106,7 +107,74 @@ class RideCancellationRefundTest extends TestCase
         $this->assertSame(100.0, (float) $customer->fresh()->wallet_balance);
     }
 
-    private function user(string $role, float $balance): User
+    public function test_admin_cancellation_tells_both_sides_and_blames_neither(): void
+    {
+        $admin = $this->user('admin', 0);
+        $customer = $this->user('customer', 0, 'customer-device');
+        $driver = $this->user('driver', 0, 'driver-device');
+
+        $ride = $this->ride($customer, [
+            'driver_id' => $driver->id,
+            'status' => 'driver_confirmed',
+        ]);
+
+        $messages = $this->captureNotifications();
+
+        $this->actingAs($admin)
+            ->patch("/admin/rides/{$ride->id}/status", ['status' => 'cancelled'])
+            ->assertRedirect();
+
+        $this->assertArrayHasKey($customer->id, $messages, 'The customer must be told.');
+        $this->assertArrayHasKey($driver->id, $messages, 'The waiting driver must be told.');
+        $this->assertStringNotContainsString(
+            'السائق',
+            $messages[$customer->id],
+            'An admin cancellation must not be blamed on the driver.',
+        );
+    }
+
+    public function test_driver_cancellation_is_attributed_to_the_driver(): void
+    {
+        $customer = $this->user('customer', 0, 'customer-device');
+        $driver = $this->user('driver', 0, 'driver-device');
+
+        $ride = $this->ride($customer, [
+            'driver_id' => $driver->id,
+            'status' => 'driver_confirmed',
+        ]);
+
+        $messages = $this->captureNotifications();
+
+        Sanctum::actingAs($driver, ['driver']);
+        $this->patchJson("api/rides/{$ride->id}", ['status' => 'cancelled'])->assertOk();
+
+        $this->assertArrayHasKey($customer->id, $messages);
+        $this->assertStringContainsString('السائق', $messages[$customer->id]);
+    }
+
+    /**
+     * Recipient id => notification body. Returned as a shared object so it
+     * keeps filling as the request runs; a plain array would be copied empty.
+     *
+     * @return \ArrayObject<int, string>
+     */
+    private function captureNotifications(): \ArrayObject
+    {
+        $messages = new \ArrayObject();
+
+        $this->mock(FcmService::class, function ($mock) use ($messages) {
+            $mock->shouldReceive('sendToUser')
+                ->andReturnUsing(function (User $user, string $title, string $body) use ($messages) {
+                    $messages[(int) $user->id] = $body;
+
+                    return true;
+                });
+        });
+
+        return $messages;
+    }
+
+    private function user(string $role, float $balance, ?string $fcmToken = null): User
     {
         static $sequence = 0;
         $sequence++;
@@ -119,6 +187,7 @@ class RideCancellationRefundTest extends TestCase
             'role' => $role,
             'account_status' => 'active',
             'wallet_balance' => $balance,
+            'fcm_token' => $fcmToken,
             'email_verified_at' => now(),
         ]);
     }
