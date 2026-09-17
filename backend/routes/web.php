@@ -52,6 +52,8 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->name('admin.')->group(fun
 
     Route::middleware('financial')->group(function () {
         Route::get('/wallets', [WalletsController::class, 'index'])->name('wallets.index');
+        Route::get('/wallets/withdrawals', [WalletsController::class, 'withdrawals'])->name('wallets.withdrawals');
+        Route::get('/wallets/balances', [WalletsController::class, 'balances'])->name('wallets.balances');
         Route::post('/wallets', [WalletsController::class, 'store'])->name('wallets.store');
         Route::patch('/wallets/{walletDeposit}/approve', [WalletsController::class, 'approve'])->name('wallets.approve');
         Route::patch('/wallets/{walletDeposit}/reject', [WalletsController::class, 'reject'])->name('wallets.reject');

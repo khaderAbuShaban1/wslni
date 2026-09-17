@@ -3,7 +3,7 @@
 @section('content')
     <div class="header">
         <div>
-            <h1>المحافظ</h1>
+            <h1>إشعارات الإيداع</h1>
             <p class="subtitle">استقبل إشعارات التحويل البنكي، راجع الصور، ثم اعتمد المبلغ ليُضاف مباشرة إلى محفظة الراكب.</p>
         </div>
         <div class="topline">
@@ -13,6 +13,8 @@
         </div>
     </div>
 
+    @include('admin.partials.wallet-nav', ['active' => 'deposits'])
+
     <div class="panel" style="margin-bottom:16px;">
         <div class="panel-header">
             <div class="panel-title">
@@ -20,14 +22,14 @@
                     <h2>طابور إشعارات الدفع</h2>
                     <p>كل صف يمثل طلبًا مستقلًا برقم واضح وبيانات الكستمر؛ راجع الإشعار ثم اعتمد أو ارفض بدون خلط بين الطلبات.</p>
                 </div>
-                <a class="btn" href="{{ route('admin.wallets.index', ['status' => 'pending']) }}">عرض المعلقة فقط</a>
+                <span class="count-badge">{{ $pendingDeposits->count() }} معلّق</span>
             </div>
         </div>
 
         @if ($pendingDeposits->isEmpty())
             <div class="empty">لا توجد إشعارات دفع بانتظار الموافقة الآن.</div>
         @else
-            <div style="overflow:auto;">
+            <div class="scroll-y" style="overflow-x:auto;">
                 <table>
                     <thead>
                         <tr>
@@ -107,107 +109,12 @@
     </div>
 
     <section class="summary">
-        <div class="metric"><div class="label">رصيد المحافظ</div><div class="value">{{ number_format((float) $totalBalances, 2) }} ₪</div><div class="hint">مجموع الأرصدة الحالية للمستخدمين</div></div>
         <div class="metric"><div class="label">الإيداعات المعتمدة</div><div class="value">{{ $approvedCount }}</div><div class="hint">{{ number_format((float) $totalCredited, 2) }} ₪ تم إضافتها</div></div>
         <div class="metric"><div class="label">بانتظار المراجعة</div><div class="value">{{ $pendingCount }}</div><div class="hint">تنتظر اعتمادًا أو رفضًا</div></div>
         <div class="metric"><div class="label">مرفوضة</div><div class="value">{{ $rejectedCount }}</div><div class="hint">إشعارات لم تُعتمد</div></div>
     </section>
 
-    <section class="panels">
-        <div class="panel">
-            <div class="panel-header">
-                <div class="panel-title">
-                    <div>
-                        <h2>حسابات الدفع المتاحة</h2>
-                        <p>أضف الحسابات التي ستظهر للراكب عند طلب شحن المحفظة، مثل بنك فلسطين أو جوال Pay أو PalPay.</p>
-                    </div>
-                    <a class="btn" href="{{ route('admin.wallet-payment-accounts.index') }}">إدارة حسابات التحويل</a>
-                </div>
-            </div>
-            <div style="padding: 0 18px 18px;">
-                <form method="post" action="{{ route('admin.wallet-payment-accounts.store') }}" class="form-grid">
-                    @csrf
-                    <div class="form-row">
-                        <label>نوع الطريقة</label>
-                        <select class="select" name="type" required>
-                            <option value="bank">حساب بنكي</option>
-                            <option value="mobile_wallet">محفظة إلكترونية</option>
-                            <option value="other">طريقة أخرى</option>
-                        </select>
-                    </div>
-                    <div class="form-row">
-                        <label>اسم الطريقة</label>
-                        <input class="input" name="name" required placeholder="بنك فلسطين">
-                    </div>
-                    <div class="form-row">
-                        <label>اسم صاحب الحساب</label>
-                        <input class="input" name="account_holder_name" required placeholder="Wslni">
-                    </div>
-                    <div class="form-row">
-                        <label>رقم الحساب البنكي</label>
-                        <input class="input" name="account_number" placeholder="اختياري للمحافظ">
-                    </div>
-                    <div class="form-row">
-                        <label>رقم الجوال / المحفظة</label>
-                        <input class="input" name="phone_number" placeholder="059xxxxxxx">
-                    </div>
-                    <div class="form-row">
-                        <label>ترتيب الظهور</label>
-                        <input class="input" name="sort_order" type="number" min="0" value="0">
-                    </div>
-                    <div class="form-row" style="grid-column: 1 / -1;">
-                        <label>تعليمات للراكب</label>
-                        <input class="input" name="instructions" placeholder="حوّل المبلغ ثم ارفع صورة الإشعار من التطبيق.">
-                    </div>
-                    <div class="form-row" style="grid-column: 1 / -1;">
-                        <button class="btn primary" type="submit">إضافة طريقة الدفع</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <div class="panel">
-            <div class="panel-header">
-                <div class="panel-title">
-                    <div>
-                        <h2>الحسابات الظاهرة للكستمر</h2>
-                        <p>الحسابات النشطة فقط تظهر داخل تطبيق الراكب عند الضغط على إضافة رصيد.</p>
-                    </div>
-                </div>
-            </div>
-            @if ($paymentAccounts->isEmpty())
-                <div class="empty">لا توجد طرق دفع بعد.</div>
-            @else
-                <div class="list">
-                    @foreach ($paymentAccounts as $account)
-                        <div class="list-item">
-                            <div>
-                                <strong>{{ $account->name }}</strong>
-                                <small>{{ $account->account_holder_name }}</small>
-                                @if ($account->account_number)
-                                    <small>رقم الحساب: {{ $account->account_number }}</small>
-                                @endif
-                                @if ($account->phone_number)
-                                    <small>رقم الجوال: {{ $account->phone_number }}</small>
-                                @endif
-                            </div>
-                            <div class="table-actions">
-                                <span class="status {{ $account->is_active ? 'approved' : 'rejected' }}">{{ $account->is_active ? 'نشط' : 'متوقف' }}</span>
-                                <a class="btn blue" href="{{ route('admin.wallet-payment-accounts.invoice', $account) }}" target="_blank">فاتورة</a>
-                                <form method="post" action="{{ route('admin.wallet-payment-accounts.toggle', $account) }}">
-                                    @csrf
-                                    @method('patch')
-                                    <button class="btn" type="submit">{{ $account->is_active ? 'إيقاف' : 'تفعيل' }}</button>
-                                </form>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-        </div>
-    </section>
-
-    <section class="panels">
+    <section>
         <div class="panel">
             <div class="panel-header">
                 <div class="panel-title">
@@ -255,31 +162,6 @@
             </div>
         </div>
 
-        <div class="panel">
-            <div class="panel-header">
-                <div class="panel-title">
-                    <div>
-                        <h2>أرصدة المستخدمين</h2>
-                        <p>نظرة سريعة على المحفظة الحالية لكل راكب قبل الاعتماد أو بعده.</p>
-                    </div>
-                </div>
-            </div>
-            @if ($users->isEmpty())
-                <div class="empty">لا يوجد مستخدمون.</div>
-            @else
-                <div class="list">
-                    @foreach ($users as $user)
-                        <div class="list-item">
-                            <div>
-                                <strong>{{ $user->name }}</strong>
-                                <small>{{ $user->email }}</small>
-                            </div>
-                            <span class="status-badge">{{ number_format((float) $user->wallet_balance, 2) }} ₪</span>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-        </div>
     </section>
 
     <div class="panel" style="margin-top:16px;">
@@ -304,6 +186,7 @@
         @if ($deposits->isEmpty())
             <div class="empty">لا توجد إشعارات إيداع بعد.</div>
         @else
+            <div class="scroll-y" style="max-height:520px; overflow-x:auto;">
             <table>
                 <thead>
                     <tr>
@@ -372,40 +255,8 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
         @endif
     </div>
 
-    <div class="panel" style="margin-top:24px;">
-        <div class="panel-head">
-            <div>
-                <h3>طلبات سحب أرباح السائقين</h3>
-                <p class="muted">راجع بيانات التحويل ثم اعتمد الطلب أو ارفضه لإعادة المبلغ.</p>
-            </div>
-        </div>
-        @if ($driverWithdrawals->isEmpty())
-            <div class="empty">لا توجد طلبات سحب حاليًا.</div>
-        @else
-            <table>
-                <thead><tr><th>السائق</th><th>المبلغ</th><th>طريقة التحويل</th><th>الحالة</th><th>الإجراء</th></tr></thead>
-                <tbody>
-                    @foreach ($driverWithdrawals as $withdrawal)
-                        <tr>
-                            <td><strong>{{ $withdrawal->driver?->name }}</strong><div class="muted">{{ $withdrawal->driver?->phone }}</div></td>
-                            <td><strong>{{ number_format((float) $withdrawal->amount, 2) }} ₪</strong></td>
-                            <td>{{ $withdrawal->method === 'bank' ? 'حساب بنكي' : 'محفظة جوال' }}<div class="muted">{{ $withdrawal->account_name }} · {{ $withdrawal->account_number }}</div></td>
-                            <td><span class="status {{ $withdrawal->status }}">{{ $withdrawal->status === 'paid' ? 'مدفوع' : ($withdrawal->status === 'rejected' ? 'مرفوض' : 'بانتظار المراجعة') }}</span></td>
-                            <td>
-                                @if ($withdrawal->status === 'pending')
-                                    <div class="table-actions">
-                                        <form method="post" action="{{ route('admin.driver-withdrawals.approve', $withdrawal) }}">@csrf @method('patch')<button class="btn blue">تم التحويل</button></form>
-                                        <form method="post" action="{{ route('admin.driver-withdrawals.reject', $withdrawal) }}">@csrf @method('patch')<button class="btn danger">رفض وإرجاع</button></form>
-                                    </div>
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        @endif
-    </div>
 @endsection

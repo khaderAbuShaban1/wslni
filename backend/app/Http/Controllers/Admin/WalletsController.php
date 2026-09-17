@@ -30,6 +30,7 @@ class WalletsController extends Controller
             'paymentAccounts' => $paymentAccounts,
             'activeCount' => $paymentAccounts->where('is_active', true)->count(),
             'inactiveCount' => $paymentAccounts->where('is_active', false)->count(),
+            'tabCounts' => $this->tabCounts(),
         ]);
     }
 
@@ -85,6 +86,7 @@ class WalletsController extends Controller
                 });
             })
             ->latest()
+            ->limit(100)
             ->get();
 
         $pendingDeposits = WalletDeposit::query()
@@ -100,17 +102,75 @@ class WalletsController extends Controller
             'status' => $status ?: 'all',
             'search' => $search,
             'users' => User::query()->where('role', 'customer')->orderBy('name')->get(['id', 'name', 'wallet_balance']),
-            'paymentAccounts' => WalletPaymentAccount::query()
-                ->orderByDesc('is_active')
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get(),
             'pendingCount' => WalletDeposit::query()->where('status', 'pending')->count(),
             'approvedCount' => WalletDeposit::query()->where('status', 'approved')->count(),
             'rejectedCount' => WalletDeposit::query()->where('status', 'rejected')->count(),
             'totalCredited' => (float) WalletDeposit::query()->where('status', 'approved')->sum('amount'),
+            'tabCounts' => $this->tabCounts(),
+        ]);
+    }
+
+    public function withdrawals(Request $request): View
+    {
+        $status = $request->string('status')->toString();
+        $search = trim($request->string('search')->toString());
+
+        $withdrawals = DriverWithdrawal::query()
+            ->with('driver:id,name,phone,wallet_balance')
+            ->when($status && $status !== 'all', fn ($query) => $query->where('status', $status))
+            ->when($search !== '', fn ($query) => $query->whereHas(
+                'driver',
+                fn ($driverQuery) => $driverQuery->where('name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+            ))
+            ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
+            ->latest()
+            ->limit(100)
+            ->get();
+
+        return view('admin.wallet-withdrawals', [
+            'withdrawals' => $withdrawals,
+            'status' => $status ?: 'all',
+            'search' => $search,
+            'pendingCount' => DriverWithdrawal::query()->where('status', 'pending')->count(),
+            'paidCount' => DriverWithdrawal::query()->where('status', 'paid')->count(),
+            'rejectedCount' => DriverWithdrawal::query()->where('status', 'rejected')->count(),
+            'paidTotal' => (float) DriverWithdrawal::query()->where('status', 'paid')->sum('amount'),
+            'tabCounts' => $this->tabCounts(),
+        ]);
+    }
+
+    public function balances(Request $request): View
+    {
+        $search = trim($request->string('search')->toString());
+
+        $users = User::query()
+            ->whereIn('role', ['customer', 'driver'])
+            ->when($search !== '', fn ($query) => $query->where(
+                fn ($nested) => $nested->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+            ))
+            ->orderByDesc('wallet_balance')
+            ->limit(200)
+            ->get(['id', 'name', 'email', 'phone', 'role', 'wallet_balance']);
+
+        return view('admin.wallet-balances', [
+            'users' => $users,
+            'search' => $search,
             'totalBalances' => (float) User::query()->sum('wallet_balance'),
-            'driverWithdrawals' => DriverWithdrawal::query()->with('driver:id,name,phone,wallet_balance')->latest()->get(),
+            'customerBalances' => (float) User::query()->where('role', 'customer')->sum('wallet_balance'),
+            'driverBalances' => (float) User::query()->where('role', 'driver')->sum('wallet_balance'),
+            'tabCounts' => $this->tabCounts(),
+        ]);
+    }
+
+    /** Badge counts shown on the wallet sub-navigation. */
+    private function tabCounts(): array
+    {
+        return array_filter([
+            'deposits' => WalletDeposit::query()->where('status', 'pending')->count(),
+            'withdrawals' => DriverWithdrawal::query()->where('status', 'pending')->count(),
         ]);
     }
 

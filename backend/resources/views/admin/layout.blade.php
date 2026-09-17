@@ -398,6 +398,57 @@
         .list {
             padding: 10px 18px 18px;
         }
+        /* Long queues must not push the rest of the page out of reach as the
+           dataset grows; cap them and let the panel scroll on its own. */
+        .scroll-y {
+            max-height: 420px;
+            overflow-y: auto;
+        }
+        .scroll-y.short { max-height: 320px; }
+        .subnav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 18px;
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 10px;
+        }
+        .subnav-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 16px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            color: var(--muted);
+            font-weight: 800;
+            font-size: 14px;
+            text-decoration: none;
+        }
+        .subnav-link:hover { background: var(--line); }
+        .subnav-link.active {
+            background: var(--panel);
+            border-color: var(--line);
+            color: var(--text);
+            box-shadow: var(--shadow);
+        }
+        .subnav-count {
+            background: var(--primary);
+            color: #1b1403;
+            border-radius: 999px;
+            padding: 1px 8px;
+            font-size: 12px;
+            font-weight: 900;
+        }
+        .count-badge {
+            background: var(--line);
+            color: var(--muted);
+            border-radius: 999px;
+            padding: 3px 10px;
+            font-size: 12px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
         .list-item {
             display: flex;
             justify-content: space-between;

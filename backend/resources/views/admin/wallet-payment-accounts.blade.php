@@ -6,11 +6,9 @@
             <h1>حسابات التحويل</h1>
             <p class="subtitle">أضف الحسابات البنكية أو المحافظ الإلكترونية التي تظهر للكستمر عند شحن المحفظة ورفع إشعار الدفع.</p>
         </div>
-        <div class="topline">
-            <a class="pill active" href="{{ route('admin.wallet-payment-accounts.index') }}">إدارة الحسابات</a>
-            <a class="pill" href="{{ route('admin.wallets.index') }}">إشعارات المحافظ</a>
-        </div>
     </div>
+
+    @include('admin.partials.wallet-nav', ['active' => 'accounts'])
 
     <section class="summary">
         <div class="metric">
