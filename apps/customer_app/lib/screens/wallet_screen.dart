@@ -30,19 +30,23 @@ class WalletScreen extends StatefulWidget {
 class _WalletScreenState extends State<WalletScreen> {
   final _walletService = WalletService();
   StreamSubscription<DatabaseEvent>? _depositsSub;
+  StreamSubscription<DatabaseEvent>? _withdrawalsSub;
 
-  late Future<WalletSummary> _walletFuture;
+  WalletSummary? _wallet;
+  Object? _loadError;
+  int _loadRequest = 0;
 
   @override
   void initState() {
     super.initState();
-    _walletFuture = _walletService.getWallet();
+    _reload();
     _listenToDeposits();
   }
 
   @override
   void dispose() {
     _depositsSub?.cancel();
+    _withdrawalsSub?.cancel();
     super.dispose();
   }
 
@@ -55,12 +59,33 @@ class _WalletScreenState extends State<WalletScreen> {
         .onValue
         .skip(1)
         .listen((_) => _reload());
+    _withdrawalsSub = FirebaseDatabase.instance
+        .ref('users/$uid/withdrawals')
+        .onValue
+        .skip(1)
+        .listen((_) => _reload());
   }
 
-  void _reload() {
-    setState(() {
-      _walletFuture = _walletService.getWallet();
-    });
+  Future<void> _reload() async {
+    final request = ++_loadRequest;
+    if (_wallet == null && _loadError != null) {
+      setState(() => _loadError = null);
+    }
+    try {
+      final wallet = await _walletService.getWallet();
+      // A deposit and a withdrawal update can land together; only the newest
+      // response may win, or an older one could overwrite fresher data.
+      if (!mounted || request != _loadRequest) return;
+      setState(() {
+        _wallet = wallet;
+        _loadError = null;
+      });
+    } catch (error) {
+      if (!mounted || request != _loadRequest) return;
+      // With data already shown, a failed background refresh keeps it rather
+      // than replacing the whole wallet with an error.
+      setState(() => _loadError = error);
+    }
   }
 
   Future<void> _openAddBalance(WalletSummary wallet) async {
@@ -86,6 +111,24 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
+  Future<void> _openWithdrawal(WalletSummary wallet) async {
+    final submitted = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => _WithdrawalSheet(balance: wallet.balance),
+    );
+
+    if (submitted == true) {
+      _message('تم إرسال طلب السحب وبانتظار مراجعة الإدارة.');
+      _reload();
+    }
+  }
+
   void _message(String text) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
@@ -96,94 +139,115 @@ class _WalletScreenState extends State<WalletScreen> {
     return AppScaffold(
       title: 'المحفظة',
       showBack: widget.showBack,
-      child: FutureBuilder<WalletSummary>(
-        future: _walletFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 80),
-                child: CircularProgressIndicator(),
-              ),
-            );
-          }
+      child: _buildBody(),
+    );
+  }
 
-          if (snapshot.hasError) {
-            return _WalletErrorCard(onRetry: _reload);
-          }
+  Widget _buildBody() {
+    final wallet = _wallet;
+    // The spinner is only for the very first load. Later refreshes keep the
+    // last wallet on screen and swap it in place when the new data arrives.
+    if (wallet == null) {
+      if (_loadError != null) return _WalletErrorCard(onRetry: _reload);
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 80),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
-          final wallet =
-              snapshot.data ??
-              WalletSummary(
-                balance: widget.user.walletBalance,
-                paymentAccounts: const [],
-                deposits: const [],
-              );
-
-          return Column(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PremiumCard(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PremiumCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'رصيدك الحالي',
-                      style: TextStyle(
-                        color: mutedText,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      '${wallet.balance.toStringAsFixed(2)} ₪',
-                      style: Theme.of(context).textTheme.headlineLarge
-                          ?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            color: emerald,
-                          ),
-                    ),
-                    const SizedBox(height: 18),
-                    CustomButton(
-                      label: 'إضافة رصيد',
-                      icon: Icons.add_card_rounded,
-                      onPressed: () => _openAddBalance(wallet),
-                    ),
-                  ],
+              const Text(
+                'رصيدك الحالي',
+                style: TextStyle(color: mutedText, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '${wallet.balance.toStringAsFixed(2)} ₪',
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: emerald,
                 ),
               ),
               const SizedBox(height: 18),
-              _SectionTitle(
-                title: 'طرق الدفع المتاحة',
-                subtitle: 'اختر إحدى هذه الحسابات عند شحن المحفظة.',
+              CustomButton(
+                label: 'إضافة رصيد',
+                icon: Icons.add_card_rounded,
+                onPressed: () => _openAddBalance(wallet),
               ),
               const SizedBox(height: 10),
-              if (wallet.paymentAccounts.isEmpty)
-                const _EmptyWalletMessage(
-                  icon: Icons.account_balance_outlined,
-                  title: 'لا توجد طرق دفع',
-                  message: 'ستظهر هنا الحسابات التي يضيفها الأدمن.',
-                )
-              else
-                ...wallet.paymentAccounts.map(_PaymentAccountCard.new),
-              const SizedBox(height: 18),
-              _SectionTitle(
-                title: 'آخر طلبات الشحن',
-                subtitle: 'الإيداعات المعتمدة تضيف الرصيد تلقائيًا.',
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  foregroundColor: Theme.of(context).colorScheme.primary,
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+                onPressed: wallet.balance <= 0
+                    ? null
+                    : () => _openWithdrawal(wallet),
+                icon: const Icon(Icons.savings_outlined),
+                label: const Text('سحب الرصيد'),
               ),
-              const SizedBox(height: 10),
-              if (wallet.deposits.isEmpty)
-                const _EmptyWalletMessage(
-                  icon: Icons.receipt_long_outlined,
-                  title: 'لا توجد إشعارات دفع',
-                  message: 'بعد رفع إشعار الدفع سيظهر الطلب هنا.',
-                )
-              else
-                ...wallet.deposits.map(_DepositTile.new),
             ],
-          );
-        },
-      ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        _SectionTitle(
+          title: 'طرق الدفع المتاحة',
+          subtitle: 'اختر إحدى هذه الحسابات عند شحن المحفظة.',
+        ),
+        const SizedBox(height: 10),
+        if (wallet.paymentAccounts.isEmpty)
+          const _EmptyWalletMessage(
+            icon: Icons.account_balance_outlined,
+            title: 'لا توجد طرق دفع',
+            message: 'ستظهر هنا الحسابات التي يضيفها الأدمن.',
+          )
+        else
+          ...wallet.paymentAccounts.map(_PaymentAccountCard.new),
+        const SizedBox(height: 18),
+        _SectionTitle(
+          title: 'آخر طلبات الشحن',
+          subtitle: 'الإيداعات المعتمدة تضيف الرصيد تلقائيًا.',
+        ),
+        const SizedBox(height: 10),
+        _RecordList(
+          records: wallet.deposits.map(_Record.fromDeposit).toList(),
+          allTitle: 'جميع طلبات الشحن',
+          empty: const _EmptyWalletMessage(
+            icon: Icons.receipt_long_outlined,
+            title: 'لا توجد إشعارات دفع',
+            message: 'بعد رفع إشعار الدفع سيظهر الطلب هنا.',
+          ),
+        ),
+        const SizedBox(height: 18),
+        _SectionTitle(
+          title: 'سجل السحب',
+          subtitle: 'المبلغ يُحجز عند الطلب، ويعود لمحفظتك إذا رُفض.',
+        ),
+        const SizedBox(height: 10),
+        _RecordList(
+          records: wallet.withdrawals.map(_Record.fromWithdrawal).toList(),
+          allTitle: 'جميع طلبات السحب',
+          empty: const _EmptyWalletMessage(
+            icon: Icons.savings_outlined,
+            title: 'لا توجد طلبات سحب',
+            message: 'عند طلب سحب رصيدك سيظهر هنا مع حالته.',
+          ),
+        ),
+      ],
     );
   }
 }
@@ -665,64 +729,6 @@ class _PaymentAccountInvoiceSheet extends StatelessWidget {
   }
 }
 
-class _DepositTile extends StatelessWidget {
-  const _DepositTile(this.deposit);
-
-  final WalletDeposit deposit;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (deposit.status) {
-      'approved' => successColor,
-      'rejected' => errorColor,
-      _ => warningColor,
-    };
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: color.withValues(alpha: 0.12),
-            child: Icon(Icons.receipt_long_rounded, color: color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${deposit.amount.toStringAsFixed(2)} ₪',
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                ),
-                Text(
-                  deposit.paymentAccountName,
-                  style: const TextStyle(color: mutedText),
-                ),
-                if (deposit.referenceNumber != null)
-                  Text(
-                    'مرجع: ${deposit.referenceNumber}',
-                    style: const TextStyle(color: mutedText, fontSize: 12),
-                  ),
-              ],
-            ),
-          ),
-          Text(
-            deposit.statusLabel,
-            style: TextStyle(color: color, fontWeight: FontWeight.w900),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle({required this.title, required this.subtitle});
 
@@ -809,6 +815,344 @@ class _EmptyWalletMessage extends StatelessWidget {
           ),
           if (action != null) ...[const SizedBox(height: 12), action!],
         ],
+      ),
+    );
+  }
+}
+
+class _WithdrawalSheet extends StatefulWidget {
+  const _WithdrawalSheet({required this.balance});
+
+  final double balance;
+
+  @override
+  State<_WithdrawalSheet> createState() => _WithdrawalSheetState();
+}
+
+class _WithdrawalSheetState extends State<_WithdrawalSheet> {
+  final _walletService = WalletService();
+  final _formKey = GlobalKey<FormState>();
+  final _amount = TextEditingController();
+  final _accountName = TextEditingController();
+  final _accountNumber = TextEditingController();
+
+  String _method = 'mobile_wallet';
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    _accountName.dispose();
+    _accountNumber.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _submitting = true);
+    try {
+      await _walletService.requestWithdrawal(
+        amount: _amount.text.trim(),
+        method: _method,
+        accountName: _accountName.text.trim(),
+        accountNumber: _accountNumber.text.trim(),
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } on ApiException catch (error) {
+      _message(error.message);
+    } on SocketException {
+      _message('تعذر الاتصال بالخادم. حاول مرة أخرى.');
+    } catch (_) {
+      _message('حدث خطأ غير متوقع أثناء إرسال الطلب.');
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  void _message(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + bottomInset),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 46,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: borderGray,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'سحب الرصيد',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'المتاح للسحب: ${widget.balance.toStringAsFixed(2)} ₪. '
+                'يُحجز المبلغ فور الطلب، ويُعاد إلى محفظتك إذا رُفض.',
+                style: const TextStyle(color: mutedText, height: 1.5),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'طريقة التحويل',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 10),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(
+                    value: 'mobile_wallet',
+                    label: Text('محفظة جوال'),
+                    icon: Icon(Icons.phone_android),
+                  ),
+                  ButtonSegment(
+                    value: 'bank',
+                    label: Text('حساب بنكي'),
+                    icon: Icon(Icons.account_balance_outlined),
+                  ),
+                ],
+                selected: {_method},
+                onSelectionChanged: (value) =>
+                    setState(() => _method = value.first),
+              ),
+              const SizedBox(height: 16),
+              CustomTextField(
+                controller: _amount,
+                label: 'المبلغ',
+                icon: Icons.payments_outlined,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                validator: (value) {
+                  final amount = double.tryParse(value?.trim() ?? '');
+                  if (amount == null || amount <= 0) {
+                    return 'أدخل مبلغًا صحيحًا.';
+                  }
+                  if (amount > widget.balance) {
+                    return 'المبلغ أكبر من رصيدك المتاح.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              CustomTextField(
+                controller: _accountName,
+                label: 'اسم صاحب الحساب',
+                icon: Icons.person_outline_rounded,
+                validator: (value) =>
+                    (value?.trim().isEmpty ?? true) ? 'الاسم مطلوب.' : null,
+              ),
+              const SizedBox(height: 12),
+              CustomTextField(
+                controller: _accountNumber,
+                label: 'رقم الحساب أو الجوال',
+                icon: Icons.numbers_rounded,
+                validator: (value) =>
+                    (value?.trim().isEmpty ?? true) ? 'الرقم مطلوب.' : null,
+              ),
+              const SizedBox(height: 18),
+              CustomButton(
+                label: _submitting ? 'جاري الإرسال...' : 'إرسال طلب السحب',
+                icon: Icons.send_rounded,
+                onPressed: _submitting ? null : _submit,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One row of wallet history, so deposits and withdrawals share one card.
+class _Record {
+  const _Record({
+    required this.amount,
+    required this.subtitle,
+    required this.label,
+    required this.outcome,
+    this.createdAt,
+  });
+
+  factory _Record.fromDeposit(WalletDeposit deposit) => _Record(
+    amount: deposit.amount,
+    subtitle: [
+      deposit.paymentAccountName,
+      if (deposit.referenceNumber != null) 'مرجع: ${deposit.referenceNumber}',
+    ].join(' · '),
+    label: deposit.statusLabel,
+    outcome: _outcome(deposit.status, success: 'approved'),
+    createdAt: deposit.createdAt,
+  );
+
+  factory _Record.fromWithdrawal(CustomerWithdrawal withdrawal) => _Record(
+    amount: withdrawal.amount,
+    subtitle: '${withdrawal.methodLabel} · ${withdrawal.accountNumber}',
+    label: withdrawal.statusLabel,
+    outcome: _outcome(withdrawal.status, success: 'paid'),
+    createdAt: withdrawal.createdAt,
+  );
+
+  final double amount;
+  final String subtitle;
+  final String label;
+  final _Outcome outcome;
+  final DateTime? createdAt;
+
+  static _Outcome _outcome(String status, {required String success}) {
+    if (status == success) return _Outcome.done;
+    if (status == 'rejected') return _Outcome.rejected;
+    return _Outcome.pending;
+  }
+}
+
+enum _Outcome { pending, done, rejected }
+
+/// Matches the driver app's withdrawal card: tinted by status.
+class _StatusRecordCard extends StatelessWidget {
+  const _StatusRecordCard({required this.record});
+
+  final _Record record;
+
+  @override
+  Widget build(BuildContext context) {
+    final (color, icon) = switch (record.outcome) {
+      _Outcome.done => (successColor, Icons.check_circle_rounded),
+      _Outcome.rejected => (errorColor, Icons.cancel_rounded),
+      _Outcome.pending => (warningColor, Icons.schedule_rounded),
+    };
+    final date = record.createdAt?.toLocal();
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .07),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withValues(alpha: .25)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: color.withValues(alpha: .14),
+            child: Icon(icon, color: color, size: 21),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${record.amount.toStringAsFixed(2)} ₪',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  record.subtitle,
+                  style: const TextStyle(color: mutedText, fontSize: 12),
+                ),
+                if (date != null)
+                  Text(
+                    '${date.year}-${_two(date.month)}-${_two(date.day)} '
+                    '${_two(date.hour)}:${_two(date.minute)}',
+                    style: const TextStyle(color: mutedText, fontSize: 11),
+                  ),
+              ],
+            ),
+          ),
+          Text(
+            record.label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _two(int value) => value.toString().padLeft(2, '0');
+}
+
+/// The latest few records, with the rest one tap away — as in the driver app.
+class _RecordList extends StatelessWidget {
+  const _RecordList({
+    required this.records,
+    required this.allTitle,
+    required this.empty,
+  });
+
+  final List<_Record> records;
+  final String allTitle;
+  final Widget empty;
+
+  static const _preview = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    if (records.isEmpty) return empty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final record in records.take(_preview)) ...[
+          _StatusRecordCard(record: record),
+          const SizedBox(height: 8),
+        ],
+        if (records.length > _preview)
+          Center(
+            child: TextButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      _AllRecordsPage(title: allTitle, records: records),
+                ),
+              ),
+              icon: const Icon(Icons.expand_more_rounded),
+              label: Text('عرض جميع الطلبات (${records.length})'),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _AllRecordsPage extends StatelessWidget {
+  const _AllRecordsPage({required this.title, required this.records});
+
+  final String title;
+  final List<_Record> records;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
+        itemCount: records.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
+        itemBuilder: (_, i) => _StatusRecordCard(record: records[i]),
       ),
     );
   }

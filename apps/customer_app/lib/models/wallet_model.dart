@@ -104,11 +104,13 @@ class WalletSummary {
     required this.balance,
     required this.paymentAccounts,
     required this.deposits,
+    this.withdrawals = const [],
   });
 
   final double balance;
   final List<WalletPaymentAccount> paymentAccounts;
   final List<WalletDeposit> deposits;
+  final List<CustomerWithdrawal> withdrawals;
 
   factory WalletSummary.fromJson(Map<String, dynamic> json) {
     return WalletSummary(
@@ -120,6 +122,10 @@ class WalletSummary {
       deposits: (json['deposits'] as List<dynamic>? ?? [])
           .whereType<Map<String, dynamic>>()
           .map(WalletDeposit.fromJson)
+          .toList(),
+      withdrawals: (json['withdrawals'] as List<dynamic>? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .map(CustomerWithdrawal.fromJson)
           .toList(),
     );
   }
@@ -133,4 +139,44 @@ String? _stringOrNull(dynamic value) {
 
 String _defaultInvoiceNumber(int id) {
   return 'WSL-PAY-${id.toString().padLeft(6, '0')}';
+}
+
+class CustomerWithdrawal {
+  const CustomerWithdrawal({
+    required this.id,
+    required this.amount,
+    required this.method,
+    required this.accountName,
+    required this.accountNumber,
+    required this.status,
+    this.createdAt,
+  });
+
+  final int id;
+  final double amount;
+  final String method;
+  final String accountName;
+  final String accountNumber;
+  final String status;
+  final DateTime? createdAt;
+
+  factory CustomerWithdrawal.fromJson(Map<String, dynamic> json) {
+    return CustomerWithdrawal(
+      id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
+      amount: double.tryParse(json['amount']?.toString() ?? '') ?? 0,
+      method: json['method']?.toString() ?? 'mobile_wallet',
+      accountName: json['account_name']?.toString() ?? '',
+      accountNumber: json['account_number']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'pending',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
+    );
+  }
+
+  String get methodLabel => method == 'bank' ? 'حساب بنكي' : 'محفظة جوال';
+
+  String get statusLabel => switch (status) {
+    'paid' => 'تم التحويل',
+    'rejected' => 'مرفوض — أُعيد المبلغ',
+    _ => 'بانتظار المراجعة',
+  };
 }
