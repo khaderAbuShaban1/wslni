@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\RideStatus;
+use App\Exceptions\RideSettlementException;
 use App\Http\Controllers\Controller;
-use App\Models\AppSetting;
 use App\Models\DriverProfile;
 use App\Models\RideOffer;
 use App\Models\RideRequest;
-use App\Models\User;
-use App\Models\WalletTransaction;
 use App\Services\NotificationDispatcher;
+use App\Services\RideSettlementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -136,6 +135,7 @@ class RideController extends Controller
         Request $request,
         RideRequest $ride,
         NotificationDispatcher $notifications,
+        RideSettlementService $settlement,
     ): JsonResponse {
         $user = $request->user();
         abort_unless($user->role === 'driver', 403, 'هذا الإجراء متاح للسائقين فقط.');
@@ -147,105 +147,58 @@ class RideController extends Controller
             'status.in' => 'حالة الرحلة غير صالحة.',
         ]);
 
-        $result = DB::transaction(function () use ($ride, $data, $user): array {
-            $lockedRide = RideRequest::query()->lockForUpdate()->findOrFail($ride->id);
+        try {
+            $result = DB::transaction(function () use ($ride, $data, $user, $settlement): array {
+                $lockedRide = RideRequest::query()->lockForUpdate()->findOrFail($ride->id);
 
-            if ((int) $lockedRide->driver_id !== $user->id) {
-                return ['error' => 'هذه الرحلة غير مرتبطة بهذا السائق.', 'status' => 403];
-            }
-
-            $allowedTransitions = [
-                RideStatus::DriverConfirmed->value => [RideStatus::DriverOnTheWay->value, RideStatus::Cancelled->value],
-                RideStatus::DriverOnTheWay->value => [RideStatus::DriverArrived->value, RideStatus::Cancelled->value],
-                RideStatus::DriverArrived->value => [RideStatus::TripStarted->value, RideStatus::Cancelled->value],
-                RideStatus::TripStarted->value => [RideStatus::TripCompleted->value, RideStatus::Cancelled->value],
-            ];
-
-            if (! in_array($data['status'], $allowedTransitions[$lockedRide->status] ?? [], true)) {
-                return ['error' => 'لا يمكن نقل الرحلة إلى هذه الحالة الآن.', 'status' => 422];
-            }
-
-            $updates = ['status' => $data['status']];
-            if ($data['status'] === RideStatus::TripCompleted->value) {
-                $fare = round((float) $lockedRide->actual_fare, 2);
-                if ($fare <= 0) {
-                    return ['error' => 'لا يمكن إنهاء الرحلة قبل تحديد الأجرة.', 'status' => 422];
+                if ((int) $lockedRide->driver_id !== $user->id) {
+                    return ['error' => 'هذه الرحلة غير مرتبطة بهذا السائق.', 'status' => 403];
                 }
 
-                $users = User::query()
-                    ->whereIn('id', [$lockedRide->customer_id, $lockedRide->driver_id])
-                    ->orderBy('id')
-                    ->lockForUpdate()
-                    ->get()
-                    ->keyBy('id');
-                $customer = $users->get($lockedRide->customer_id);
-                $driver = $users->get($lockedRide->driver_id);
-                if (! $customer || ! $driver) {
-                    return ['error' => 'تعذر العثور على محفظة الزبون أو السائق.', 'status' => 422];
-                }
-                if ((float) $customer->wallet_balance < $fare) {
-                    return ['error' => 'رصيد محفظة الزبون غير كافٍ لإكمال الرحلة.', 'status' => 422];
+                $allowedTransitions = [
+                    RideStatus::DriverConfirmed->value => [RideStatus::DriverOnTheWay->value, RideStatus::Cancelled->value],
+                    RideStatus::DriverOnTheWay->value => [RideStatus::DriverArrived->value, RideStatus::Cancelled->value],
+                    RideStatus::DriverArrived->value => [RideStatus::TripStarted->value, RideStatus::Cancelled->value],
+                    RideStatus::TripStarted->value => [RideStatus::TripCompleted->value, RideStatus::Cancelled->value],
+                ];
+
+                if (! in_array($data['status'], $allowedTransitions[$lockedRide->status] ?? [], true)) {
+                    return ['error' => 'لا يمكن نقل الرحلة إلى هذه الحالة الآن.', 'status' => 422];
                 }
 
-                $commissionPercent = (float) (AppSetting::query()
-                    ->where('key', 'commission_percent')
-                    ->value('value') ?? 15);
-                $platformFee = round($fare * $commissionPercent / 100, 2);
-                $driverEarning = round($fare - $platformFee, 2);
-                $customerBalance = round((float) $customer->wallet_balance - $fare, 2);
-                $driverBalance = round((float) $driver->wallet_balance + $driverEarning, 2);
+                if ($data['status'] === RideStatus::TripCompleted->value) {
+                    $settlement->complete($lockedRide, $user->id);
 
-                $customer->update(['wallet_balance' => $customerBalance]);
-                $driver->update(['wallet_balance' => $driverBalance]);
-                WalletTransaction::create([
-                    'user_id' => $customer->id,
-                    'ride_request_id' => $lockedRide->id,
-                    'type' => 'ride_fare_debit',
-                    'amount' => -$fare,
-                    'balance_after' => $customerBalance,
-                    'description' => 'خصم أجرة الرحلة',
-                ]);
-                WalletTransaction::create([
-                    'user_id' => $driver->id,
-                    'ride_request_id' => $lockedRide->id,
-                    'type' => 'driver_earning_credit',
-                    'amount' => $driverEarning,
-                    'balance_after' => $driverBalance,
-                    'description' => 'صافي أرباح الرحلة',
-                ]);
-                WalletTransaction::create([
-                    'ride_request_id' => $lockedRide->id,
-                    'type' => 'platform_commission',
-                    'amount' => $platformFee,
-                    'description' => 'عمولة التطبيق',
-                ]);
+                    return ['ride' => $lockedRide];
+                }
 
-                $updates['commission_percent'] = $commissionPercent;
-                $updates['platform_fee'] = $platformFee;
-                $updates['completed_at'] = now();
-            }
+                $updates = ['status' => $data['status']];
 
-            if ($data['status'] === RideStatus::Cancelled->value) {
-                // A cancelled ride charges nobody, so the agreed fare must not
-                // linger on the record. Money only moves at completion, and
-                // completion cannot transition to cancelled, so there is
-                // nothing to refund here.
-                $updates['actual_fare'] = null;
-                $updates['platform_fee'] = null;
-            }
+                if ($data['status'] === RideStatus::Cancelled->value) {
+                    // A cancelled ride charges nobody, so the agreed fare must not
+                    // linger on the record. Money only moves at completion, and
+                    // completion cannot transition to cancelled, so there is
+                    // nothing to refund here.
+                    $updates['actual_fare'] = null;
+                    $updates['platform_fee'] = null;
+                }
 
-            $lockedRide->update($updates);
+                $lockedRide->update($updates);
 
-            if ($data['status'] === 'cancelled') {
-                RideOffer::query()
-                    ->where('ride_request_id', $lockedRide->id)
-                    ->where('driver_id', $user->id)
-                    ->where('status', 'accepted')
-                    ->update(['status' => 'cancelled']);
-            }
+                if ($data['status'] === 'cancelled') {
+                    RideOffer::query()
+                        ->where('ride_request_id', $lockedRide->id)
+                        ->where('driver_id', $user->id)
+                        ->where('status', 'accepted')
+                        ->update(['status' => 'cancelled']);
+                }
 
-            return ['ride' => $lockedRide];
-        });
+                return ['ride' => $lockedRide];
+            });
+        } catch (RideSettlementException $exception) {
+            // Thrown before any write, and the transaction has rolled back.
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
 
         if (isset($result['error'])) {
             return response()->json(['message' => $result['error']], $result['status']);
