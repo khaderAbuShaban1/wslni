@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => EnsureAdmin::class,
             'financial' => SecureFinancialRequest::class,
         ]);
+
+        // The login route is named auth.login, not the framework's default
+        // "login"; without this an expired admin session hit a 500 page.
+        $middleware->redirectGuestsTo(fn () => route('auth.login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

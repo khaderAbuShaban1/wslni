@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\RideStatus;
+use App\Exceptions\RideSettlementException;
 use App\Http\Controllers\Controller;
-use App\Models\AppSetting;
 use App\Models\RideRequest;
 use App\Models\User;
 use App\Models\WalletTransaction;
 use App\Services\NotificationDispatcher;
+use App\Services\RideSettlementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -50,6 +51,7 @@ class RidesController extends Controller
         Request $request,
         RideRequest $rideRequest,
         NotificationDispatcher $notifications,
+        RideSettlementService $settlement,
     ): RedirectResponse {
         $data = $request->validate([
             'status' => ['required', Rule::enum(RideStatus::class)],
@@ -64,73 +66,124 @@ class RidesController extends Controller
             return back()->withErrors(['status' => 'لا يمكن تخطي مراحل الرحلة.']);
         }
 
-        if ($requestedStatus === RideStatus::Cancelled) {
-            return $this->cancel($rideRequest, $currentStatus, $notifications);
+        // Nothing is left to do on a cancelled ride. Allowing it again sent the
+        // customer a second "ride cancelled" notification.
+        if ($currentStatus === RideStatus::Cancelled) {
+            return back()->withErrors(['status' => 'هذه الرحلة ملغاة مسبقًا.']);
         }
 
-        $commissionPercent = (float) (AppSetting::query()->where('key', 'commission_percent')->value('value') ?? 15);
-        $actualFare = $data['actual_fare'] ?? $rideRequest->fare_estimate;
-        $platformFee = $actualFare !== null ? round(((float) $actualFare * $commissionPercent) / 100, 2) : null;
+        // Every stage past receiving offers is about a specific driver. Moving a
+        // driverless ride into them told the customer a driver was on the way
+        // when none existed.
+        $driverStage = ! in_array($requestedStatus, [RideStatus::Pending, RideStatus::ReceivingOffers, RideStatus::Cancelled], true);
+        if ($driverStage && $rideRequest->driver_id === null) {
+            return back()->withErrors(['status' => 'لا يمكن نقل الرحلة لهذه المرحلة قبل اختيار سائق.']);
+        }
+
+        if ($requestedStatus === RideStatus::Cancelled) {
+            return $this->cancel($rideRequest, $notifications);
+        }
+
+        if ($requestedStatus === RideStatus::TripCompleted) {
+            return $this->complete($rideRequest, $data['actual_fare'] ?? null, $settlement);
+        }
+
+        // Ordinary stage changes move no money, so they never write a
+        // commission; only settlement does. Once a ride is settled its fare is
+        // what the customer paid and must stay matching the wallet.
+        $settled = in_array($currentStatus, [RideStatus::TripCompleted, RideStatus::Rated], true);
 
         $rideRequest->fill([
             'status' => $data['status'],
-            'actual_fare' => $actualFare,
+            'actual_fare' => $settled
+                ? $rideRequest->actual_fare
+                : ($data['actual_fare'] ?? $rideRequest->actual_fare ?? $rideRequest->fare_estimate),
             'distance_km' => $data['distance_km'] ?? $rideRequest->distance_km,
-            'commission_percent' => $commissionPercent,
-            'platform_fee' => $platformFee,
             'accepted_at' => $requestedStatus === RideStatus::DriverConfirmed && $rideRequest->accepted_at === null ? now() : $rideRequest->accepted_at,
-            'completed_at' => $requestedStatus === RideStatus::TripCompleted ? now() : $rideRequest->completed_at,
         ])->save();
 
         return back()->with('status', 'تم تحديث الرحلة بنجاح.');
     }
 
     /**
-     * A cancelled ride must leave nobody paid: no fare, no commission, and any
-     * money a settled ride already moved is returned to where it came from.
+     * Completing from the dashboard settles exactly as the driver app does,
+     * through the same service, so the customer is charged and the driver
+     * paid the same way whoever closes the ride.
      */
-    private function cancel(
-        RideRequest $rideRequest,
-        ?RideStatus $currentStatus,
-        NotificationDispatcher $notifications,
-    ): RedirectResponse {
-        $wasSettled = in_array($currentStatus, [RideStatus::TripCompleted, RideStatus::Rated], true);
+    private function complete(RideRequest $rideRequest, mixed $postedFare, RideSettlementService $settlement): RedirectResponse
+    {
+        try {
+            DB::transaction(function () use ($rideRequest, $postedFare, $settlement): void {
+                $ride = RideRequest::query()->lockForUpdate()->findOrFail($rideRequest->id);
+
+                // The dashboard may correct the agreed fare before charging it.
+                $ride->actual_fare = $postedFare ?? $ride->actual_fare ?? $ride->fare_estimate;
+
+                $settlement->complete($ride, auth()->id());
+            });
+        } catch (RideSettlementException $exception) {
+            return back()->withErrors(['status' => $exception->getMessage()]);
+        }
+
+        return back()->with('status', 'تم إكمال الرحلة: خُصمت الأجرة من الزبون وأُضيفت أرباح السائق.');
+    }
+
+    /**
+     * A cancelled ride must leave nobody paid: no fare, no commission, and any
+     * money it actually moved is returned to where it came from.
+     *
+     * What to reverse is read from the ride's recorded wallet transactions,
+     * not inferred from its status. A ride marked completed from the dashboard
+     * never charged anyone, and refunding it by status handed the customer a
+     * fare they never paid.
+     */
+    private function cancel(RideRequest $rideRequest, NotificationDispatcher $notifications): RedirectResponse
+    {
         $driverId = (int) $rideRequest->driver_id;
         $error = null;
+        $refunded = false;
 
-        DB::transaction(function () use ($rideRequest, $wasSettled, &$error): void {
+        DB::transaction(function () use ($rideRequest, &$error, &$refunded): void {
             $ride = RideRequest::query()->lockForUpdate()->findOrFail($rideRequest->id);
 
-            if ($wasSettled && $ride->actual_fare !== null && $ride->driver_id !== null) {
-                $fare = round((float) $ride->actual_fare, 2);
-                $driverEarning = round($fare - (float) $ride->platform_fee, 2);
+            $moved = WalletTransaction::query()
+                ->where('ride_request_id', $ride->id)
+                ->lockForUpdate()
+                ->get()
+                ->groupBy('type');
+            $charge = $moved->get('ride_fare_debit')?->first();
+            $earning = $moved->get('driver_earning_credit')?->first();
+            $commission = $moved->get('platform_commission')?->first();
+
+            if ($charge !== null && ! $moved->has('ride_fare_refund')) {
+                $fare = round(abs((float) $charge->amount), 2);
+                $driverEarning = round((float) ($earning?->amount ?? 0), 2);
+                $customerId = (int) $charge->user_id;
+                $earnerId = (int) ($earning?->user_id ?? 0);
 
                 $wallets = User::query()
-                    ->whereIn('id', [$ride->customer_id, $ride->driver_id])
+                    ->whereIn('id', array_filter([$customerId, $earnerId]))
                     ->orderBy('id')
                     ->lockForUpdate()
                     ->get()
                     ->keyBy('id');
-                $customer = $wallets->get($ride->customer_id);
-                $driver = $wallets->get($ride->driver_id);
+                $customer = $wallets->get($customerId);
+                $driver = $earnerId > 0 ? $wallets->get($earnerId) : null;
 
-                if (! $customer || ! $driver) {
+                if (! $customer || ($earnerId > 0 && ! $driver)) {
                     $error = 'تعذر العثور على محفظة الزبون أو السائق.';
 
                     return;
                 }
 
-                if ((float) $driver->wallet_balance < $driverEarning) {
+                if ($driver && (float) $driver->wallet_balance < $driverEarning) {
                     $error = 'رصيد السائق لا يغطي استرجاع أرباح الرحلة. سوِّ الرصيد أولًا.';
 
                     return;
                 }
 
                 $customerBalance = round((float) $customer->wallet_balance + $fare, 2);
-                $driverBalance = round((float) $driver->wallet_balance - $driverEarning, 2);
                 $customer->update(['wallet_balance' => $customerBalance]);
-                $driver->update(['wallet_balance' => $driverBalance]);
-
                 WalletTransaction::create([
                     'user_id' => $customer->id,
                     'ride_request_id' => $ride->id,
@@ -140,22 +193,32 @@ class RidesController extends Controller
                     'balance_after' => $customerBalance,
                     'description' => 'استرجاع أجرة رحلة ملغاة',
                 ]);
-                WalletTransaction::create([
-                    'user_id' => $driver->id,
-                    'ride_request_id' => $ride->id,
-                    'created_by' => auth()->id(),
-                    'type' => 'driver_earning_reversal',
-                    'amount' => -$driverEarning,
-                    'balance_after' => $driverBalance,
-                    'description' => 'سحب أرباح رحلة ملغاة',
-                ]);
-                WalletTransaction::create([
-                    'ride_request_id' => $ride->id,
-                    'created_by' => auth()->id(),
-                    'type' => 'platform_commission_reversal',
-                    'amount' => -round((float) $ride->platform_fee, 2),
-                    'description' => 'إلغاء عمولة رحلة ملغاة',
-                ]);
+
+                if ($driver) {
+                    $driverBalance = round((float) $driver->wallet_balance - $driverEarning, 2);
+                    $driver->update(['wallet_balance' => $driverBalance]);
+                    WalletTransaction::create([
+                        'user_id' => $driver->id,
+                        'ride_request_id' => $ride->id,
+                        'created_by' => auth()->id(),
+                        'type' => 'driver_earning_reversal',
+                        'amount' => -$driverEarning,
+                        'balance_after' => $driverBalance,
+                        'description' => 'سحب أرباح رحلة ملغاة',
+                    ]);
+                }
+
+                if ($commission) {
+                    WalletTransaction::create([
+                        'ride_request_id' => $ride->id,
+                        'created_by' => auth()->id(),
+                        'type' => 'platform_commission_reversal',
+                        'amount' => -round((float) $commission->amount, 2),
+                        'description' => 'إلغاء عمولة رحلة ملغاة',
+                    ]);
+                }
+
+                $refunded = true;
             }
 
             $ride->update([
@@ -173,7 +236,7 @@ class RidesController extends Controller
 
         $notifications->rideCancelledByAdmin($rideRequest, $driverId);
 
-        return back()->with('status', $wasSettled
+        return back()->with('status', $refunded
             ? 'تم إلغاء الرحلة وإرجاع الأجرة للزبون وسحب الأرباح من السائق.'
             : 'تم إلغاء الرحلة بنجاح.');
     }
