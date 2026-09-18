@@ -105,12 +105,14 @@ class WalletSummary {
     required this.paymentAccounts,
     required this.deposits,
     this.withdrawals = const [],
+    this.movements = const [],
   });
 
   final double balance;
   final List<WalletPaymentAccount> paymentAccounts;
   final List<WalletDeposit> deposits;
   final List<CustomerWithdrawal> withdrawals;
+  final List<WalletMovement> movements;
 
   factory WalletSummary.fromJson(Map<String, dynamic> json) {
     return WalletSummary(
@@ -126,6 +128,10 @@ class WalletSummary {
       withdrawals: (json['withdrawals'] as List<dynamic>? ?? [])
           .whereType<Map<String, dynamic>>()
           .map(CustomerWithdrawal.fromJson)
+          .toList(),
+      movements: (json['transactions'] as List<dynamic>? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .map(WalletMovement.fromJson)
           .toList(),
     );
   }
@@ -178,5 +184,61 @@ class CustomerWithdrawal {
     'paid' => 'تم التحويل',
     'rejected' => 'مرفوض — أُعيد المبلغ',
     _ => 'بانتظار المراجعة',
+  };
+}
+
+/// One change to the customer's balance, as recorded in the wallet ledger.
+class WalletMovement {
+  const WalletMovement({
+    required this.id,
+    required this.type,
+    required this.amount,
+    this.balanceAfter,
+    this.description,
+    this.rideRequestId,
+    this.createdAt,
+  });
+
+  final int id;
+  final String type;
+
+  /// Signed: positive money came in, negative money went out.
+  final double amount;
+  final double? balanceAfter;
+  final String? description;
+  final int? rideRequestId;
+  final DateTime? createdAt;
+
+  factory WalletMovement.fromJson(Map<String, dynamic> json) {
+    return WalletMovement(
+      id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
+      type: json['type']?.toString() ?? '',
+      amount: double.tryParse(json['amount']?.toString() ?? '') ?? 0,
+      balanceAfter: double.tryParse(json['balance_after']?.toString() ?? ''),
+      description: _stringOrNull(json['description']),
+      rideRequestId: int.tryParse(json['ride_request_id']?.toString() ?? ''),
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
+    );
+  }
+
+  bool get isIncoming => amount >= 0;
+
+  // Labelled from the type, not the stored description: some descriptions
+  // are internal English text that should not reach the customer.
+  String get label => switch (type) {
+    'deposit_credit' => 'شحن المحفظة',
+    'ride_fare_debit' => 'أجرة رحلة',
+    'ride_fare_refund' => 'استرجاع أجرة رحلة ملغاة',
+    'withdrawal_hold' => 'طلب سحب',
+    'withdrawal_return' => 'إرجاع سحب مرفوض',
+    _ => 'حركة على المحفظة',
+  };
+
+  /// What the movement was for, when there is something useful to add.
+  String? get detail => switch (type) {
+    'ride_fare_debit' ||
+    'ride_fare_refund' => rideRequestId == null ? null : 'رحلة #$rideRequestId',
+    'withdrawal_hold' || 'withdrawal_return' => description,
+    _ => null,
   };
 }

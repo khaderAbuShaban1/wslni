@@ -205,6 +205,13 @@ class _WalletScreenState extends State<WalletScreen> {
         ),
         const SizedBox(height: 18),
         _SectionTitle(
+          title: 'سجل الحركات',
+          subtitle: 'كل ما دخل محفظتك وخرج منها، والرصيد بعد كل حركة.',
+        ),
+        const SizedBox(height: 10),
+        _MovementList(movements: wallet.movements),
+        const SizedBox(height: 18),
+        _SectionTitle(
           title: 'طرق الدفع المتاحة',
           subtitle: 'اختر إحدى هذه الحسابات عند شحن المحفظة.',
         ),
@@ -1153,6 +1160,144 @@ class _AllRecordsPage extends StatelessWidget {
         itemCount: records.length,
         separatorBuilder: (_, _) => const SizedBox(height: 8),
         itemBuilder: (_, i) => _StatusRecordCard(record: records[i]),
+      ),
+    );
+  }
+}
+
+/// The latest balance changes, with the full statement one tap away.
+class _MovementList extends StatelessWidget {
+  const _MovementList({required this.movements});
+
+  final List<WalletMovement> movements;
+
+  static const _preview = 5;
+
+  @override
+  Widget build(BuildContext context) {
+    if (movements.isEmpty) {
+      return const _EmptyWalletMessage(
+        icon: Icons.swap_vert_rounded,
+        title: 'لا توجد حركات بعد',
+        message: 'أي شحن أو دفع أو سحب من محفظتك سيظهر هنا.',
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final movement in movements.take(_preview)) ...[
+          _MovementTile(movement: movement),
+          const SizedBox(height: 8),
+        ],
+        if (movements.length > _preview)
+          Center(
+            child: TextButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => _AllMovementsPage(movements: movements),
+                ),
+              ),
+              icon: const Icon(Icons.expand_more_rounded),
+              label: Text('عرض كل الحركات (${movements.length})'),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _MovementTile extends StatelessWidget {
+  const _MovementTile({required this.movement});
+
+  final WalletMovement movement;
+
+  @override
+  Widget build(BuildContext context) {
+    final incoming = movement.isIncoming;
+    final color = incoming ? successColor : errorColor;
+    final date = movement.createdAt?.toLocal();
+    final sign = incoming ? '+' : '−';
+    final lines = [
+      if (movement.detail != null) movement.detail!,
+      if (date != null)
+        '${date.year}-${_two(date.month)}-${_two(date.day)} '
+            '${_two(date.hour)}:${_two(date.minute)}',
+    ];
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .07),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withValues(alpha: .25)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: color.withValues(alpha: .14),
+            child: Icon(
+              incoming
+                  ? Icons.arrow_downward_rounded
+                  : Icons.arrow_upward_rounded,
+              color: color,
+              size: 21,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  movement.label,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+                for (final line in lines)
+                  Text(
+                    line,
+                    style: const TextStyle(color: mutedText, fontSize: 12),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$sign${movement.amount.abs().toStringAsFixed(2)} ₪',
+                style: TextStyle(color: color, fontWeight: FontWeight.w900),
+              ),
+              if (movement.balanceAfter != null)
+                Text(
+                  'الرصيد ${movement.balanceAfter!.toStringAsFixed(2)} ₪',
+                  style: const TextStyle(color: mutedText, fontSize: 11),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static String _two(int value) => value.toString().padLeft(2, '0');
+}
+
+class _AllMovementsPage extends StatelessWidget {
+  const _AllMovementsPage({required this.movements});
+
+  final List<WalletMovement> movements;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('سجل الحركات')),
+      body: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
+        itemCount: movements.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
+        itemBuilder: (_, i) => _MovementTile(movement: movements[i]),
       ),
     );
   }
