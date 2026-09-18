@@ -149,6 +149,10 @@ class RideOfferController extends Controller
             'ride' => $result['ride']->fresh([
                 'customer:id,name,phone',
                 'driver:id,name,phone',
+                // The customer's trip screen opens straight from this response
+                // and shows the car and plate; without the profile they read
+                // "غير متوفر" until the Firebase mirror catches up.
+                'driver.driverProfile',
                 'offers.driver:id,name,phone',
                 'offers.driver.driverProfile',
             ]),

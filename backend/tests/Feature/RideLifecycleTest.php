@@ -248,6 +248,49 @@ class RideLifecycleTest extends TestCase
         ]);
     }
 
+    public function test_accepting_an_offer_returns_the_driver_and_their_car(): void
+    {
+        $customer = $this->customer();
+        $driver = $this->approvedDriver(['name' => 'سائق الاختبار', 'phone' => '0599111222']);
+        $ride = $this->createRide(['customer_id' => $customer->id, 'status' => 'receiving_offers']);
+        $offer = RideOffer::create([
+            'ride_request_id' => $ride->id,
+            'driver_id' => $driver->id,
+            'price' => 30,
+            'status' => 'pending',
+        ]);
+
+        Sanctum::actingAs($customer, ['customer']);
+
+        // The customer's trip screen opens straight from this response.
+        $this->patchJson("api/rides/{$ride->id}/offers/{$offer->id}/accept")
+            ->assertOk()
+            ->assertJsonPath('ride.driver.name', 'سائق الاختبار')
+            ->assertJsonPath('ride.driver.phone', '0599111222')
+            ->assertJsonPath('ride.driver.driver_profile.vehicle_type', 'sedan')
+            ->assertJsonPath('ride.driver.driver_profile.vehicle_plate', 'P'.$driver->id);
+    }
+
+    public function test_stage_changes_keep_the_customers_details_for_the_driver(): void
+    {
+        $customer = $this->customer(['name' => 'زبون الاختبار', 'phone' => '0599333444']);
+        $driver = $this->approvedDriver();
+        $ride = $this->createRide([
+            'customer_id' => $customer->id,
+            'driver_id' => $driver->id,
+            'status' => 'driver_confirmed',
+        ]);
+
+        Sanctum::actingAs($driver, ['driver']);
+
+        // Each stage change hands the driver's screen a fresh ride, which must
+        // still say who the customer is and how to reach them.
+        $this->patchJson("api/rides/{$ride->id}", ['status' => 'driver_on_the_way'])
+            ->assertOk()
+            ->assertJsonPath('ride.customer.name', 'زبون الاختبار')
+            ->assertJsonPath('ride.customer.phone', '0599333444');
+    }
+
     private function customer(array $attributes = []): User
     {
         return User::factory()->create(array_merge([
