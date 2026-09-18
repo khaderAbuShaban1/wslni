@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\DriverWithdrawal;
 use App\Models\User;
+use App\Models\WalletTransaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +52,20 @@ class DriverWithdrawalController extends Controller
                 'status' => 'pending',
             ]);
 
-            return ['withdrawal' => $withdrawal, 'wallet_balance' => (float) $lockedDriver->fresh()->wallet_balance];
+            $balanceAfter = (float) $lockedDriver->fresh()->wallet_balance;
+
+            // The balance drops here, so the ledger must record why; otherwise
+            // the driver's earnings shrink with no entry explaining it.
+            WalletTransaction::create([
+                'user_id' => $lockedDriver->id,
+                'created_by' => $lockedDriver->id,
+                'type' => 'withdrawal_hold',
+                'amount' => -$amount,
+                'balance_after' => $balanceAfter,
+                'description' => "طلب سحب #{$withdrawal->id}",
+            ]);
+
+            return ['withdrawal' => $withdrawal, 'wallet_balance' => $balanceAfter];
         });
 
         if (isset($result['error'])) {

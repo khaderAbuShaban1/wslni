@@ -206,8 +206,18 @@ class WalletsController extends Controller
         DB::transaction(function () use ($driverWithdrawal): void {
             $withdrawal = DriverWithdrawal::query()->lockForUpdate()->findOrFail($driverWithdrawal->id);
             if ($withdrawal->status !== 'pending') return;
-            User::query()->lockForUpdate()->findOrFail($withdrawal->driver_id)->increment('wallet_balance', $withdrawal->amount);
+            $driver = User::query()->lockForUpdate()->findOrFail($withdrawal->driver_id);
+            $driver->increment('wallet_balance', $withdrawal->amount);
             $withdrawal->update(['status' => 'rejected', 'reviewed_by' => auth()->id(), 'reviewed_at' => now()]);
+
+            WalletTransaction::create([
+                'user_id' => $driver->id,
+                'created_by' => auth()->id(),
+                'type' => 'withdrawal_return',
+                'amount' => (float) $withdrawal->amount,
+                'balance_after' => (float) $driver->fresh()->wallet_balance,
+                'description' => "إرجاع طلب سحب مرفوض #{$withdrawal->id}",
+            ]);
         });
         return back()->with('status', 'تم رفض طلب السحب وإعادة المبلغ لمحفظة السائق.');
     }
@@ -232,9 +242,18 @@ class WalletsController extends Controller
             }
 
             // The amount was reserved when the customer asked; give it back.
-            User::query()->lockForUpdate()->findOrFail($withdrawal->customer_id)
-                ->increment('wallet_balance', $withdrawal->amount);
+            $customer = User::query()->lockForUpdate()->findOrFail($withdrawal->customer_id);
+            $customer->increment('wallet_balance', $withdrawal->amount);
             $withdrawal->update(['status' => 'rejected', 'reviewed_by' => auth()->id(), 'reviewed_at' => now()]);
+
+            WalletTransaction::create([
+                'user_id' => $customer->id,
+                'created_by' => auth()->id(),
+                'type' => 'withdrawal_return',
+                'amount' => (float) $withdrawal->amount,
+                'balance_after' => (float) $customer->fresh()->wallet_balance,
+                'description' => "إرجاع طلب سحب مرفوض #{$withdrawal->id}",
+            ]);
         });
 
         return back()->with('status', 'تم رفض طلب السحب وإعادة المبلغ لمحفظة الزبون.');

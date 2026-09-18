@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CustomerWithdrawal;
 use App\Models\User;
+use App\Models\WalletTransaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,9 +70,22 @@ class CustomerWithdrawalController extends Controller
                 'status' => 'pending',
             ]);
 
+            $balanceAfter = (float) $lockedCustomer->fresh()->wallet_balance;
+
+            // The balance drops here, so the statement must say why; otherwise
+            // the customer sees money gone with no entry explaining it.
+            WalletTransaction::create([
+                'user_id' => $lockedCustomer->id,
+                'created_by' => $lockedCustomer->id,
+                'type' => 'withdrawal_hold',
+                'amount' => -$amount,
+                'balance_after' => $balanceAfter,
+                'description' => "طلب سحب #{$withdrawal->id}",
+            ]);
+
             return [
                 'withdrawal' => $withdrawal,
-                'wallet_balance' => (float) $lockedCustomer->fresh()->wallet_balance,
+                'wallet_balance' => $balanceAfter,
             ];
         });
 

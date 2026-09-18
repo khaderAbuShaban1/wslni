@@ -7,6 +7,7 @@ use App\Models\CustomerWithdrawal;
 use App\Models\User;
 use App\Models\WalletDeposit;
 use App\Models\WalletPaymentAccount;
+use App\Models\WalletTransaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -47,11 +48,30 @@ class CustomerWalletController extends Controller
                 'created_at' => optional($withdrawal->created_at)->toIso8601String(),
             ]);
 
+        // Every change to the customer's balance, newest first, so they can see
+        // where their money went. Ordered by id: several entries can share a
+        // second, and the statement must keep them in the order they happened.
+        $transactions = WalletTransaction::query()
+            ->where('user_id', $customer->id)
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get()
+            ->map(fn (WalletTransaction $transaction) => [
+                'id' => $transaction->id,
+                'type' => $transaction->type,
+                'amount' => (float) $transaction->amount,
+                'balance_after' => $transaction->balance_after === null ? null : (float) $transaction->balance_after,
+                'description' => $transaction->description,
+                'ride_request_id' => $transaction->ride_request_id,
+                'created_at' => optional($transaction->created_at)->toIso8601String(),
+            ]);
+
         return response()->json([
             'wallet_balance' => (float) $customer->wallet_balance,
             'payment_accounts' => $paymentAccounts,
             'deposits' => $deposits,
             'withdrawals' => $withdrawals,
+            'transactions' => $transactions,
         ]);
     }
 
