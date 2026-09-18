@@ -85,6 +85,20 @@ class RealtimeDriverService {
     });
   }
 
+  /// One ride as Firebase mirrors it. The mirror is flat (customer_name,
+  /// customer_phone), unlike the API's nested customer object, so it must go
+  /// through [_rideFromRaw] and never RideRequestItem.fromJson.
+  Stream<RideRequestItem?> watchRide(int driverId, int rideId) {
+    if (!isEnabled || driverId == 0 || rideId == 0) {
+      return const Stream.empty();
+    }
+
+    return _database.ref('users/$driverId/rides/$rideId').onValue.map((event) {
+      final raw = event.snapshot.value;
+      return raw is Map ? _rideFromRaw(raw) : null;
+    });
+  }
+
   Future<void> sendOffer({
     required RideRequestItem ride,
     required DriverUser driver,

@@ -21,7 +21,7 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
   final _realtime = RealtimeDriverService();
   late RideRequestItem _ride;
   bool _updating = false;
-  StreamSubscription<DatabaseEvent>? _rideSub;
+  StreamSubscription<RideRequestItem?>? _rideSub;
 
   @override
   void initState() {
@@ -37,30 +37,19 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
   }
 
   void _listenToRide() {
-    if (!_realtime.isEnabled) return;
-    _rideSub = FirebaseDatabase.instance
-        .ref('users/${widget.user.id}/rides/${_ride.id}')
-        .onValue
-        .skip(1)
-        .listen((event) {
-          final raw = event.snapshot.value;
-          if (raw is! Map) return;
-          final status = RideStatuses.normalize(
-            raw['status']?.toString() ?? '',
-          );
-          if (status == RideStatuses.cancelled) {
-            if (mounted) {
-              _showMessage('تم إلغاء الرحلة من قبل الزبون.');
-              widget.onReleased();
-            }
-          } else if (status != _ride.status && mounted) {
-            setState(
-              () => _ride = RideRequestItem.fromJson(
-                Map<String, dynamic>.from(raw),
-              ),
-            );
-          }
-        });
+    _rideSub = _realtime.watchRide(widget.user.id, _ride.id).skip(1).listen((
+      ride,
+    ) {
+      if (ride == null || !mounted) return;
+      if (ride.status == RideStatuses.cancelled) {
+        // The customer or an admin may have cancelled; the push
+        // notification already says which, so this stays neutral.
+        _showMessage('تم إلغاء هذه الرحلة.');
+        widget.onReleased();
+      } else if (ride.status != _ride.status) {
+        setState(() => _ride = ride);
+      }
+    });
   }
 
   @override
