@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerWalletController;
+use App\Http\Controllers\Api\CustomerWithdrawalController;
 use App\Http\Controllers\Api\DriverController;
 use App\Http\Controllers\Api\DriverWithdrawalController;
 use App\Http\Controllers\Api\HealthController;
@@ -58,6 +59,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('customers/me/wallet', [CustomerWalletController::class, 'show'])
             ->middleware('throttle:wallet-read');
         Route::post('customers/me/wallet/deposits', [CustomerWalletController::class, 'storeDeposit'])
+            ->middleware('throttle:wallet-deposit');
+        Route::get('customers/me/withdrawals', [CustomerWithdrawalController::class, 'index'])
+            ->middleware('throttle:wallet-read');
+        Route::post('customers/me/withdrawals', [CustomerWithdrawalController::class, 'store'])
             ->middleware('throttle:wallet-deposit');
     });
 

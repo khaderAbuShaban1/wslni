@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CustomerWithdrawal;
 use App\Models\User;
 use App\Models\DriverWithdrawal;
 use App\Models\WalletDeposit;
@@ -128,14 +129,32 @@ class WalletsController extends Controller
             ->limit(100)
             ->get();
 
+        $customerWithdrawals = CustomerWithdrawal::query()
+            ->with('customer:id,name,phone,wallet_balance')
+            ->when($status && $status !== 'all', fn ($query) => $query->where('status', $status))
+            ->when($search !== '', fn ($query) => $query->whereHas(
+                'customer',
+                fn ($customerQuery) => $customerQuery->where('name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+            ))
+            ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
+            ->latest()
+            ->limit(100)
+            ->get();
+
         return view('admin.wallet-withdrawals', [
             'withdrawals' => $withdrawals,
+            'customerWithdrawals' => $customerWithdrawals,
             'status' => $status ?: 'all',
             'search' => $search,
-            'pendingCount' => DriverWithdrawal::query()->where('status', 'pending')->count(),
-            'paidCount' => DriverWithdrawal::query()->where('status', 'paid')->count(),
-            'rejectedCount' => DriverWithdrawal::query()->where('status', 'rejected')->count(),
-            'paidTotal' => (float) DriverWithdrawal::query()->where('status', 'paid')->sum('amount'),
+            'pendingCount' => DriverWithdrawal::query()->where('status', 'pending')->count()
+                + CustomerWithdrawal::query()->where('status', 'pending')->count(),
+            'paidCount' => DriverWithdrawal::query()->where('status', 'paid')->count()
+                + CustomerWithdrawal::query()->where('status', 'paid')->count(),
+            'rejectedCount' => DriverWithdrawal::query()->where('status', 'rejected')->count()
+                + CustomerWithdrawal::query()->where('status', 'rejected')->count(),
+            'paidTotal' => (float) DriverWithdrawal::query()->where('status', 'paid')->sum('amount')
+                + (float) CustomerWithdrawal::query()->where('status', 'paid')->sum('amount'),
             'tabCounts' => $this->tabCounts(),
         ]);
     }
@@ -170,7 +189,8 @@ class WalletsController extends Controller
     {
         return array_filter([
             'deposits' => WalletDeposit::query()->where('status', 'pending')->count(),
-            'withdrawals' => DriverWithdrawal::query()->where('status', 'pending')->count(),
+            'withdrawals' => DriverWithdrawal::query()->where('status', 'pending')->count()
+                + CustomerWithdrawal::query()->where('status', 'pending')->count(),
         ]);
     }
 
@@ -190,6 +210,34 @@ class WalletsController extends Controller
             $withdrawal->update(['status' => 'rejected', 'reviewed_by' => auth()->id(), 'reviewed_at' => now()]);
         });
         return back()->with('status', 'تم رفض طلب السحب وإعادة المبلغ لمحفظة السائق.');
+    }
+
+    public function approveCustomerWithdrawal(CustomerWithdrawal $customerWithdrawal): RedirectResponse
+    {
+        if (! $customerWithdrawal->isPending()) {
+            return back()->withErrors(['status' => 'تمت مراجعة طلب السحب مسبقًا.']);
+        }
+
+        $customerWithdrawal->update(['status' => 'paid', 'reviewed_by' => auth()->id(), 'reviewed_at' => now()]);
+
+        return back()->with('status', 'تم اعتماد طلب السحب وتحويله إلى مدفوع.');
+    }
+
+    public function rejectCustomerWithdrawal(CustomerWithdrawal $customerWithdrawal): RedirectResponse
+    {
+        DB::transaction(function () use ($customerWithdrawal): void {
+            $withdrawal = CustomerWithdrawal::query()->lockForUpdate()->findOrFail($customerWithdrawal->id);
+            if (! $withdrawal->isPending()) {
+                return;
+            }
+
+            // The amount was reserved when the customer asked; give it back.
+            User::query()->lockForUpdate()->findOrFail($withdrawal->customer_id)
+                ->increment('wallet_balance', $withdrawal->amount);
+            $withdrawal->update(['status' => 'rejected', 'reviewed_by' => auth()->id(), 'reviewed_at' => now()]);
+        });
+
+        return back()->with('status', 'تم رفض طلب السحب وإعادة المبلغ لمحفظة الزبون.');
     }
 
     public function storePaymentAccount(Request $request): RedirectResponse

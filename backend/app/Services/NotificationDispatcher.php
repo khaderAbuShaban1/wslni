@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CustomerWithdrawal;
 use App\Models\DriverProfile;
 use App\Models\DriverWithdrawal;
 use App\Models\RideOffer;
@@ -25,6 +26,7 @@ class NotificationDispatcher
             $model instanceof RideOffer => $this->handleOffer($model),
             $model instanceof WalletDeposit => $this->handleDeposit($model),
             $model instanceof DriverWithdrawal => $this->handleWithdrawal($model),
+            $model instanceof CustomerWithdrawal => $this->handleCustomerWithdrawal($model),
             $model instanceof DriverProfile => $this->handleDriverProfile($model),
             default => null,
         };
@@ -226,6 +228,27 @@ class NotificationDispatcher
                 'تم رفض طلب السحب ❌',
                 "تم رفض طلب السحب وأُعيد المبلغ {$withdrawal->amount} شيكل إلى محفظتك.",
                 ['type' => 'wallet', 'action' => 'withdrawal_rejected', 'withdrawal_id' => (string) $withdrawal->id],
+            ),
+            default => null,
+        };
+    }
+
+    private function handleCustomerWithdrawal(CustomerWithdrawal $withdrawal): void
+    {
+        if (! $withdrawal->wasChanged('status')) return;
+
+        match ($withdrawal->status) {
+            'paid' => $this->notify(
+                $withdrawal->customer_id,
+                'تم تحويل السحب ✅',
+                "تم تحويل مبلغ {$withdrawal->amount} شيكل إلى حسابك.",
+                ['type' => 'wallet', 'action' => 'customer_withdrawal_paid', 'withdrawal_id' => (string) $withdrawal->id],
+            ),
+            'rejected' => $this->notify(
+                $withdrawal->customer_id,
+                'تم رفض طلب السحب ❌',
+                "تم رفض طلب السحب وأُعيد المبلغ {$withdrawal->amount} شيكل إلى محفظتك.",
+                ['type' => 'wallet', 'action' => 'customer_withdrawal_rejected', 'withdrawal_id' => (string) $withdrawal->id],
             ),
             default => null,
         };

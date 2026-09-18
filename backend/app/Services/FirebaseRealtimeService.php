@@ -60,6 +60,9 @@ class FirebaseRealtimeService
         } elseif ($entity instanceof DriverWithdrawal) {
             $path = "users/{$entity->driver_id}/withdrawals/{$entity->id}";
             $payload = ['id' => $entity->id, 'status' => $entity->status, 'amount' => (float) $entity->amount, 'updated_at' => $updatedAt];
+        } elseif ($entity instanceof \App\Models\CustomerWithdrawal) {
+            $path = "users/{$entity->customer_id}/withdrawals/{$entity->id}";
+            $payload = ['id' => $entity->id, 'status' => $entity->status, 'amount' => (float) $entity->amount, 'updated_at' => $updatedAt];
         } elseif ($entity instanceof \App\Models\Complaint) {
             $path = "users/{$entity->user_id}/complaints/{$entity->id}";
             $payload = ['id' => $entity->id, 'status' => $entity->status, 'category' => $entity->category, 'updated_at' => $updatedAt];

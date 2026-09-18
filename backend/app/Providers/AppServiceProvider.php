@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Models\{Complaint, DriverProfile, DriverWithdrawal, Promotion, RideOffer, RideRequest, User, WalletDeposit};
+use App\Models\{Complaint, CustomerWithdrawal, DriverProfile, DriverWithdrawal, Promotion, RideOffer, RideRequest, User, WalletDeposit};
 use App\Observers\FirebaseRealtimeObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -24,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        foreach ([User::class, DriverProfile::class, DriverWithdrawal::class, WalletDeposit::class, Complaint::class, Promotion::class, RideRequest::class, RideOffer::class] as $model) {
+        foreach ([User::class, DriverProfile::class, DriverWithdrawal::class, CustomerWithdrawal::class, WalletDeposit::class, Complaint::class, Promotion::class, RideRequest::class, RideOffer::class] as $model) {
             $model::observe(FirebaseRealtimeObserver::class);
         }
 

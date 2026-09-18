@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CustomerWithdrawal;
 use App\Models\User;
 use App\Models\WalletDeposit;
 use App\Models\WalletPaymentAccount;
@@ -27,14 +28,30 @@ class CustomerWalletController extends Controller
             ->where('user_id', $customer->id)
             ->with('paymentAccount')
             ->latest()
-            ->limit(10)
+            ->limit(50)
             ->get()
             ->map(fn (WalletDeposit $deposit) => $this->depositPayload($deposit));
+
+        $withdrawals = CustomerWithdrawal::query()
+            ->where('customer_id', $customer->id)
+            ->latest()
+            ->limit(50)
+            ->get()
+            ->map(fn (CustomerWithdrawal $withdrawal) => [
+                'id' => $withdrawal->id,
+                'amount' => (float) $withdrawal->amount,
+                'method' => $withdrawal->method,
+                'account_name' => $withdrawal->account_name,
+                'account_number' => $withdrawal->account_number,
+                'status' => $withdrawal->status,
+                'created_at' => optional($withdrawal->created_at)->toIso8601String(),
+            ]);
 
         return response()->json([
             'wallet_balance' => (float) $customer->wallet_balance,
             'payment_accounts' => $paymentAccounts,
             'deposits' => $deposits,
+            'withdrawals' => $withdrawals,
         ]);
     }
 

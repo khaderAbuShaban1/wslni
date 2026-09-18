@@ -89,4 +89,64 @@
             </div>
         @endif
     </div>
+
+    <div class="panel" style="margin-top:16px;">
+        <div class="panel-header">
+            <div class="panel-title">
+                <div>
+                    <h2>طلبات سحب الزبائن</h2>
+                    <p>الزبون يسحب رصيد محفظته. المبلغ محجوز منذ الطلب، والرفض يعيده إلى محفظته.</p>
+                </div>
+                <span class="count-badge">{{ $customerWithdrawals->where('status', 'pending')->count() }} معلّق</span>
+            </div>
+        </div>
+
+        @if ($customerWithdrawals->isEmpty())
+            <div class="empty">لا توجد طلبات سحب من الزبائن.</div>
+        @else
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>الزبون</th>
+                            <th>المبلغ</th>
+                            <th>وجهة التحويل</th>
+                            <th>الحالة</th>
+                            <th>الإجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($customerWithdrawals as $withdrawal)
+                            <tr>
+                                <td>
+                                    <strong>{{ $withdrawal->customer?->name ?? 'زبون محذوف' }}</strong>
+                                    <div class="muted">{{ $withdrawal->customer?->phone }}</div>
+                                    <div class="muted">{{ optional($withdrawal->created_at)->format('Y-m-d H:i') }}</div>
+                                </td>
+                                <td><strong>{{ number_format((float) $withdrawal->amount, 2) }} ₪</strong></td>
+                                <td>
+                                    {{ $withdrawal->method === 'bank' ? 'حساب بنكي' : 'محفظة جوال' }}
+                                    <div class="muted">{{ $withdrawal->account_name }}</div>
+                                    <div class="muted">{{ $withdrawal->account_number }}</div>
+                                </td>
+                                <td>
+                                    <span class="status {{ $withdrawal->status }}">{{ $withdrawal->status === 'paid' ? 'مدفوع' : ($withdrawal->status === 'rejected' ? 'مرفوض' : 'بانتظار المراجعة') }}</span>
+                                </td>
+                                <td>
+                                    @if ($withdrawal->status === 'pending')
+                                        <div class="table-actions">
+                                            <form method="post" action="{{ route('admin.customer-withdrawals.approve', $withdrawal) }}" onsubmit="return confirm('تأكيد تحويل {{ number_format((float) $withdrawal->amount, 2) }} ₪؟')">@csrf @method('patch')<button class="btn blue">تم التحويل</button></form>
+                                            <form method="post" action="{{ route('admin.customer-withdrawals.reject', $withdrawal) }}" onsubmit="return confirm('رفض الطلب وإعادة المبلغ للمحفظة؟')">@csrf @method('patch')<button class="btn danger">رفض وإرجاع</button></form>
+                                        </div>
+                                    @else
+                                        <div class="muted">تمت المراجعة، لا توجد إجراءات مطلوبة.</div>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
 @endsection
