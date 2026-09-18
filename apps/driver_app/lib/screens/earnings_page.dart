@@ -698,4 +698,3 @@ class _AllWithdrawalsPage extends StatelessWidget {
     );
   }
 }
-

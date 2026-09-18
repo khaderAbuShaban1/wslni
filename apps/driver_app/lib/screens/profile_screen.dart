@@ -222,10 +222,8 @@ class _DriverProfilePageState extends State<_DriverProfilePage> {
                 child: TextButton.icon(
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => _AllRatingsPage(
-                        ratings: _ratings,
-                        summary: _summary,
-                      ),
+                      builder: (_) =>
+                          _AllRatingsPage(ratings: _ratings, summary: _summary),
                     ),
                   ),
                   icon: const Icon(Icons.expand_more_rounded),
@@ -289,8 +287,7 @@ class _IdentityCard extends StatelessWidget {
                     CircleAvatar(
                       radius: 33,
                       backgroundColor: const Color(0xFFF3C455),
-                      backgroundImage:
-                          hasPhoto ? FileImage(file) : null,
+                      backgroundImage: hasPhoto ? FileImage(file) : null,
                       child: hasPhoto
                           ? null
                           : Text(
@@ -473,8 +470,12 @@ class _EditProfilePageState extends State<_EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   late final _name = TextEditingController(text: widget.user.name);
   late final _phone = TextEditingController(text: widget.user.phone);
-  late final _vehicleType = TextEditingController(text: widget.user.vehicleType);
-  late final _vehiclePlate = TextEditingController(text: widget.user.vehiclePlate);
+  late final _vehicleType = TextEditingController(
+    text: widget.user.vehicleType,
+  );
+  late final _vehiclePlate = TextEditingController(
+    text: widget.user.vehiclePlate,
+  );
   bool _saving = false;
 
   @override
@@ -501,12 +502,14 @@ class _EditProfilePageState extends State<_EditProfilePage> {
       if (userData is Map<String, dynamic>) {
         Navigator.of(context).pop(DriverUser.fromJson(userData));
       } else {
-        Navigator.of(context).pop(widget.user.copyWith(
-          name: _name.text.trim(),
-          phone: _phone.text.trim(),
-          vehicleType: _vehicleType.text.trim(),
-          vehiclePlate: _vehiclePlate.text.trim(),
-        ));
+        Navigator.of(context).pop(
+          widget.user.copyWith(
+            name: _name.text.trim(),
+            phone: _phone.text.trim(),
+            vehicleType: _vehicleType.text.trim(),
+            vehiclePlate: _vehiclePlate.text.trim(),
+          ),
+        );
       }
     } on ApiException catch (e) {
       if (mounted) _message(e.message);
@@ -730,9 +733,11 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                       labelText: 'كلمة المرور الحالية',
                       prefixIcon: const Icon(Icons.lock_outline_rounded),
                       suffixIcon: IconButton(
-                        icon: Icon(_showCurrent
-                            ? Icons.visibility_off_rounded
-                            : Icons.visibility_rounded),
+                        icon: Icon(
+                          _showCurrent
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
+                        ),
                         onPressed: () =>
                             setState(() => _showCurrent = !_showCurrent),
                       ),
@@ -750,11 +755,12 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                       labelText: 'كلمة المرور الجديدة',
                       prefixIcon: const Icon(Icons.password_rounded),
                       suffixIcon: IconButton(
-                        icon: Icon(_showNew
-                            ? Icons.visibility_off_rounded
-                            : Icons.visibility_rounded),
-                        onPressed: () =>
-                            setState(() => _showNew = !_showNew),
+                        icon: Icon(
+                          _showNew
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
+                        ),
+                        onPressed: () => setState(() => _showNew = !_showNew),
                       ),
                       border: const OutlineInputBorder(),
                     ),
@@ -773,8 +779,8 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                     ),
                     validator: (v) => v == _newPass.text
                         ? (v == null || v.isEmpty
-                            ? 'أدخل تأكيد كلمة المرور'
-                            : null)
+                              ? 'أدخل تأكيد كلمة المرور'
+                              : null)
                         : 'كلمتا المرور غير متطابقتين',
                   ),
                 ],
@@ -795,8 +801,7 @@ class _ChangePasswordPageState extends State<_ChangePasswordPage> {
                         ),
                       )
                     : const Icon(Icons.key_rounded),
-                label: Text(
-                    _saving ? 'جاري الحفظ...' : 'تغيير كلمة المرور'),
+                label: Text(_saving ? 'جاري الحفظ...' : 'تغيير كلمة المرور'),
               ),
             ),
           ],
