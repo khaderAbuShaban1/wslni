@@ -18,13 +18,11 @@ class _DriverHomePageState extends State<DriverHomePage> {
   int? _withdrawnOffersForRideId;
   RideRequestItem? _activeRide;
   StreamSubscription<List<RideRequestItem>>? _activeRideSubscription;
+  late DriverUser _user = widget.user;
 
-  late final List<Widget> _pages = [
-    RequestsPage(user: widget.user),
-    _TripsPage(user: widget.user),
-    _EarningsPage(user: widget.user),
-    _DriverProfilePage(user: widget.user, onSignOut: _signOut),
-  ];
+  void _onUserChanged(DriverUser updated) {
+    setState(() => _user = updated);
+  }
 
   @override
   void initState() {
@@ -34,7 +32,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
     unawaited(_loadActiveRideFromApi());
     if (_realtime.isEnabled) {
       _activeRideSubscription = _realtime
-          .watchActiveRides(widget.user.id)
+          .watchActiveRides(_user.id)
           // Firebase is the realtime signal. Verify its update against
           // Laravel so an old cached Firebase ride can never lock the app.
           .listen((_) => unawaited(_loadActiveRideFromApi()));
@@ -115,10 +113,21 @@ class _DriverHomePageState extends State<DriverHomePage> {
       return ActiveRidePage(
         key: ValueKey('${activeRide.id}-${activeRide.status}'),
         ride: activeRide,
-        user: widget.user,
+        user: _user,
         onReleased: _releaseActiveRide,
       );
     }
+
+    final pages = [
+      RequestsPage(user: _user),
+      _TripsPage(user: _user),
+      _EarningsPage(user: _user),
+      _DriverProfilePage(
+        user: _user,
+        onSignOut: _signOut,
+        onUserChanged: _onUserChanged,
+      ),
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -139,7 +148,7 @@ class _DriverHomePageState extends State<DriverHomePage> {
         duration: const Duration(milliseconds: 220),
         switchInCurve: Curves.easeOutCubic,
         switchOutCurve: Curves.easeInCubic,
-        child: KeyedSubtree(key: ValueKey(_index), child: _pages[_index]),
+        child: KeyedSubtree(key: ValueKey(_index), child: pages[_index]),
       ),
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(

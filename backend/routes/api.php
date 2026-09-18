@@ -43,6 +43,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Drivers
     Route::get('drivers/available', [DriverController::class, 'available']);
     Route::get('drivers/{driver}/ratings', [DriverController::class, 'ratings']);
+    Route::get('drivers/me', [DriverController::class, 'me']);
+    Route::patch('drivers/me', [DriverController::class, 'update']);
     Route::patch('drivers/me/status', [DriverController::class, 'updateStatus']);
     Route::get('drivers/me/withdrawals', [DriverWithdrawalController::class, 'index']);
     Route::post('drivers/me/withdrawals', [DriverWithdrawalController::class, 'store']);

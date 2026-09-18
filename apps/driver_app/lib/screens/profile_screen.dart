@@ -1,9 +1,14 @@
 part of '../main.dart';
 
 class _DriverProfilePage extends StatefulWidget {
-  const _DriverProfilePage({required this.user, required this.onSignOut});
+  const _DriverProfilePage({
+    required this.user,
+    required this.onSignOut,
+    required this.onUserChanged,
+  });
   final DriverUser user;
   final VoidCallback onSignOut;
+  final ValueChanged<DriverUser> onUserChanged;
 
   @override
   State<_DriverProfilePage> createState() => _DriverProfilePageState();
@@ -11,8 +16,10 @@ class _DriverProfilePage extends StatefulWidget {
 
 class _DriverProfilePageState extends State<_DriverProfilePage> {
   final _api = ApiClient();
+  final _picker = ImagePicker();
   bool _loading = true;
   String? _error;
+  String? _photoPath;
   _RatingSummary _summary = const _RatingSummary();
   List<_CustomerRating> _ratings = const [];
 
@@ -20,6 +27,27 @@ class _DriverProfilePageState extends State<_DriverProfilePage> {
   void initState() {
     super.initState();
     _loadRatings();
+    _loadPhoto();
+  }
+
+  String _prefKey(String key) => 'driver_${widget.user.id}_$key';
+
+  Future<void> _loadPhoto() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() => _photoPath = prefs.getString(_prefKey('photo')));
+  }
+
+  Future<void> _pickPhoto() async {
+    final image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 82,
+    );
+    if (image == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefKey('photo'), image.path);
+    if (!mounted) return;
+    setState(() => _photoPath = image.path);
   }
 
   Future<void> _loadRatings() async {
@@ -29,8 +57,6 @@ class _DriverProfilePageState extends State<_DriverProfilePage> {
     });
     try {
       final data = await _api.get('drivers/${widget.user.id}/ratings');
-      // Note: this endpoint still uses the driver ID in the URL — it's
-      // read-only and useful for viewing any driver's public ratings.
       if (!mounted) return;
       final rows = data['ratings'];
       setState(() {
@@ -73,24 +99,88 @@ class _DriverProfilePageState extends State<_DriverProfilePage> {
     if (confirmed == true && mounted) widget.onSignOut();
   }
 
+  void _message(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final previewRatings = _ratings.take(3).toList();
     return RefreshIndicator(
       onRefresh: _loadRatings,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
         children: [
-          _IdentityCard(user: widget.user, summary: _summary),
+          _IdentityCard(
+            user: widget.user,
+            summary: _summary,
+            photoPath: _photoPath,
+            onPickPhoto: _pickPhoto,
+          ),
           const SizedBox(height: 14),
+
+          // Vehicle info
           const _SectionTitle(
             title: 'بيانات المركبة',
             icon: Icons.directions_car_filled_rounded,
           ),
           const SizedBox(height: 9),
           _VehicleInfoCard(user: widget.user),
+
           const SizedBox(height: 22),
+
+          // Actions
+          _ProfileMenuTile(
+            icon: Icons.edit_rounded,
+            label: 'تعديل البيانات الشخصية',
+            onTap: () async {
+              final updated = await Navigator.of(context).push<DriverUser>(
+                MaterialPageRoute(
+                  builder: (_) => _EditProfilePage(user: widget.user),
+                ),
+              );
+              if (updated != null) {
+                widget.onUserChanged(updated);
+                _message('تم تحديث البيانات بنجاح.');
+              }
+            },
+          ),
+          const SizedBox(height: 10),
+          _ProfileMenuTile(
+            icon: Icons.lock_outline_rounded,
+            label: 'تغيير كلمة المرور',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const _ChangePasswordPage()),
+            ),
+          ),
+          const SizedBox(height: 10),
+          _ProfileMenuTile(
+            icon: Icons.support_agent_rounded,
+            label: 'الدعم',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const _DriverSupportPage()),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _confirmSignOut,
+              icon: const Icon(Icons.logout_rounded),
+              label: const Text('تسجيل الخروج'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: scheme.error,
+                side: BorderSide(color: scheme.error),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 22),
+
+          // Ratings — preview (max 3)
           _SectionTitle(
             title: 'تقييمات الزبائن',
             icon: Icons.star_rounded,
@@ -123,46 +213,54 @@ class _DriverProfilePageState extends State<_DriverProfilePage> {
           else ...[
             _RatingOverview(summary: _summary),
             const SizedBox(height: 10),
-            for (final rating in _ratings) ...[
+            for (final rating in previewRatings) ...[
               _CustomerRatingCard(rating: rating),
               const SizedBox(height: 10),
             ],
-          ],
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const _DriverSupportPage()),
-            ),
-            icon: const Icon(Icons.support_agent_rounded),
-            label: const Text('الدعم'),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _confirmSignOut,
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('تسجيل الخروج'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.error,
-                side: BorderSide(color: Theme.of(context).colorScheme.error),
+            if (_ratings.length > 3)
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => _AllRatingsPage(
+                        ratings: _ratings,
+                        summary: _summary,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.expand_more_rounded),
+                  label: Text('عرض جميع التقييمات (${_ratings.length})'),
+                ),
               ),
-            ),
-          ),
+          ],
         ],
       ),
     );
   }
 }
 
+// ---------------------------------------------------------------------------
+// Identity Card (top of profile)
+// ---------------------------------------------------------------------------
+
 class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({required this.user, required this.summary});
+  const _IdentityCard({
+    required this.user,
+    required this.summary,
+    required this.photoPath,
+    required this.onPickPhoto,
+  });
   final DriverUser user;
   final _RatingSummary summary;
+  final String? photoPath;
+  final VoidCallback onPickPhoto;
 
   @override
   Widget build(BuildContext context) {
     final initial = user.name.trim().isEmpty ? 'س' : user.name.trim()[0];
+    final file = photoPath == null ? null : File(photoPath!);
+    final hasPhoto = file != null && file.existsSync();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -184,16 +282,49 @@ class _IdentityCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 33,
-                backgroundColor: const Color(0xFFF3C455),
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: _dark,
-                    fontSize: 27,
-                    fontWeight: FontWeight.w900,
-                  ),
+              GestureDetector(
+                onTap: onPickPhoto,
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 33,
+                      backgroundColor: const Color(0xFFF3C455),
+                      backgroundImage:
+                          hasPhoto ? FileImage(file) : null,
+                      child: hasPhoto
+                          ? null
+                          : Text(
+                              initial,
+                              style: const TextStyle(
+                                color: _dark,
+                                fontSize: 27,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: .15),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt_rounded,
+                          size: 14,
+                          color: _dark,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 14),
@@ -270,6 +401,442 @@ class _IdentityCard extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Profile menu tile
+// ---------------------------------------------------------------------------
+
+class _ProfileMenuTile extends StatelessWidget {
+  const _ProfileMenuTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final outline = Theme.of(context).colorScheme.outlineVariant;
+    return Material(
+      borderRadius: BorderRadius.circular(23),
+      color: Theme.of(context).colorScheme.surface,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(23),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(23),
+            border: Border.all(color: outline),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: _emerald.withValues(alpha: .16),
+                child: Icon(icon, color: _emerald),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              const Icon(Icons.chevron_left_rounded, color: _muted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Edit profile page
+// ---------------------------------------------------------------------------
+
+class _EditProfilePage extends StatefulWidget {
+  const _EditProfilePage({required this.user});
+  final DriverUser user;
+
+  @override
+  State<_EditProfilePage> createState() => _EditProfilePageState();
+}
+
+class _EditProfilePageState extends State<_EditProfilePage> {
+  final _api = ApiClient();
+  final _formKey = GlobalKey<FormState>();
+  late final _name = TextEditingController(text: widget.user.name);
+  late final _phone = TextEditingController(text: widget.user.phone);
+  late final _vehicleType = TextEditingController(text: widget.user.vehicleType);
+  late final _vehiclePlate = TextEditingController(text: widget.user.vehiclePlate);
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _phone.dispose();
+    _vehicleType.dispose();
+    _vehiclePlate.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    try {
+      final result = await _api.patch('drivers/me', {
+        'name': _name.text.trim(),
+        'phone': _phone.text.trim(),
+        'vehicle_type': _vehicleType.text.trim(),
+        'vehicle_plate': _vehiclePlate.text.trim(),
+      });
+      final userData = result['user'];
+      if (!mounted) return;
+      if (userData is Map<String, dynamic>) {
+        Navigator.of(context).pop(DriverUser.fromJson(userData));
+      } else {
+        Navigator.of(context).pop(widget.user.copyWith(
+          name: _name.text.trim(),
+          phone: _phone.text.trim(),
+          vehicleType: _vehicleType.text.trim(),
+          vehiclePlate: _vehiclePlate.text.trim(),
+        ));
+      }
+    } on ApiException catch (e) {
+      if (mounted) _message(e.message);
+    } catch (_) {
+      if (mounted) _message('تعذر حفظ التعديلات. تأكد من اتصال الخادم.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _message(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final outline = Theme.of(context).colorScheme.outlineVariant;
+    return Scaffold(
+      appBar: AppBar(title: const Text('تعديل البيانات')),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(23),
+                border: Border.all(color: outline),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const _SectionTitle(
+                    title: 'البيانات الشخصية',
+                    icon: Icons.person_rounded,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _name,
+                    decoration: const InputDecoration(
+                      labelText: 'الاسم',
+                      prefixIcon: Icon(Icons.person_outline_rounded),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'الاسم مطلوب' : null,
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _phone,
+                    decoration: const InputDecoration(
+                      labelText: 'رقم الهاتف',
+                      prefixIcon: Icon(Icons.phone_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.phone,
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    initialValue: widget.user.email,
+                    decoration: const InputDecoration(
+                      labelText: 'البريد الإلكتروني',
+                      prefixIcon: Icon(Icons.email_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    enabled: false,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(23),
+                border: Border.all(color: outline),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const _SectionTitle(
+                    title: 'بيانات المركبة',
+                    icon: Icons.directions_car_filled_rounded,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _vehicleType,
+                    decoration: const InputDecoration(
+                      labelText: 'نوع المركبة',
+                      prefixIcon: Icon(Icons.directions_car_rounded),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _vehiclePlate,
+                    decoration: const InputDecoration(
+                      labelText: 'رقم اللوحة',
+                      prefixIcon: Icon(Icons.pin_rounded),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 50,
+              child: FilledButton.icon(
+                onPressed: _saving ? null : _save,
+                icon: _saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.check_rounded),
+                label: Text(_saving ? 'جاري الحفظ...' : 'حفظ التعديلات'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Change password page
+// ---------------------------------------------------------------------------
+
+class _ChangePasswordPage extends StatefulWidget {
+  const _ChangePasswordPage();
+
+  @override
+  State<_ChangePasswordPage> createState() => _ChangePasswordPageState();
+}
+
+class _ChangePasswordPageState extends State<_ChangePasswordPage> {
+  final _api = ApiClient();
+  final _formKey = GlobalKey<FormState>();
+  final _current = TextEditingController();
+  final _newPass = TextEditingController();
+  final _confirm = TextEditingController();
+  bool _saving = false;
+  bool _showCurrent = false;
+  bool _showNew = false;
+
+  @override
+  void dispose() {
+    _current.dispose();
+    _newPass.dispose();
+    _confirm.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    try {
+      await _api.post('auth/change-password', {
+        'current_password': _current.text,
+        'password': _newPass.text,
+        'password_confirmation': _confirm.text,
+      });
+      _current.clear();
+      _newPass.clear();
+      _confirm.clear();
+      if (mounted) {
+        _message('تم تغيير كلمة المرور بنجاح.');
+        Navigator.of(context).pop();
+      }
+    } on ApiException catch (e) {
+      if (mounted) _message(e.message);
+    } catch (_) {
+      if (mounted) _message('تعذر تغيير كلمة المرور. تأكد من اتصال الخادم.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _message(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final outline = Theme.of(context).colorScheme.outlineVariant;
+    return Scaffold(
+      appBar: AppBar(title: const Text('تغيير كلمة المرور')),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(23),
+                border: Border.all(color: outline),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'استخدم كلمة مرور قوية من 8 أحرف أو أكثر.',
+                    style: TextStyle(color: _muted),
+                  ),
+                  const SizedBox(height: 18),
+                  TextFormField(
+                    controller: _current,
+                    obscureText: !_showCurrent,
+                    decoration: InputDecoration(
+                      labelText: 'كلمة المرور الحالية',
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      suffixIcon: IconButton(
+                        icon: Icon(_showCurrent
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded),
+                        onPressed: () =>
+                            setState(() => _showCurrent = !_showCurrent),
+                      ),
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: (v) => v == null || v.isEmpty
+                        ? 'أدخل كلمة المرور الحالية'
+                        : null,
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _newPass,
+                    obscureText: !_showNew,
+                    decoration: InputDecoration(
+                      labelText: 'كلمة المرور الجديدة',
+                      prefixIcon: const Icon(Icons.password_rounded),
+                      suffixIcon: IconButton(
+                        icon: Icon(_showNew
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded),
+                        onPressed: () =>
+                            setState(() => _showNew = !_showNew),
+                      ),
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: (v) => v != null && v.length >= 8
+                        ? null
+                        : 'أدخل 8 أحرف على الأقل',
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _confirm,
+                    obscureText: !_showNew,
+                    decoration: const InputDecoration(
+                      labelText: 'تأكيد كلمة المرور الجديدة',
+                      prefixIcon: Icon(Icons.lock_reset_rounded),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) => v == _newPass.text
+                        ? (v == null || v.isEmpty
+                            ? 'أدخل تأكيد كلمة المرور'
+                            : null)
+                        : 'كلمتا المرور غير متطابقتين',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 50,
+              child: FilledButton.icon(
+                onPressed: _saving ? null : _save,
+                icon: _saving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.key_rounded),
+                label: Text(
+                    _saving ? 'جاري الحفظ...' : 'تغيير كلمة المرور'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// All ratings page
+// ---------------------------------------------------------------------------
+
+class _AllRatingsPage extends StatelessWidget {
+  const _AllRatingsPage({required this.ratings, required this.summary});
+  final List<_CustomerRating> ratings;
+  final _RatingSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('جميع التقييمات')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
+        children: [
+          _RatingOverview(summary: summary),
+          const SizedBox(height: 14),
+          for (final rating in ratings) ...[
+            _CustomerRatingCard(rating: rating),
+            const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared widgets
+// ---------------------------------------------------------------------------
 
 class _VehicleInfoCard extends StatelessWidget {
   const _VehicleInfoCard({required this.user});
@@ -450,7 +1017,7 @@ class _CustomerRatingCard extends StatelessWidget {
                 Text(
                   rating.comment.isEmpty
                       ? 'قيّم رحلتك بدون تعليق'
-                      : '“${rating.comment}”',
+                      : '"${rating.comment}"',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

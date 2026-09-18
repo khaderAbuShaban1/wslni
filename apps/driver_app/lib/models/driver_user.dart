@@ -29,4 +29,20 @@ class DriverUser {
       vehiclePlate: profileMap['vehicle_plate']?.toString() ?? '',
     );
   }
+
+  DriverUser copyWith({
+    String? name,
+    String? phone,
+    String? vehicleType,
+    String? vehiclePlate,
+  }) {
+    return DriverUser(
+      id: id,
+      name: name ?? this.name,
+      email: email,
+      phone: phone ?? this.phone,
+      vehicleType: vehicleType ?? this.vehicleType,
+      vehiclePlate: vehiclePlate ?? this.vehiclePlate,
+    );
+  }
 }

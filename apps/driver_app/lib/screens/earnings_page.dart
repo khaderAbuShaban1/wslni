@@ -151,11 +151,24 @@ class _EarningsPageState extends State<_EarningsPage> {
             title: 'لا توجد أرباح بعد',
             message: 'بعد إكمال الرحلات ستظهر أرباحك هنا مباشرة.',
           )
-        else
-          for (final ride in completed) ...[
+        else ...[
+          for (final ride in completed.take(3)) ...[
             _TripEarningCard(ride: ride),
             const SizedBox(height: 10),
           ],
+          if (completed.length > 3)
+            Center(
+              child: TextButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => _AllEarningsPage(completed: completed),
+                  ),
+                ),
+                icon: const Icon(Icons.expand_more_rounded),
+                label: Text('عرض جميع الأرباح (${completed.length})'),
+              ),
+            ),
+        ],
       ],
     );
   }
@@ -382,10 +395,23 @@ class _WithdrawalPanelState extends State<_WithdrawalPanel> {
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 8),
-          for (final withdrawal in _withdrawals) ...[
+          for (final withdrawal in _withdrawals.take(3)) ...[
             _WithdrawalStatusCard(withdrawal: withdrawal),
             const SizedBox(height: 8),
           ],
+          if (_withdrawals.length > 3)
+            Center(
+              child: TextButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        _AllWithdrawalsPage(withdrawals: _withdrawals),
+                  ),
+                ),
+                icon: const Icon(Icons.expand_more_rounded),
+                label: Text('عرض جميع الطلبات (${_withdrawals.length})'),
+              ),
+            ),
         ],
       ],
     );
@@ -635,3 +661,41 @@ class _TripEarningCard extends StatelessWidget {
     );
   }
 }
+
+class _AllEarningsPage extends StatelessWidget {
+  const _AllEarningsPage({required this.completed});
+  final List<RideRequestItem> completed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('جميع الأرباح')),
+      body: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
+        itemCount: completed.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
+        itemBuilder: (_, i) => _TripEarningCard(ride: completed[i]),
+      ),
+    );
+  }
+}
+
+class _AllWithdrawalsPage extends StatelessWidget {
+  const _AllWithdrawalsPage({required this.withdrawals});
+  final List<Map<String, dynamic>> withdrawals;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('جميع طلبات السحب')),
+      body: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 30),
+        itemCount: withdrawals.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
+        itemBuilder: (_, i) =>
+            _WithdrawalStatusCard(withdrawal: withdrawals[i]),
+      ),
+    );
+  }
+}
+
