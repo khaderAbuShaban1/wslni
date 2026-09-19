@@ -39,6 +39,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'google_id',
         'email_otp_code',
         'email_otp_expires_at',
         'wallet_balance',

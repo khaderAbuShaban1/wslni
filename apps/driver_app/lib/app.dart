@@ -39,7 +39,7 @@ class DriverRideApp extends StatelessWidget {
       theme: _buildDriverTheme(),
       darkTheme: _buildDriverTheme(brightness: Brightness.dark),
       themeMode: ThemeMode.system,
-      home: const AuthPage(),
+      home: const _StartupGate(),
     );
   }
 }

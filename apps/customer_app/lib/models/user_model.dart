@@ -31,6 +31,16 @@ class AppUser {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'email': email,
+    'phone': phone,
+    'role': role,
+    'wallet_balance': walletBalance,
+    'avatar_path': avatarPath,
+  };
+
   AppUser copyWith({
     String? name,
     String? email,

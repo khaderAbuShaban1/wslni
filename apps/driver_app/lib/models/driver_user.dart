@@ -33,6 +33,19 @@ class DriverUser {
     );
   }
 
+  /// Same shape as the API payload, so [DriverUser.fromJson] reads it back.
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'email': email,
+    'phone': phone,
+    'avatar_path': avatarPath,
+    'driver_profile': {
+      'vehicle_type': vehicleType,
+      'vehicle_plate': vehiclePlate,
+    },
+  };
+
   DriverUser copyWith({
     String? name,
     String? phone,

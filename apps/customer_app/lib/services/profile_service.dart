@@ -8,6 +8,11 @@ class ProfileService {
 
   final ApiClient _api;
 
+  Future<AppUser> fetchMe() async {
+    final result = await _api.get('customers/me');
+    return AppUser.fromJson(result['user'] as Map<String, dynamic>);
+  }
+
   Future<AppUser> updateProfile({
     required String name,
     required String phone,

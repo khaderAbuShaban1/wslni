@@ -31,6 +31,41 @@ class _AuthPageState extends State<AuthPage> {
   String? _pendingEmail;
 
   @override
+  void initState() {
+    super.initState();
+    _SessionStore.lastEmail().then((email) {
+      if (mounted && _loginEmail.text.isEmpty) _loginEmail.text = email;
+    });
+  }
+
+  Future<void> _googleLogin() async {
+    if (!_GoogleAuth.isConfigured) {
+      _show('تسجيل الدخول عبر Google غير مفعّل بعد.');
+      return;
+    }
+    await _run(() async {
+      final idToken = await _GoogleAuth.idToken();
+      if (idToken == null) return;
+      final result = await _api.post('auth/google', {
+        'id_token': idToken,
+        'role': 'driver',
+      });
+      _requireDriverAccount(result);
+      await _saveToken(result);
+      await _signInToFirebase(result);
+      _openHome(DriverUser.fromJson(result['user'] as Map<String, dynamic>));
+    });
+  }
+
+  void _openForgotPassword() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _ForgotPasswordPage(email: _loginEmail.text.trim()),
+      ),
+    );
+  }
+
+  @override
   void dispose() {
     _loginEmail.dispose();
     _loginPassword.dispose();
@@ -152,6 +187,7 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   void _openHome(DriverUser user) {
+    unawaited(_SessionStore.saveUser(user));
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => DriverHomePage(user: user)),
     );
@@ -218,6 +254,8 @@ class _AuthPageState extends State<AuthPage> {
                 password: _loginPassword,
                 loading: _loading,
                 onSubmit: _login,
+                onForgotPassword: _openForgotPassword,
+                onGoogle: _googleLogin,
               ),
             const SizedBox(height: 12),
             if (!_otpMode)
@@ -245,6 +283,8 @@ class _LoginForm extends StatelessWidget {
     required this.password,
     required this.loading,
     required this.onSubmit,
+    required this.onForgotPassword,
+    required this.onGoogle,
   });
 
   final GlobalKey<FormState> formKey;
@@ -252,12 +292,15 @@ class _LoginForm extends StatelessWidget {
   final TextEditingController password;
   final bool loading;
   final VoidCallback onSubmit;
+  final VoidCallback onForgotPassword;
+  final VoidCallback onGoogle;
 
   @override
   Widget build(BuildContext context) {
     return Form(
       key: formKey,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _Field(
             controller: email,
@@ -271,11 +314,53 @@ class _LoginForm extends StatelessWidget {
             icon: Icons.lock_outline,
             obscure: true,
           ),
-          const SizedBox(height: 16),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: TextButton(
+              onPressed: loading ? null : onForgotPassword,
+              child: const Text('نسيت كلمة المرور؟'),
+            ),
+          ),
           FilledButton.icon(
             onPressed: loading ? null : onSubmit,
             icon: const Icon(Icons.login),
             label: const Text('تسجيل الدخول'),
+          ),
+          const SizedBox(height: 16),
+          const Row(
+            children: [
+              Expanded(child: Divider()),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: Text('أو', style: TextStyle(color: _muted)),
+              ),
+              Expanded(child: Divider()),
+            ],
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 52),
+            ),
+            onPressed: loading ? null : onGoogle,
+            icon: Container(
+              width: 24,
+              height: 24,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: _line),
+              ),
+              child: const Text(
+                'G',
+                style: TextStyle(
+                  color: Color(0xFF4285F4),
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            label: const Text('المتابعة باستخدام Google'),
           ),
         ],
       ),

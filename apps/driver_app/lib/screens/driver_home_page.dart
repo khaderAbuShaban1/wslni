@@ -22,11 +22,30 @@ class _DriverHomePageState extends State<DriverHomePage> {
 
   void _onUserChanged(DriverUser updated) {
     setState(() => _user = updated);
+    unawaited(_SessionStore.saveUser(updated));
+  }
+
+  /// A restored session may be stale or revoked (e.g. after a password reset).
+  Future<void> _refreshUser() async {
+    try {
+      final result = await _api.get('drivers/me');
+      final user = result['user'];
+      if (mounted && user is Map<String, dynamic>) {
+        _onUserChanged(DriverUser.fromJson(user));
+      }
+    } on ApiException catch (error) {
+      if (error.statusCode == 401 || error.statusCode == 403) {
+        await _signOut();
+      }
+    } catch (_) {
+      // Offline: keep the cached profile.
+    }
   }
 
   @override
   void initState() {
     super.initState();
+    unawaited(_refreshUser());
     // A single API read restores state when opening the app. All subsequent
     // changes arrive from Firebase; polling would defeat realtime updates.
     unawaited(_loadActiveRideFromApi());
@@ -95,6 +114,8 @@ class _DriverHomePageState extends State<DriverHomePage> {
   Future<void> _signOut() async {
     await NotificationService.instance.unregisterToken();
     await ApiTokenStore.clear();
+    await _SessionStore.clear();
+    await _GoogleAuth.signOut();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const AuthPage()),

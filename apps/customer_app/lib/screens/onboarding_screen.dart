@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/session_store.dart';
 import '../utils/constants.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/custom_button.dart';
@@ -35,6 +36,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
 
   void _openAuth() {
+    SessionStore.markOnboardingSeen();
     Navigator.of(
       context,
     ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));

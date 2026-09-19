@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../services/session_store.dart';
 import '../utils/constants.dart';
 import '../widgets/app_logo.dart';
+import 'customer_shell.dart';
+import 'login_screen.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -21,12 +24,22 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(milliseconds: 1200), () {
+    // Read the stored session while the logo is on screen.
+    final next = _nextScreen();
+    _timer = Timer(const Duration(milliseconds: 1200), () async {
+      final screen = await next;
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => screen));
     });
+  }
+
+  Future<Widget> _nextScreen() async {
+    final user = await SessionStore.restoreUser();
+    if (user != null) return CustomerShell(user: user);
+    if (await SessionStore.onboardingSeen()) return const LoginScreen();
+    return const OnboardingScreen();
   }
 
   @override

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CustomerWithdrawalController;
 use App\Http\Controllers\Api\DriverController;
 use App\Http\Controllers\Api\DriverWithdrawalController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\RideController;
 use App\Http\Controllers\Api\RideOfferController;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +21,10 @@ Route::prefix('auth')->middleware('throttle:auth')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
     Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
     Route::post('resend-otp', [AuthController::class, 'resendOtp']);
+    Route::post('google', [AuthController::class, 'google']);
+    Route::post('forgot-password', [PasswordResetController::class, 'sendCode']);
+    Route::post('forgot-password/verify', [PasswordResetController::class, 'verifyCode']);
+    Route::post('reset-password', [PasswordResetController::class, 'reset']);
 });
 
 /*

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/user_model.dart';
 import '../services/api_client.dart';
+import '../services/google_auth.dart';
 import '../services/notification_service.dart';
+import '../services/profile_service.dart';
+import '../services/session_store.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'trip_history_screen.dart';
@@ -21,9 +24,37 @@ class CustomerShell extends StatefulWidget {
 class _CustomerShellState extends State<CustomerShell> {
   late AppUser _user = widget.user;
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshUser();
+  }
+
+  /// A restored session may be stale or revoked (e.g. after a password reset).
+  Future<void> _refreshUser() async {
+    try {
+      final fresh = await ProfileService().fetchMe();
+      if (mounted) _onUserChanged(fresh);
+    } on ApiException catch (error) {
+      if (error.statusCode == 401 || error.statusCode == 403) {
+        await _signOut();
+      }
+    } catch (_) {
+      // Offline: keep the cached profile.
+    }
+  }
+
+  void _onUserChanged(AppUser user) {
+    setState(() => _user = user);
+    SessionStore.saveUser(user);
+  }
+
   Future<void> _signOut() async {
     await NotificationService.instance.unregisterToken();
     await ApiTokenStore.clear();
+    await SessionStore.clear();
+    await GoogleAuth.signOut();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -40,7 +71,7 @@ class _CustomerShellState extends State<CustomerShell> {
       ProfileScreen(
         user: _user,
         showBack: false,
-        onUserChanged: (user) => setState(() => _user = user),
+        onUserChanged: _onUserChanged,
         onSignOut: _signOut,
       ),
     ];

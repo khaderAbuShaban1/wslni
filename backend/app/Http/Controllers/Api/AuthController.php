@@ -6,13 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\DriverProfile;
 use App\Models\User;
 use App\Services\FirebaseRealtimeService;
+use App\Services\GoogleIdTokenVerifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class AuthController extends Controller
 {
@@ -139,6 +142,72 @@ class AuthController extends Controller
                 'email' => $user->email,
             ], 403);
         }
+
+        if (! $user->isActive()) {
+            return response()->json(['message' => 'هذا الحساب موقوف. تواصل مع الإدارة.'], 403);
+        }
+
+        return response()->json([
+            'message' => 'تم تسجيل الدخول بنجاح.',
+            'user' => $this->userPayload($user),
+            'token' => $this->issueToken($user),
+            'firebase_token' => app(FirebaseRealtimeService::class)->customToken($user),
+        ]);
+    }
+
+    public function google(Request $request, GoogleIdTokenVerifier $verifier): JsonResponse
+    {
+        $data = $request->validate([
+            'id_token' => ['required', 'string', 'max:4096'],
+            'role' => ['required', 'in:customer,driver'],
+        ]);
+
+        try {
+            $google = $verifier->verify($data['id_token']);
+        } catch (RuntimeException) {
+            return response()->json(['message' => 'تعذر التحقق من حساب Google. حاول مجددًا.'], 401);
+        }
+
+        $user = User::where('google_id', $google['sub'])->first()
+            ?? User::where('email', $google['email'])->first();
+
+        if ($user === null) {
+            // Drivers need vehicle details and admin approval, which Google can't supply.
+            if ($data['role'] === 'driver') {
+                return response()->json([
+                    'message' => 'لا يوجد حساب سائق بهذا البريد. أنشئ حساب سائق أولًا.',
+                ], 404);
+            }
+
+            $user = User::create([
+                'name' => $google['name'] ?: strstr($google['email'], '@', true),
+                'email' => $google['email'],
+                'password' => Str::password(40),
+                'role' => 'customer',
+                'account_status' => 'active',
+            ]);
+        }
+
+        if ($user->role !== $data['role']) {
+            return response()->json([
+                'message' => $data['role'] === 'driver'
+                    ? 'هذا حساب زبون. سجّل الدخول بحساب سائق في تطبيق السائق.'
+                    : 'هذا الحساب غير مصرح له باستخدام تطبيق الزبون.',
+            ], 403);
+        }
+
+        if ($user->google_id !== null && $user->google_id !== $google['sub']) {
+            return response()->json(['message' => 'هذا البريد مرتبط بحساب Google آخر.'], 409);
+        }
+
+        // Google has verified the address, which also proves ownership of an
+        // account registered with it but never confirmed by OTP.
+        $user->forceFill([
+            'google_id' => $google['sub'],
+            'email_verified_at' => $user->email_verified_at ?? now(),
+            'email_otp_code' => null,
+            'email_otp_expires_at' => null,
+        ])->save();
 
         if (! $user->isActive()) {
             return response()->json(['message' => 'هذا الحساب موقوف. تواصل مع الإدارة.'], 403);

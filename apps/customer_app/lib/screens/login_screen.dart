@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
+import '../services/session_store.dart';
 import '../utils/constants.dart';
 import '../utils/validators.dart';
 import '../widgets/app_logo.dart';
@@ -12,6 +13,7 @@ import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/premium_card.dart';
 import 'customer_shell.dart';
+import 'forgot_password_screen.dart';
 import 'otp_verification_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -34,6 +36,40 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _signup = false;
   bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    SessionStore.lastEmail().then((email) {
+      if (mounted && _email.text.isEmpty) _email.text = email;
+    });
+  }
+
+  Future<void> _googleLogin() async {
+    setState(() => _loading = true);
+    try {
+      final user = await _authService.loginWithGoogle();
+      if (user != null) _openHome(user);
+    } on ApiException catch (error) {
+      _showMessage(error.message);
+    } on SocketException {
+      _showMessage(
+        'تعذر الاتصال بالخادم. تأكد أن Laravel يعمل على المنفذ 8000.',
+      );
+    } catch (_) {
+      _showMessage('تعذر تسجيل الدخول عبر Google. حاول مجددًا.');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _openForgotPassword() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ForgotPasswordScreen(email: _email.text.trim()),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -186,7 +222,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                     ],
-                    const SizedBox(height: 20),
+                    if (!_signup)
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: TextButton(
+                          onPressed: _loading ? null : _openForgotPassword,
+                          child: const Text('نسيت كلمة المرور؟'),
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 20),
                     CustomButton(
                       label: _loading
                           ? 'جاري التنفيذ...'
@@ -197,6 +242,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? Icons.person_add_alt_rounded
                           : Icons.login_rounded,
                       onPressed: _loading ? null : _submit,
+                    ),
+                    const SizedBox(height: 18),
+                    const _OrDivider(),
+                    const SizedBox(height: 18),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 54),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                      onPressed: _loading ? null : _googleLogin,
+                      icon: const _GoogleMark(),
+                      label: const Text(
+                        'المتابعة باستخدام Google',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
                     ),
                   ],
                 ),
@@ -217,6 +279,50 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrDivider extends StatelessWidget {
+  const _OrDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Expanded(child: Divider()),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12),
+          child: Text('أو', style: TextStyle(color: mutedText)),
+        ),
+        Expanded(child: Divider()),
+      ],
+    );
+  }
+}
+
+class _GoogleMark extends StatelessWidget {
+  const _GoogleMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 26,
+      height: 26,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(color: borderGray),
+      ),
+      child: const Text(
+        'G',
+        style: TextStyle(
+          color: Color(0xFF4285F4),
+          fontWeight: FontWeight.w900,
+          fontSize: 16,
         ),
       ),
     );
