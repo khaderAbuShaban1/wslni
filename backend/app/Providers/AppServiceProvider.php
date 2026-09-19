@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Models\{Complaint, CustomerWithdrawal, DriverProfile, DriverWithdrawal, Promotion, RideOffer, RideRequest, User, WalletDeposit};
 use App\Observers\FirebaseRealtimeObserver;
+use App\Services\FcmService;
+use App\Services\FirebaseRealtimeService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -16,7 +18,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Singletons so queue workers reuse the access token and HTTP connection across jobs.
+        $this->app->singleton(FirebaseRealtimeService::class);
+        $this->app->singleton(FcmService::class);
     }
 
     /**

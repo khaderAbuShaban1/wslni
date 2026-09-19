@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendPushNotification;
 use App\Models\CustomerWithdrawal;
 use App\Models\DriverProfile;
 use App\Models\DriverWithdrawal;
@@ -13,8 +14,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class NotificationDispatcher
 {
-    public function __construct(private FcmService $fcm) {}
-
     /**
      * Dispatch push notifications based on model changes.
      * Called from the observer after each saved event.
@@ -296,9 +295,6 @@ class NotificationDispatcher
 
     private function notify(int $userId, string $title, string $body, array $data = []): void
     {
-        $user = User::find($userId);
-        if ($user && $user->fcm_token) {
-            $this->fcm->sendToUser($user, $title, $body, $data);
-        }
+        SendPushNotification::dispatch($userId, $title, $body, $data);
     }
 }

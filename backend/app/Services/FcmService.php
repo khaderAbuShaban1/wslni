@@ -4,12 +4,15 @@ namespace App\Services;
 
 use App\Models\User;
 use Firebase\JWT\JWT;
+use GuzzleHttp\Client;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class FcmService
 {
+    private ?Client $connection = null;
     private ?string $accessToken = null;
     private int $accessTokenExpiresAt = 0;
 
@@ -110,17 +113,17 @@ class FcmService
         }
     }
 
-    private function authenticatedClient(): \Illuminate\Http\Client\PendingRequest
+    private function authenticatedClient(): PendingRequest
     {
         if ($this->accessToken !== null && $this->accessTokenExpiresAt > time()) {
-            return Http::withToken($this->accessToken)->timeout(10);
+            return $this->http()->withToken($this->accessToken);
         }
 
         $cached = Cache::get('firebase.fcm.access-token');
         if (is_array($cached) && isset($cached['token'], $cached['expires_at']) && $cached['expires_at'] > time()) {
             $this->accessToken = $cached['token'];
             $this->accessTokenExpiresAt = $cached['expires_at'];
-            return Http::withToken($this->accessToken)->timeout(10);
+            return $this->http()->withToken($this->accessToken);
         }
 
         $credentials = $this->credentials();
@@ -152,7 +155,13 @@ class FcmService
             'expires_at' => $this->accessTokenExpiresAt,
         ], now()->addSeconds(3300));
 
-        return Http::withToken($this->accessToken)->timeout(10);
+        return $this->http()->withToken($this->accessToken);
+    }
+
+    /** One Guzzle client per process, so a long-lived queue worker keeps its TLS connection to FCM open. */
+    private function http(): PendingRequest
+    {
+        return Http::setClient($this->connection ??= new Client)->timeout(10);
     }
 
     /** @return array<string, string> */
