@@ -169,7 +169,7 @@ class _RequestsPageState extends State<RequestsPage> {
             FilledButton.icon(
               style: FilledButton.styleFrom(
                 backgroundColor: _emerald,
-                foregroundColor: Colors.white,
+                foregroundColor: _dark,
                 minimumSize: const Size(double.infinity, 56),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),

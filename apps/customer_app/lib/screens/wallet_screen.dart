@@ -164,9 +164,12 @@ class _WalletScreenState extends State<WalletScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'رصيدك الحالي',
-                style: TextStyle(color: mutedText, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 10),
               Text(
@@ -210,20 +213,6 @@ class _WalletScreenState extends State<WalletScreen> {
         ),
         const SizedBox(height: 10),
         _MovementList(movements: wallet.movements),
-        const SizedBox(height: 18),
-        _SectionTitle(
-          title: 'طرق الدفع المتاحة',
-          subtitle: 'اختر إحدى هذه الحسابات عند شحن المحفظة.',
-        ),
-        const SizedBox(height: 10),
-        if (wallet.paymentAccounts.isEmpty)
-          const _EmptyWalletMessage(
-            icon: Icons.account_balance_outlined,
-            title: 'لا توجد طرق دفع',
-            message: 'ستظهر هنا الحسابات التي يضيفها الأدمن.',
-          )
-        else
-          ...wallet.paymentAccounts.map(_PaymentAccountCard.new),
         const SizedBox(height: 18),
         _SectionTitle(
           title: 'آخر طلبات الشحن',
@@ -454,6 +443,7 @@ class _AddBalanceSheetState extends State<_AddBalanceSheet> {
   }
 }
 
+// ignore: unused_element
 class _PaymentAccountCard extends StatelessWidget {
   const _PaymentAccountCard(this.account);
 
@@ -558,7 +548,10 @@ class _PaymentAccountDetails extends StatelessWidget {
                   ),
                   Text(
                     account.typeLabel,
-                    style: const TextStyle(color: mutedText, fontSize: 12),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -1272,7 +1265,10 @@ class _MovementTile extends StatelessWidget {
               if (movement.balanceAfter != null)
                 Text(
                   'الرصيد ${movement.balanceAfter!.toStringAsFixed(2)} ₪',
-                  style: const TextStyle(color: mutedText, fontSize: 11),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
                 ),
             ],
           ),

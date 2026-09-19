@@ -108,9 +108,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'مرحبا 👋',
-                        style: TextStyle(color: mutedText, fontSize: 16),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 16,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -248,7 +251,10 @@ class _RecentRideCard extends StatelessWidget {
                       '${ride.pickup} ← ${ride.destination}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: mutedText, fontSize: 13),
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -274,7 +280,11 @@ class _RecentRideCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(width: 6),
-              const Icon(Icons.replay_rounded, color: mutedText, size: 20),
+              Icon(
+                Icons.replay_rounded,
+                color: scheme.onSurfaceVariant,
+                size: 20,
+              ),
             ],
           ),
         ),

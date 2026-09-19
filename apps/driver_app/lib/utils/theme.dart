@@ -108,7 +108,17 @@ ThemeData _buildDriverTheme({Brightness brightness = Brightness.light}) {
       backgroundColor: Colors.transparent,
       foregroundColor: scheme.onSurface,
       surfaceTintColor: Colors.transparent,
-      titleTextStyle: text.titleLarge,
+      systemOverlayStyle: SystemUiOverlayStyle(
+        statusBarColor: scheme.surface,
+        statusBarIconBrightness: dark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: dark ? Brightness.dark : Brightness.light,
+        systemNavigationBarColor: scheme.surface,
+        systemNavigationBarIconBrightness: dark
+            ? Brightness.light
+            : Brightness.dark,
+      ),
+      titleTextStyle: text.titleLarge?.copyWith(color: scheme.onSurface),
+      iconTheme: IconThemeData(color: scheme.onSurface),
     ),
     cardTheme: CardThemeData(
       elevation: dark ? 2 : 3,

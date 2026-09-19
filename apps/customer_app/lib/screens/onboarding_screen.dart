@@ -93,7 +93,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         height: 8,
                         margin: const EdgeInsetsDirectional.only(end: 7),
                         decoration: BoxDecoration(
-                          color: _page == index ? emerald : borderGray,
+                          color: _page == index
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.outlineVariant,
                           borderRadius: BorderRadius.circular(99),
                         ),
                       ),
@@ -142,7 +144,7 @@ class _OnboardingPanel extends StatelessWidget {
           width: 220,
           height: 220,
           decoration: BoxDecoration(
-            color: lightGray,
+            color: Theme.of(context).colorScheme.surfaceContainerHigh,
             borderRadius: BorderRadius.circular(40),
           ),
           child: Icon(item.icon, size: 92, color: emerald),
@@ -160,9 +162,10 @@ class _OnboardingPanel extends StatelessWidget {
         Text(
           item.subtitle,
           textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(color: mutedText, height: 1.65),
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            height: 1.65,
+          ),
         ),
       ],
     );

@@ -522,6 +522,7 @@ class _RideProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const labels = ['تأكيد', 'في الطريق', 'الوصول', 'بدء الرحلة'];
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -539,14 +540,18 @@ class _RideProgress extends StatelessWidget {
                     index <= _currentStep
                         ? Icons.check_circle_rounded
                         : Icons.radio_button_unchecked_rounded,
-                    color: index <= _currentStep ? _emerald : _muted,
+                    color: index <= _currentStep
+                        ? scheme.primary
+                        : scheme.onSurfaceVariant,
                   ),
                   const SizedBox(height: 6),
                   Text(
                     labels[index],
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: index <= _currentStep ? _dark : _muted,
+                      color: index <= _currentStep
+                          ? scheme.onSurface
+                          : scheme.onSurfaceVariant,
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
                     ),
@@ -558,7 +563,9 @@ class _RideProgress extends StatelessWidget {
               Container(
                 width: 18,
                 height: 2,
-                color: index < _currentStep ? _emerald : _line,
+                color: index < _currentStep
+                    ? scheme.primary
+                    : scheme.outlineVariant,
               ),
           ],
         ],

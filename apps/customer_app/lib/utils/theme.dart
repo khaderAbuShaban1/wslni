@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'constants.dart';
 
@@ -123,7 +124,16 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
       backgroundColor: Colors.transparent,
       foregroundColor: scheme.onSurface,
       surfaceTintColor: Colors.transparent,
-      titleTextStyle: textTheme.titleLarge,
+      systemOverlayStyle: SystemUiOverlayStyle(
+        statusBarColor: scheme.surface,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        systemNavigationBarColor: scheme.surface,
+        systemNavigationBarIconBrightness: isDark
+            ? Brightness.light
+            : Brightness.dark,
+      ),
+      titleTextStyle: textTheme.titleLarge?.copyWith(color: scheme.onSurface),
       iconTheme: IconThemeData(color: scheme.onSurface),
     ),
     cardTheme: CardThemeData(

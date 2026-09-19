@@ -347,6 +347,9 @@ class _StatusHero extends StatelessWidget {
         warningColor.withValues(alpha: .16),
       ),
     };
+    final iconColor = color == scheme.primary || color == warningColor
+        ? scheme.onPrimary
+        : Colors.white;
 
     return Container(
       width: double.infinity,
@@ -361,7 +364,7 @@ class _StatusHero extends StatelessWidget {
             width: 54,
             height: 54,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: Icon(icon, color: Colors.white, size: 29),
+            child: Icon(icon, color: iconColor, size: 29),
           ),
           const SizedBox(width: 14),
           Expanded(

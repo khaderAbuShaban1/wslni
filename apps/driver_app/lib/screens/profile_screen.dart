@@ -983,54 +983,62 @@ class _RatingOverview extends StatelessWidget {
   const _RatingOverview({required this.summary});
   final _RatingSummary summary;
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: const Color(0xFFFFF8E6),
-      borderRadius: BorderRadius.circular(23),
-      border: Border.all(color: const Color(0xFFF1D486)),
-    ),
-    child: Column(
-      children: [
-        Row(
-          children: [
-            Text(
-              summary.displayAverage,
-              style: const TextStyle(
-                fontSize: 34,
-                fontWeight: FontWeight.w900,
-                color: _dark,
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: isDark ? scheme.surfaceContainerHigh : const Color(0xFFFFF8E6),
+        borderRadius: BorderRadius.circular(23),
+        border: Border.all(
+          color: isDark ? scheme.outlineVariant : const Color(0xFFF1D486),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Text(
+                summary.displayAverage,
+                style: TextStyle(
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  color: scheme.onSurface,
+                ),
               ),
+              const SizedBox(width: 8),
+              Text('/ 5', style: TextStyle(color: scheme.onSurfaceVariant)),
+              const Spacer(),
+              _StarRow(value: summary.average.round()),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: summary.count == 0
+                  ? 0
+                  : summary.fiveStarCount / summary.count,
+              minHeight: 8,
+              color: scheme.primary,
+              backgroundColor: isDark
+                  ? scheme.surfaceContainerHighest
+                  : const Color(0xFFF4DF9B),
             ),
-            const SizedBox(width: 8),
-            const Text('/ 5', style: TextStyle(color: _muted)),
-            const Spacer(),
-            _StarRow(value: summary.average.round()),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: LinearProgressIndicator(
-            value: summary.count == 0
-                ? 0
-                : summary.fiveStarCount / summary.count,
-            minHeight: 8,
-            color: const Color(0xFFF0B72E),
-            backgroundColor: const Color(0xFFF4DF9B),
           ),
-        ),
-        const SizedBox(height: 8),
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: Text(
-            '${summary.fiveStarCount} تقييم بخمس نجوم من أصل ${summary.count}',
-            style: const TextStyle(color: _muted, fontSize: 12),
+          const SizedBox(height: 8),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              '${summary.fiveStarCount} تقييم بخمس نجوم من أصل ${summary.count}',
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _CustomerRatingCard extends StatelessWidget {

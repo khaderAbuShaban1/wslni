@@ -28,7 +28,7 @@ class CustomerRideApp extends StatelessWidget {
           final isDark = Theme.of(context).brightness == Brightness.dark;
           return AnnotatedRegion<SystemUiOverlayStyle>(
             value: SystemUiOverlayStyle(
-              statusBarColor: Colors.transparent,
+              statusBarColor: Theme.of(context).colorScheme.surface,
               statusBarIconBrightness: isDark
                   ? Brightness.light
                   : Brightness.dark,
