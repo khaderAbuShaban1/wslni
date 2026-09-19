@@ -36,6 +36,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
   late Stream<List<RideDraft>> _realtimeRides;
   List<RideDraft> _apiRides = const [];
   bool _loadingApi = true;
+  bool _apiLoaded = false;
 
   @override
   void initState() {
@@ -59,7 +60,12 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
     try {
       final rides = await widget.rideService.listCustomerRides(widget.user.id);
       rides.sort((a, b) => b.id.compareTo(a.id));
-      if (mounted) setState(() => _apiRides = rides);
+      if (mounted) {
+        setState(() {
+          _apiRides = rides;
+          _apiLoaded = true;
+        });
+      }
     } catch (_) {
       // Firebase remains the live fallback.
     } finally {
@@ -68,9 +74,13 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
   }
 
   List<RideDraft> _merge(List<RideDraft> realtimeRides) {
+    // Once the API answered, it decides which rides exist; Firebase only
+    // refreshes their live state. A ride Firebase has but the API doesn't
+    // is stale and would otherwise push real rides down the list.
+    if (!_apiLoaded) return realtimeRides;
     final byId = {for (final ride in _apiRides) ride.id: ride};
     for (final ride in realtimeRides) {
-      byId[ride.id] = ride;
+      if (byId.containsKey(ride.id)) byId[ride.id] = ride;
     }
     final merged = byId.values.toList()..sort((a, b) => b.id.compareTo(a.id));
     return merged;
