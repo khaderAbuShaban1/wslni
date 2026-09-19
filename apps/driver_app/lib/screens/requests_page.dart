@@ -208,11 +208,12 @@ class _RequestsPageState extends State<RequestsPage> {
             message: 'تحقق من اتصال Firebase ثم أعد فتح التطبيق.',
           );
         }
-        final rides = (snapshot.hasData
-                ? _mergeRealtimeRides(snapshot.data!)
-                : _initialRides)
-            .where((ride) => !ride.hasExpired)
-            .toList();
+        final rides =
+            (snapshot.hasData
+                    ? _mergeRealtimeRides(snapshot.data!)
+                    : _initialRides)
+                .where((ride) => !ride.hasExpired)
+                .toList();
         return _RequestsList(
           rides: rides,
           onOffer: _openOfferSheet,

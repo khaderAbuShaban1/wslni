@@ -624,7 +624,8 @@ class _CountdownBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final minutes = remaining.inMinutes;
     final seconds = remaining.inSeconds % 60;
-    final label = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    final label =
+        '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
     final isUrgent = remaining.inMinutes < 3;
     final color = isUrgent ? errorColor : warningColor;
     final bg = color.withValues(alpha: .12);

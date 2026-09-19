@@ -35,9 +35,7 @@ class RideRequestItem {
       status == RideStatuses.driverSelected;
 
   bool get hasExpired =>
-      isExpirable &&
-      expiresAt != null &&
-      !expiresAt!.isAfter(DateTime.now());
+      isExpirable && expiresAt != null && !expiresAt!.isAfter(DateTime.now());
 
   // API rows send ISO strings, Firebase sends epoch milliseconds.
   static DateTime? parseTime(Object? value) {
