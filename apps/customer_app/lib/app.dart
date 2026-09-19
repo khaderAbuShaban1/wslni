@@ -16,7 +16,7 @@ class CustomerRideApp extends StatelessWidget {
       valueListenable: appThemeMode,
       builder: (context, themeMode, _) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'وصلني',
+        title: 'Wslni',
         locale: const Locale('ar'),
         supportedLocales: const [Locale('ar')],
         localizationsDelegates: const [

@@ -172,7 +172,11 @@ class _AuthPageState extends State<AuthPage> {
           padding: const EdgeInsets.all(20),
           children: [
             const SizedBox(height: 20),
-            const Icon(Icons.local_taxi, size: 56),
+            Image.asset(
+              'assets/branding/wslni_driver_logo.png',
+              height: 150,
+              fit: BoxFit.contain,
+            ),
             const SizedBox(height: 12),
             Text(
               _otpMode

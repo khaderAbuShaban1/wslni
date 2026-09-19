@@ -1,6 +1,6 @@
 {
-    "name": "driver_app",
-    "short_name": "driver_app",
+    "name": "Wslni Driver",
+    "short_name": "Wslni Driver",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -7,7 +7,7 @@ class DriverRideApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'وصلني للسائق',
+      title: 'Wslni Driver',
       locale: const Locale('ar'),
       supportedLocales: const [Locale('ar')],
       localizationsDelegates: const [

@@ -1,6 +1,6 @@
 {
-    "name": "customer_app",
-    "short_name": "customer_app",
+    "name": "Wslni",
+    "short_name": "Wslni",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

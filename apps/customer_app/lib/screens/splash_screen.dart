@@ -42,14 +42,7 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const AppLogo(size: 86),
-            const SizedBox(height: 20),
-            Text(
-              'وصلني',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900),
-            ),
+            const AppLogo(size: 260),
             const SizedBox(height: 8),
             const Text(
               'رحلات فاخرة بدون خرائط معقدة',
