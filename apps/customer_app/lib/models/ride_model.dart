@@ -16,6 +16,7 @@ class RideDraft {
     this.driverCar = '',
     this.driverPlate = '',
     this.expiresAt,
+    this.driverAvatar,
   });
 
   final int id;
@@ -32,6 +33,7 @@ class RideDraft {
   final String driverCar;
   final String driverPlate;
   final DateTime? expiresAt;
+  final String? driverAvatar;
 
   factory RideDraft.fromJson(Map<String, dynamic> json) {
     final driver = json['driver'];
@@ -55,6 +57,7 @@ class RideDraft {
       driverCar: profileMap['vehicle_type']?.toString() ?? '',
       driverPlate: profileMap['vehicle_plate']?.toString() ?? '',
       expiresAt: _parseDateTime(json['expires_at']),
+      driverAvatar: nonEmpty(driverMap['avatar_path']),
     );
   }
 
@@ -78,6 +81,11 @@ class RideDraft {
     if (value is Map) return value.length;
     if (value is List) return value.length;
     return 0;
+  }
+
+  static String? nonEmpty(Object? value) {
+    final text = value?.toString();
+    return text == null || text.isEmpty ? null : text;
   }
 
   static DateTime? _parseDateTime(Object? value) {

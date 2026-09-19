@@ -152,6 +152,7 @@ class RealtimeDriverService {
       platformFee: raw['platform_fee']?.toString() ?? '',
       offers: DriverRideOffer.listFrom(raw['offers']),
       expiresAt: RideRequestItem.parseTime(raw['expires_at']),
+      customerAvatar: _nonEmpty(raw['customer_avatar']),
     );
   }
 

@@ -47,7 +47,7 @@ class WalletsController extends Controller
             });
 
         $deposits = (clone $depositsQuery)
-            ->with('user:id,name,email,phone')
+            ->with('user:id,name,email,phone,avatar_path')
             ->latest()
             ->limit(20)
             ->get();
@@ -69,7 +69,7 @@ class WalletsController extends Controller
         $search = trim($request->string('search')->toString());
 
         $deposits = WalletDeposit::query()
-            ->with(['user:id,name,email,phone,wallet_balance', 'paymentAccount', 'reviewer:id,name'])
+            ->with(['user:id,name,email,phone,wallet_balance,avatar_path', 'paymentAccount', 'reviewer:id,name'])
             ->when($status && $status !== 'all', fn ($query) => $query->where('status', $status))
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($nested) use ($search) {
@@ -91,7 +91,7 @@ class WalletsController extends Controller
             ->get();
 
         $pendingDeposits = WalletDeposit::query()
-            ->with(['user:id,name,email,phone,wallet_balance', 'paymentAccount'])
+            ->with(['user:id,name,email,phone,wallet_balance,avatar_path', 'paymentAccount'])
             ->where('status', 'pending')
             ->oldest()
             ->get();
@@ -117,7 +117,7 @@ class WalletsController extends Controller
         $search = trim($request->string('search')->toString());
 
         $withdrawals = DriverWithdrawal::query()
-            ->with('driver:id,name,phone,wallet_balance')
+            ->with('driver:id,name,phone,wallet_balance,avatar_path')
             ->when($status && $status !== 'all', fn ($query) => $query->where('status', $status))
             ->when($search !== '', fn ($query) => $query->whereHas(
                 'driver',
@@ -130,7 +130,7 @@ class WalletsController extends Controller
             ->get();
 
         $customerWithdrawals = CustomerWithdrawal::query()
-            ->with('customer:id,name,phone,wallet_balance')
+            ->with('customer:id,name,phone,wallet_balance,avatar_path')
             ->when($status && $status !== 'all', fn ($query) => $query->where('status', $status))
             ->when($search !== '', fn ($query) => $query->whereHas(
                 'customer',
@@ -172,7 +172,7 @@ class WalletsController extends Controller
             ))
             ->orderByDesc('wallet_balance')
             ->limit(200)
-            ->get(['id', 'name', 'email', 'phone', 'role', 'wallet_balance']);
+            ->get(['id', 'name', 'email', 'phone', 'avatar_path', 'role', 'wallet_balance']);
 
         return view('admin.wallet-balances', [
             'users' => $users,

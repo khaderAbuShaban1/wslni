@@ -270,15 +270,30 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
               _ActiveRideSection(
                 title: 'معلومات الزبون',
                 icon: Icons.person_outline_rounded,
-                child: Column(
+                child: Row(
                   children: [
-                    _ActiveInfoRow(label: 'الاسم', value: _ride.customerName),
-                    const Divider(height: 20),
-                    _ActiveInfoRow(
-                      label: 'رقم الهاتف',
-                      value: _ride.customerPhone.isEmpty
-                          ? 'غير متوفر'
-                          : _ride.customerPhone,
+                    _UserAvatar(
+                      name: _ride.customerName,
+                      path: _ride.customerAvatar,
+                      radius: 30,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _ActiveInfoRow(
+                            label: 'الاسم',
+                            value: _ride.customerName,
+                          ),
+                          const Divider(height: 20),
+                          _ActiveInfoRow(
+                            label: 'رقم الهاتف',
+                            value: _ride.customerPhone.isEmpty
+                                ? 'غير متوفر'
+                                : _ride.customerPhone,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),

@@ -13,6 +13,7 @@ class RideRequestItem {
     this.platformFee = '',
     this.offers = const [],
     this.expiresAt,
+    this.customerAvatar,
   });
 
   final int id;
@@ -26,6 +27,7 @@ class RideRequestItem {
   final String platformFee;
   final List<DriverRideOffer> offers;
   final DateTime? expiresAt;
+  final String? customerAvatar;
 
   bool get isActive => RideStatuses.activeForDriver.contains(status);
 
@@ -90,6 +92,7 @@ class RideRequestItem {
       platformFee: json['platform_fee']?.toString() ?? '',
       offers: DriverRideOffer.listFrom(json['offers']),
       expiresAt: parseTime(json['expires_at']),
+      customerAvatar: _nonEmpty(customerMap['avatar_path']),
     );
   }
 }
@@ -100,12 +103,14 @@ class DriverRideOffer {
     required this.driverName,
     required this.price,
     required this.vehicle,
+    this.avatarPath,
   });
 
   final int driverId;
   final String driverName;
   final String price;
   final String vehicle;
+  final String? avatarPath;
 
   factory DriverRideOffer.fromMap(Map map) {
     final driver = map['driver'];
@@ -127,6 +132,9 @@ class DriverRideOffer {
           : profileVehicle.isNotEmpty
           ? profileVehicle
           : 'سيارة',
+      avatarPath:
+          _nonEmpty(map['driver_avatar']) ??
+          _nonEmpty(driverMap['avatar_path']),
     );
   }
 

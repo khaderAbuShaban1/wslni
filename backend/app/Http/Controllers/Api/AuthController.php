@@ -274,6 +274,7 @@ class AuthController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
+            'avatar_path' => $user->avatar_path,
             'role' => $user->role,
             'wallet_balance' => (float) $user->wallet_balance,
             'email_verified_at' => $user->email_verified_at,

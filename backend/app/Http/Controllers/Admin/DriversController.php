@@ -16,7 +16,7 @@ class DriversController extends Controller
         $status = $request->string('status')->toString();
 
         $drivers = DriverProfile::query()
-            ->with(['user:id,name,email,phone,account_status'])
+            ->with(['user:id,name,email,phone,account_status,avatar_path'])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($nested) use ($search) {
                     $nested->whereHas('user', fn ($userQuery) => $userQuery->where('name', 'like', "%{$search}%"))

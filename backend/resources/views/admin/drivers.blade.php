@@ -50,8 +50,13 @@
                     @foreach ($drivers as $driver)
                         <tr>
                             <td>
-                                <strong>{{ $driver->user?->name }}</strong>
-                                <div class="muted">{{ $driver->user?->email }} · {{ $driver->user?->phone ?? 'لا يوجد رقم' }}</div>
+                                <div class="person">
+                                    @include('admin.partials.avatar', ['user' => $driver->user, 'size' => 42])
+                                    <div>
+                                        <strong>{{ $driver->user?->name }}</strong>
+                                        <div class="muted">{{ $driver->user?->email }} · {{ $driver->user?->phone ?? 'لا يوجد رقم' }}</div>
+                                    </div>
+                                </div>
                             </td>
                             <td>
                                 <strong>{{ $driver->vehicle_type ?? 'مركبة غير معروفة' }}</strong>

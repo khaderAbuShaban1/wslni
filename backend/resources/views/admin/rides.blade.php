@@ -52,8 +52,16 @@
                     @foreach ($rides as $ride)
                         <tr>
                             <td>
-                                <strong>{{ $ride->customer?->name ?? 'غير معروف' }}</strong>
-                                <div class="muted">{{ $ride->driver?->name ?? 'غير مسندة' }}</div>
+                                <div class="person">
+                                    @include('admin.partials.avatar', ['user' => $ride->customer, 'size' => 36])
+                                    <strong>{{ $ride->customer?->name ?? 'غير معروف' }}</strong>
+                                </div>
+                                <div class="person muted" style="margin-top: 6px;">
+                                    @if ($ride->driver)
+                                        @include('admin.partials.avatar', ['user' => $ride->driver, 'size' => 26])
+                                    @endif
+                                    <span>{{ $ride->driver?->name ?? 'غير مسندة' }}</span>
+                                </div>
                             </td>
                             <td>
                                 <strong>{{ $ride->pickup_address }}</strong>

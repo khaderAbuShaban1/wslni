@@ -75,6 +75,7 @@
                 <div class="list">
                     @foreach ($complaints as $complaint)
                         <div class="list-item">
+                            @include('admin.partials.avatar', ['user' => $complaint->user, 'size' => 40])
                             <div style="flex: 1;">
                                 <strong>{{ $complaint->category }} · {{ $complaint->user?->name }}</strong>
                                 <small>{{ $complaint->message }}</small>

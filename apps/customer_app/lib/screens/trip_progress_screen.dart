@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/ride_model.dart';
 import '../services/api_client.dart';
@@ -9,6 +10,7 @@ import '../services/ride_service.dart';
 import '../utils/constants.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/premium_card.dart';
+import '../widgets/user_avatar.dart';
 import 'trip_completed_screen.dart';
 import 'driver_offers_screen.dart';
 
@@ -202,27 +204,8 @@ class _TripProgressScreenState extends State<TripProgressScreen> {
                       icon: Icons.person_outline_rounded,
                       label: 'بيانات السائق',
                     ),
-                    const SizedBox(height: 12),
-                    _InfoTile(
-                      icon: Icons.person_outline_rounded,
-                      label: 'السائق',
-                      value: ride.driverName,
-                    ),
-                    _InfoTile(
-                      icon: Icons.phone_outlined,
-                      label: 'الهاتف',
-                      value: ride.driverPhone.isEmpty
-                          ? 'غير متوفر'
-                          : ride.driverPhone,
-                    ),
-                    _InfoTile(
-                      icon: Icons.directions_car_outlined,
-                      label: 'السيارة',
-                      value: [
-                        ride.driverCar,
-                        ride.driverPlate,
-                      ].where((value) => value.isNotEmpty).join(' - '),
-                    ),
+                    const SizedBox(height: 14),
+                    _DriverProfileCard(ride: ride),
                   ],
                   const Divider(height: 34),
                   _SectionLabel(
@@ -506,56 +489,164 @@ class _SectionLabel extends StatelessWidget {
   );
 }
 
-class _InfoTile extends StatelessWidget {
-  const _InfoTile({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-  final IconData icon;
-  final String label;
-  final String value;
+class _DriverProfileCard extends StatelessWidget {
+  const _DriverProfileCard({required this.ride});
+
+  final RideDraft ride;
+
+  Future<void> _call(BuildContext context) async {
+    final opened = await launchUrl(Uri(scheme: 'tel', path: ride.driverPhone));
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تعذر فتح تطبيق الاتصال.')));
+    }
+  }
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Row(
-      children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            icon,
-            size: 20,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final hasPhone = ride.driverPhone.isNotEmpty;
+    final hasCar = ride.driverCar.isNotEmpty || ride.driverPlate.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: emerald.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: emerald.withValues(alpha: .22)),
+      ),
+      child: Column(
+        children: [
+          Row(
             children: [
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: emerald, width: 2.5),
+                ),
+                child: UserAvatar(
+                  name: ride.driverName,
+                  path: ride.driverAvatar,
+                  radius: 32,
                 ),
               ),
-              Text(
-                value.isEmpty ? 'غير متوفر' : value,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w800),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'سائقك',
+                      style: text.labelMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      ride.driverName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: text.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    if (hasPhone) ...[
+                      const SizedBox(height: 3),
+                      Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: Text(
+                          ride.driverPhone,
+                          style: text.bodyMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: .5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
+              if (hasPhone)
+                IconButton.filled(
+                  tooltip: 'اتصال بالسائق',
+                  style: IconButton.styleFrom(
+                    backgroundColor: emerald,
+                    foregroundColor: Colors.white,
+                    fixedSize: const Size(50, 50),
+                  ),
+                  onPressed: () => _call(context),
+                  icon: const Icon(Icons.call_rounded),
+                ),
             ],
           ),
+          if (hasCar) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.directions_car_filled_rounded,
+                    color: emerald,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      ride.driverCar.isEmpty ? 'السيارة' : ride.driverCar,
+                      style: text.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  if (ride.driverPlate.isNotEmpty)
+                    _PlateBadge(ride.driverPlate),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PlateBadge extends StatelessWidget {
+  const _PlateBadge(this.plate);
+
+  final String plate;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: scheme.onSurface, width: 1.4),
+      ),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Text(
+          plate,
+          style: const TextStyle(
+            color: Color(0xFF111214),
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+            fontFeatures: [FontFeature.tabularFigures()],
+          ),
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class _RouteStop extends StatelessWidget {

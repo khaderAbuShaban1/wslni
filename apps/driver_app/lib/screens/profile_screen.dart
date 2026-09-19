@@ -16,10 +16,11 @@ class _DriverProfilePage extends StatefulWidget {
 
 class _DriverProfilePageState extends State<_DriverProfilePage> {
   final _api = ApiClient();
+  final _avatars = _AvatarService();
   final _picker = ImagePicker();
   bool _loading = true;
+  bool _photoBusy = false;
   String? _error;
-  String? _photoPath;
   _RatingSummary _summary = const _RatingSummary();
   List<_CustomerRating> _ratings = const [];
 
@@ -27,27 +28,78 @@ class _DriverProfilePageState extends State<_DriverProfilePage> {
   void initState() {
     super.initState();
     _loadRatings();
-    _loadPhoto();
   }
 
-  String _prefKey(String key) => 'driver_${widget.user.id}_$key';
+  Future<void> _onPhotoTap() async {
+    if (_photoBusy) return;
+    if (widget.user.avatarPath == null) return _uploadPhoto();
 
-  Future<void> _loadPhoto() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() => _photoPath = prefs.getString(_prefKey('photo')));
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('تغيير الصورة'),
+              onTap: () => Navigator.pop(context, 'change'),
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.delete_outline_rounded,
+                color: Colors.red.shade700,
+              ),
+              title: Text(
+                'حذف الصورة',
+                style: TextStyle(color: Colors.red.shade700),
+              ),
+              onTap: () => Navigator.pop(context, 'remove'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == 'change') await _uploadPhoto();
+    if (action == 'remove') await _removePhoto();
   }
 
-  Future<void> _pickPhoto() async {
+  Future<void> _uploadPhoto() async {
+    // Downscaled on the phone: every customer who sees this photo downloads it.
     final image = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 82,
+      maxWidth: 720,
+      maxHeight: 720,
+      imageQuality: 85,
     );
-    if (image == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefKey('photo'), image.path);
-    if (!mounted) return;
-    setState(() => _photoPath = image.path);
+    if (image == null || !mounted) return;
+
+    setState(() => _photoBusy = true);
+    try {
+      final path = await _avatars.upload(File(image.path));
+      widget.onUserChanged(widget.user.copyWith(avatarPath: path));
+      _message('تم تحديث الصورة الشخصية');
+    } on ApiException catch (error) {
+      _message(error.message);
+    } catch (_) {
+      _message('تعذر رفع الصورة. تحقق من الاتصال وحاول مجددًا.');
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
+  }
+
+  Future<void> _removePhoto() async {
+    setState(() => _photoBusy = true);
+    try {
+      await _avatars.remove();
+      widget.onUserChanged(widget.user.copyWith(clearAvatar: true));
+      _message('تم حذف الصورة الشخصية');
+    } catch (_) {
+      _message('تعذر حذف الصورة. حاول مجددًا.');
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
   }
 
   Future<void> _loadRatings() async {
@@ -117,8 +169,8 @@ class _DriverProfilePageState extends State<_DriverProfilePage> {
           _IdentityCard(
             user: widget.user,
             summary: _summary,
-            photoPath: _photoPath,
-            onPickPhoto: _pickPhoto,
+            photoBusy: _photoBusy,
+            onPickPhoto: _onPhotoTap,
           ),
           const SizedBox(height: 14),
 
@@ -245,20 +297,16 @@ class _IdentityCard extends StatelessWidget {
   const _IdentityCard({
     required this.user,
     required this.summary,
-    required this.photoPath,
+    required this.photoBusy,
     required this.onPickPhoto,
   });
   final DriverUser user;
   final _RatingSummary summary;
-  final String? photoPath;
+  final bool photoBusy;
   final VoidCallback onPickPhoto;
 
   @override
   Widget build(BuildContext context) {
-    final initial = user.name.trim().isEmpty ? 'س' : user.name.trim()[0];
-    final file = photoPath == null ? null : File(photoPath!);
-    final hasPhoto = file != null && file.existsSync();
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -284,21 +332,29 @@ class _IdentityCard extends StatelessWidget {
                 onTap: onPickPhoto,
                 child: Stack(
                   children: [
-                    CircleAvatar(
+                    _UserAvatar(
+                      name: user.name,
+                      path: user.avatarPath,
                       radius: 33,
-                      backgroundColor: const Color(0xFFF3C455),
-                      backgroundImage: hasPhoto ? FileImage(file) : null,
-                      child: hasPhoto
-                          ? null
-                          : Text(
-                              initial,
-                              style: const TextStyle(
-                                color: _dark,
-                                fontSize: 27,
-                                fontWeight: FontWeight.w900,
+                      fallbackColor: const Color(0xFFF3C455),
+                    ),
+                    if (photoBusy)
+                      const Positioned.fill(
+                        child: ClipOval(
+                          child: ColoredBox(
+                            color: Color(0x66000000),
+                            child: Center(
+                              child: SizedBox.square(
+                                dimension: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
-                    ),
+                          ),
+                        ),
+                      ),
                     Positioned(
                       bottom: 0,
                       left: 0,
@@ -983,7 +1039,6 @@ class _CustomerRatingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final initial = rating.customerName.isEmpty ? 'ز' : rating.customerName[0];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
       decoration: BoxDecoration(
@@ -994,13 +1049,10 @@ class _CustomerRatingCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
+          _UserAvatar(
+            name: rating.customerName,
+            path: rating.customerAvatar,
             radius: 22,
-            backgroundColor: _emerald.withValues(alpha: .16),
-            child: Text(
-              initial,
-              style: const TextStyle(color: _dark, fontWeight: FontWeight.w900),
-            ),
           ),
           const SizedBox(width: 11),
           Expanded(
@@ -1135,9 +1187,11 @@ class _CustomerRating {
     required this.comment,
     required this.pickup,
     required this.dropoff,
+    this.customerAvatar,
   });
   final int rideId;
   final String customerName;
+  final String? customerAvatar;
   final int value;
   final String comment;
   final String pickup;
@@ -1149,5 +1203,6 @@ class _CustomerRating {
     comment: map['comment']?.toString() ?? '',
     pickup: map['pickup_address']?.toString() ?? '',
     dropoff: map['dropoff_address']?.toString() ?? '',
+    customerAvatar: _nonEmpty(map['customer_avatar']),
   );
 }

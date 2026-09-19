@@ -16,10 +16,10 @@ class SyncFirebaseRides extends Command
     {
         $rides = RideRequest::query()
             ->with([
-                'customer:id,name,phone',
-                'driver:id,name,phone',
+                'customer:id,name,phone,avatar_path',
+                'driver:id,name,phone,avatar_path',
                 'driver.driverProfile',
-                'offers.driver:id,name,phone',
+                'offers.driver:id,name,phone,avatar_path',
                 'offers.driver.driverProfile',
             ])
             ->orderBy('id')

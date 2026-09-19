@@ -493,6 +493,27 @@
         .form-row { display: grid; gap: 8px; }
         .form-row label { font-size: 13px; color: var(--muted); }
         .muted { color: var(--muted); line-height: 1.6; }
+        .avatar {
+            flex: none;
+            display: inline-grid;
+            place-items: center;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--line);
+            background: var(--panel-soft);
+        }
+        .avatar-fallback {
+            background: var(--primary-soft);
+            color: var(--text);
+            font-weight: 800;
+        }
+        .person {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        .person > div { min-width: 0; }
         .table-actions {
             display: flex;
             gap: 8px;

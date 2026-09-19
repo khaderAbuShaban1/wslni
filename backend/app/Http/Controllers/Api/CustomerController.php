@@ -51,6 +51,7 @@ class CustomerController extends Controller
             'name' => $customer->name,
             'email' => $customer->email,
             'phone' => $customer->phone,
+            'avatar_path' => $customer->avatar_path,
             'role' => $customer->role,
             'wallet_balance' => (float) $customer->wallet_balance,
         ];

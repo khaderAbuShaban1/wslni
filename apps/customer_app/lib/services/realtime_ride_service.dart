@@ -54,6 +54,7 @@ class RealtimeRideService {
             driverCar: raw['vehicle']?.toString() ?? '',
             driverPlate: raw['vehicle_plate']?.toString() ?? '',
             expiresAt: _parseTimestamp(raw['expires_at']),
+            driverAvatar: RideDraft.nonEmpty(raw['driver_avatar']),
           ),
         );
       }
@@ -95,6 +96,7 @@ class RealtimeRideService {
       driverCar: raw['vehicle']?.toString() ?? '',
       driverPlate: raw['vehicle_plate']?.toString() ?? '',
       expiresAt: _parseTimestamp(raw['expires_at']),
+      driverAvatar: RideDraft.nonEmpty(raw['driver_avatar']),
     );
   }
 
@@ -127,6 +129,7 @@ class RealtimeRideService {
             eta: raw['eta']?.toString() ?? 'قريبًا',
             phone: raw['driver_phone']?.toString() ?? '',
             vehiclePlate: raw['vehicle_plate']?.toString() ?? '',
+            avatarPath: RideDraft.nonEmpty(raw['driver_avatar']),
           ),
         );
       }

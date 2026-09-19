@@ -9,6 +9,7 @@ class DriverOffer {
     required this.eta,
     this.phone = '',
     this.vehiclePlate = '',
+    this.avatarPath,
   });
 
   final int id;
@@ -20,4 +21,5 @@ class DriverOffer {
   final String eta;
   final String phone;
   final String vehiclePlate;
+  final String? avatarPath;
 }

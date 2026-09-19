@@ -1,4 +1,4 @@
-﻿part of '../main.dart';
+part of '../main.dart';
 
 class DriverUser {
   const DriverUser({
@@ -8,6 +8,7 @@ class DriverUser {
     required this.phone,
     required this.vehicleType,
     required this.vehiclePlate,
+    this.avatarPath,
   });
 
   final int id;
@@ -16,6 +17,7 @@ class DriverUser {
   final String phone;
   final String vehicleType;
   final String vehiclePlate;
+  final String? avatarPath;
 
   factory DriverUser.fromJson(Map<String, dynamic> json) {
     final profile = json['driver_profile'];
@@ -27,6 +29,7 @@ class DriverUser {
       phone: json['phone']?.toString() ?? '',
       vehicleType: profileMap['vehicle_type']?.toString() ?? '',
       vehiclePlate: profileMap['vehicle_plate']?.toString() ?? '',
+      avatarPath: _nonEmpty(json['avatar_path']),
     );
   }
 
@@ -35,6 +38,8 @@ class DriverUser {
     String? phone,
     String? vehicleType,
     String? vehiclePlate,
+    String? avatarPath,
+    bool clearAvatar = false,
   }) {
     return DriverUser(
       id: id,
@@ -43,6 +48,7 @@ class DriverUser {
       phone: phone ?? this.phone,
       vehicleType: vehicleType ?? this.vehicleType,
       vehiclePlate: vehiclePlate ?? this.vehiclePlate,
+      avatarPath: clearAvatar ? null : avatarPath ?? this.avatarPath,
     );
   }
 }

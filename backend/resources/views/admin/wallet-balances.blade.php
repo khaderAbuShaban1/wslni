@@ -51,7 +51,12 @@
                     <tbody>
                         @foreach ($users as $user)
                             <tr>
-                                <td><strong>{{ $user->name }}</strong></td>
+                                <td>
+                                    <div class="person">
+                                        @include('admin.partials.avatar', ['user' => $user, 'size' => 34])
+                                        <strong>{{ $user->name }}</strong>
+                                    </div>
+                                </td>
                                 <td>
                                     <div class="muted">{{ $user->email }}</div>
                                     <div class="muted">{{ $user->phone }}</div>

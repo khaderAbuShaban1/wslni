@@ -24,7 +24,7 @@ class RidesController extends Controller
         $status = $request->string('status')->toString();
 
         $rides = RideRequest::query()
-            ->with(['customer:id,name,phone', 'driver:id,name,phone'])
+            ->with(['customer:id,name,phone,avatar_path', 'driver:id,name,phone,avatar_path'])
             ->when($status && $status !== 'all', fn ($query) => $query->where('status', $status))
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($nested) use ($search) {

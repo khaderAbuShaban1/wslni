@@ -50,8 +50,13 @@
                     @foreach ($riders as $rider)
                         <tr>
                             <td>
-                                <strong>{{ $rider->name }}</strong>
-                                <div class="muted">سُجّل في {{ $rider->created_at->format('M d, Y') }}</div>
+                                <div class="person">
+                                    @include('admin.partials.avatar', ['user' => $rider, 'size' => 42])
+                                    <div>
+                                        <strong>{{ $rider->name }}</strong>
+                                        <div class="muted">سُجّل في {{ $rider->created_at->format('M d, Y') }}</div>
+                                    </div>
+                                </div>
                             </td>
                             <td>
                                 <div>{{ $rider->email }}</div>

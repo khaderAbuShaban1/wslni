@@ -53,7 +53,10 @@
                                     <span class="status pending" style="margin-top:8px;">بانتظار المراجعة</span>
                                 </td>
                                 <td>
-                                    <strong>{{ $deposit->user?->name }}</strong>
+                                    <div class="person">
+                                        @include('admin.partials.avatar', ['user' => $deposit->user, 'size' => 34])
+                                        <strong>{{ $deposit->user?->name }}</strong>
+                                    </div>
                                     <div class="muted">{{ $deposit->user?->phone }}</div>
                                     <div class="muted">{{ $deposit->user?->email }}</div>
                                     @if ($customerPendingCount > 1)
@@ -206,7 +209,10 @@
                                 <div class="muted">{{ optional($deposit->created_at)->format('Y-m-d H:i') }}</div>
                             </td>
                             <td>
-                                <strong>{{ $deposit->user?->name }}</strong>
+                                <div class="person">
+                                    @include('admin.partials.avatar', ['user' => $deposit->user, 'size' => 34])
+                                    <strong>{{ $deposit->user?->name }}</strong>
+                                </div>
                                 <div class="muted">{{ $deposit->user?->email }}</div>
                                 <div class="muted">الرصيد الحالي: {{ number_format((float) ($deposit->user?->wallet_balance ?? 0), 2) }} ₪</div>
                             </td>

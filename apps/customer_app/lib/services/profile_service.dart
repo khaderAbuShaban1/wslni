@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import '../models/user_model.dart';
 import 'api_client.dart';
 
@@ -16,4 +18,17 @@ class ProfileService {
     });
     return AppUser.fromJson(result['user'] as Map<String, dynamic>);
   }
+
+  /// Returns the stored path of the uploaded photo.
+  Future<String> uploadAvatar(File image) async {
+    final result = await _api.postMultipart(
+      'me/avatar',
+      fields: const {},
+      fileField: 'avatar',
+      file: image,
+    );
+    return result['avatar_path'].toString();
+  }
+
+  Future<void> removeAvatar() => _api.delete('me/avatar');
 }

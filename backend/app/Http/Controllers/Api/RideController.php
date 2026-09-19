@@ -33,10 +33,10 @@ class RideController extends Controller
         return response()->json(
             RideRequest::query()
                 ->with([
-                    'customer:id,name,phone',
-                    'driver:id,name,phone',
+                    'customer:id,name,phone,avatar_path',
+                    'driver:id,name,phone,avatar_path',
                     'driver.driverProfile',
-                    'offers.driver:id,name,phone',
+                    'offers.driver:id,name,phone,avatar_path',
                     'offers.driver.driverProfile',
                 ])
                 ->when($status === 'open', fn ($query) => $query->whereIn('status', [
@@ -122,10 +122,10 @@ class RideController extends Controller
 
         return response()->json(
             $ride->load([
-                'customer:id,name,phone',
+                'customer:id,name,phone,avatar_path',
                 'offers' => fn ($query) => $query
                     ->with([
-                        'driver:id,name,phone',
+                        'driver:id,name,phone,avatar_path',
                         'driver.driverProfile',
                     ])
                     ->latest(),
@@ -215,9 +215,9 @@ class RideController extends Controller
         return response()->json([
             'message' => 'تم تحديث حالة الرحلة بنجاح.',
             'ride' => $syncedRide->load([
-                'customer:id,name,phone',
-                'driver:id,name,phone',
-                'offers.driver:id,name,phone',
+                'customer:id,name,phone,avatar_path',
+                'driver:id,name,phone,avatar_path',
+                'offers.driver:id,name,phone,avatar_path',
                 'offers.driver.driverProfile',
             ]),
         ]);
@@ -299,7 +299,7 @@ class RideController extends Controller
 
         $syncedRide = $result['ride']->fresh();
 
-        return response()->json(['ride' => $syncedRide->load(['customer:id,name,phone', 'driver.driverProfile'])]);
+        return response()->json(['ride' => $syncedRide->load(['customer:id,name,phone,avatar_path', 'driver.driverProfile'])]);
     }
 
     public function rate(Request $request, RideRequest $ride): JsonResponse

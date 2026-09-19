@@ -15,7 +15,7 @@ class ComplaintsController extends Controller
     public function index(Request $request): View
     {
         return view('admin.complaints', [
-            'complaints' => Complaint::query()->with(['user:id,name,phone', 'rideRequest:id,pickup_address,dropoff_address,status'])->latest()->get(),
+            'complaints' => Complaint::query()->with(['user:id,name,phone,avatar_path', 'rideRequest:id,pickup_address,dropoff_address,status'])->latest()->get(),
             'openCount' => Complaint::query()->where('status', 'open')->count(),
             'resolvedCount' => Complaint::query()->where('status', 'resolved')->count(),
             'users' => User::query()->select('id', 'name')->orderBy('name')->get(),

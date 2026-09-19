@@ -113,10 +113,10 @@ class FirebaseRealtimeService
     private function ridePayload(RideRequest $ride): array
     {
         $ride->loadMissing([
-            'customer:id,name,phone',
-            'driver:id,name,phone',
+            'customer:id,name,phone,avatar_path',
+            'driver:id,name,phone,avatar_path',
             'driver.driverProfile',
-            'offers.driver:id,name',
+            'offers.driver:id,name,avatar_path',
             'offers.driver.driverProfile',
         ]);
 
@@ -129,6 +129,7 @@ class FirebaseRealtimeService
                 'offer_id' => $offer->id,
                 'driver_id' => $offer->driver_id,
                 'driver_name' => $driver?->name ?? 'سائق',
+                'driver_avatar' => $driver?->avatar_path,
                 'vehicle' => $profile?->vehicle_type ?? 'سيارة',
                 'vehicle_plate' => $profile?->vehicle_plate ?? '',
                 'rating' => (string) ($profile?->rating ?? '5.0'),
@@ -148,9 +149,11 @@ class FirebaseRealtimeService
             'customer_uid' => (string) $ride->customer_id,
             'customer_name' => $ride->customer?->name ?? 'زبون',
             'customer_phone' => $ride->customer?->phone ?? '',
+            'customer_avatar' => $ride->customer?->avatar_path,
             'driver_id' => $ride->driver_id,
             'driver_uid' => $ride->driver_id === null ? null : (string) $ride->driver_id,
             'driver_name' => $driver?->name ?? '',
+            'driver_avatar' => $driver?->avatar_path,
             'driver_phone' => $driver?->phone ?? '',
             'vehicle' => $profile?->vehicle_type ?? '',
             'vehicle_plate' => $profile?->vehicle_plate ?? '',

@@ -12,7 +12,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'firebase_options.dart';
@@ -29,6 +28,7 @@ part 'screens/requests_page.dart';
 part 'screens/support_page.dart';
 part 'screens/trips_page.dart';
 part 'services/api_client.dart';
+part 'services/avatar_service.dart';
 part 'services/notification_service.dart';
 part 'services/realtime_driver_service.dart';
 part 'utils/constants.dart';
@@ -37,6 +37,7 @@ part 'utils/theme.dart';
 part 'widgets/empty_state_card.dart';
 part 'widgets/ride_request_card.dart';
 part 'widgets/skeleton_loader.dart';
+part 'widgets/user_avatar.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

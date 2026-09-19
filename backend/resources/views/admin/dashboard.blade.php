@@ -73,8 +73,13 @@
                         @foreach ($recentRides as $ride)
                             <tr>
                                 <td>
-                                    <strong>{{ $ride->customer?->name ?? 'راكب غير معروف' }}</strong>
-                                    <div class="muted">{{ $ride->driver?->name ?? 'غير مسندة' }}</div>
+                                    <div class="person">
+                                        @include('admin.partials.avatar', ['user' => $ride->customer, 'size' => 36])
+                                        <div>
+                                            <strong>{{ $ride->customer?->name ?? 'راكب غير معروف' }}</strong>
+                                            <div class="muted">{{ $ride->driver?->name ?? 'غير مسندة' }}</div>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td>
                                     <strong>{{ $ride->pickup_address }}</strong>

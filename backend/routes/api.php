@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AvatarController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerWalletController;
 use App\Http\Controllers\Api\CustomerWithdrawalController;
@@ -32,6 +33,9 @@ Route::prefix('auth')->middleware('throttle:auth')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/change-password', [AuthController::class, 'changePassword'])
         ->middleware('throttle:6,1');
+
+    Route::post('me/avatar', [AvatarController::class, 'store'])->middleware('throttle:10,1');
+    Route::delete('me/avatar', [AvatarController::class, 'destroy'])->middleware('throttle:10,1');
 
     // Rides — scoped by the authenticated user's role.
     Route::apiResource('rides', RideController::class);

@@ -156,17 +156,17 @@ class RideOfferController extends Controller
         return response()->json([
             'message' => 'تم قبول عرض السائق بنجاح.',
             'ride' => $result['ride']->fresh([
-                'customer:id,name,phone',
-                'driver:id,name,phone',
+                'customer:id,name,phone,avatar_path',
+                'driver:id,name,phone,avatar_path',
                 // The customer's trip screen opens straight from this response
                 // and shows the car and plate; without the profile they read
                 // "غير متوفر" until the Firebase mirror catches up.
                 'driver.driverProfile',
-                'offers.driver:id,name,phone',
+                'offers.driver:id,name,phone,avatar_path',
                 'offers.driver.driverProfile',
             ]),
             'offer' => $result['offer']->fresh([
-                'driver:id,name,phone',
+                'driver:id,name,phone,avatar_path',
                 'driver.driverProfile',
             ]),
         ]);

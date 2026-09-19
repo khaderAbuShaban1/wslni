@@ -97,7 +97,7 @@ class DriverController extends Controller
         $ratings = RideRequest::query()
             ->where('driver_id', $driver->id)
             ->whereNotNull('rating')
-            ->with('customer:id,name')
+            ->with('customer:id,name,avatar_path')
             ->latest('completed_at')
             ->get();
 
@@ -112,6 +112,7 @@ class DriverController extends Controller
             'ratings' => $ratings->map(fn (RideRequest $ride) => [
                 'ride_id' => $ride->id,
                 'customer_name' => $ride->customer?->name ?? 'زبون',
+                'customer_avatar' => $ride->customer?->avatar_path,
                 'rating' => $ride->rating,
                 'comment' => $ride->rating_comment,
                 'pickup_address' => $ride->pickup_address,
@@ -138,6 +139,7 @@ class DriverController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
+            'avatar_path' => $user->avatar_path,
             'role' => $user->role,
             'wallet_balance' => (float) $user->wallet_balance,
             'driver_profile' => $user->driverProfile,

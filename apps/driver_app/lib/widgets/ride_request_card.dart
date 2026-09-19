@@ -33,15 +33,10 @@ class _RideRequestCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
+              _UserAvatar(
+                name: ride.customerName,
+                path: ride.customerAvatar,
                 radius: 26,
-                backgroundColor: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: .15),
-                child: Icon(
-                  Icons.person,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -312,17 +307,7 @@ class _CompetitorOfferRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        CircleAvatar(
-          radius: 15,
-          backgroundColor: Theme.of(
-            context,
-          ).colorScheme.primary.withValues(alpha: .15),
-          child: Icon(
-            Icons.person,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-            size: 16,
-          ),
-        ),
+        _UserAvatar(name: offer.driverName, path: offer.avatarPath, radius: 15),
         const SizedBox(width: 8),
         Expanded(
           child: Text(

@@ -59,7 +59,10 @@
                         @foreach ($withdrawals as $withdrawal)
                             <tr>
                                 <td>
-                                    <strong>{{ $withdrawal->driver?->name ?? 'سائق محذوف' }}</strong>
+                                    <div class="person">
+                                        @include('admin.partials.avatar', ['user' => $withdrawal->driver, 'size' => 34])
+                                        <strong>{{ $withdrawal->driver?->name ?? 'سائق محذوف' }}</strong>
+                                    </div>
                                     <div class="muted">{{ $withdrawal->driver?->phone }}</div>
                                     <div class="muted">{{ optional($withdrawal->created_at)->format('Y-m-d H:i') }}</div>
                                 </td>
@@ -119,7 +122,10 @@
                         @foreach ($customerWithdrawals as $withdrawal)
                             <tr>
                                 <td>
-                                    <strong>{{ $withdrawal->customer?->name ?? 'زبون محذوف' }}</strong>
+                                    <div class="person">
+                                        @include('admin.partials.avatar', ['user' => $withdrawal->customer, 'size' => 34])
+                                        <strong>{{ $withdrawal->customer?->name ?? 'زبون محذوف' }}</strong>
+                                    </div>
                                     <div class="muted">{{ $withdrawal->customer?->phone }}</div>
                                     <div class="muted">{{ optional($withdrawal->created_at)->format('Y-m-d H:i') }}</div>
                                 </td>

@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/user_model.dart';
+import '../services/api_client.dart';
 import '../services/profile_service.dart';
 import '../utils/constants.dart';
 import '../utils/theme_mode_controller.dart';
@@ -12,6 +13,7 @@ import '../widgets/app_scaffold.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_textfield.dart';
 import '../widgets/premium_card.dart';
+import '../widgets/user_avatar.dart';
 import 'support_screen.dart';
 import 'security_screen.dart';
 
@@ -39,8 +41,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _name = TextEditingController();
   final _phone = TextEditingController();
 
-  String? _photoPath;
   bool _saving = false;
+  bool _photoBusy = false;
   bool _notifications = true;
 
   @override
@@ -64,21 +66,80 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      _photoPath = prefs.getString(_key('photo'));
       _notifications = prefs.getBool(_key('notifications')) ?? true;
     });
   }
 
-  Future<void> _pickPhoto() async {
+  Future<void> _onPhotoTap() async {
+    if (_photoBusy) return;
+    if (widget.user.avatarPath == null) return _uploadPhoto();
+
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('تغيير الصورة'),
+              onTap: () => Navigator.pop(context, 'change'),
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.delete_outline_rounded,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                'حذف الصورة',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              onTap: () => Navigator.pop(context, 'remove'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (action == 'change') await _uploadPhoto();
+    if (action == 'remove') await _removePhoto();
+  }
+
+  Future<void> _uploadPhoto() async {
+    // Downscaled on the phone: every driver who sees this photo downloads it.
     final image = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 82,
+      maxWidth: 720,
+      maxHeight: 720,
+      imageQuality: 85,
     );
-    if (image == null) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key('photo'), image.path);
-    if (!mounted) return;
-    setState(() => _photoPath = image.path);
+    if (image == null || !mounted) return;
+
+    setState(() => _photoBusy = true);
+    try {
+      final path = await _profileService.uploadAvatar(File(image.path));
+      widget.onUserChanged(widget.user.copyWith(avatarPath: path));
+      _message('تم تحديث الصورة الشخصية');
+    } on ApiException catch (error) {
+      _message(error.message);
+    } catch (_) {
+      _message('تعذر رفع الصورة. تحقق من الاتصال وحاول مجددًا.');
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
+  }
+
+  Future<void> _removePhoto() async {
+    setState(() => _photoBusy = true);
+    try {
+      await _profileService.removeAvatar();
+      widget.onUserChanged(widget.user.copyWith(clearAvatar: true));
+      _message('تم حذف الصورة الشخصية');
+    } catch (_) {
+      _message('تعذر حذف الصورة. حاول مجددًا.');
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
   }
 
   Future<void> _saveProfile() async {
@@ -136,12 +197,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final file = _photoPath == null ? null : File(_photoPath!);
-    final hasPhoto = file != null && file.existsSync();
-    final initial = widget.user.name.trim().isEmpty
-        ? 'ز'
-        : widget.user.name.trim().substring(0, 1);
-
     return AppScaffold(
       title: 'الملف والإعدادات',
       showBack: widget.showBack,
@@ -152,28 +207,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Stack(
                   children: [
-                    CircleAvatar(
-                      radius: 46,
-                      backgroundColor: Theme.of(
-                        context,
-                      ).colorScheme.primaryContainer,
-                      backgroundImage: hasPhoto ? FileImage(file) : null,
-                      child: hasPhoto
-                          ? null
-                          : Text(
-                              initial,
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(
-                                    color: emerald,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                            ),
+                    GestureDetector(
+                      onTap: _onPhotoTap,
+                      child: UserAvatar(
+                        name: widget.user.name,
+                        path: widget.user.avatarPath,
+                        radius: 46,
+                      ),
                     ),
+                    if (_photoBusy)
+                      const Positioned.fill(
+                        child: ClipOval(
+                          child: ColoredBox(
+                            color: Color(0x66000000),
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     PositionedDirectional(
                       bottom: 0,
                       end: 0,
                       child: GestureDetector(
-                        onTap: _pickPhoto,
+                        onTap: _onPhotoTap,
                         child: Container(
                           width: 34,
                           height: 34,

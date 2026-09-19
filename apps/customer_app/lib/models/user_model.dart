@@ -6,6 +6,7 @@ class AppUser {
     required this.phone,
     this.role = 'customer',
     this.walletBalance = 0,
+    this.avatarPath,
   });
 
   final int id;
@@ -14,8 +15,10 @@ class AppUser {
   final String phone;
   final String role;
   final double walletBalance;
+  final String? avatarPath;
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
+    final avatar = json['avatar_path']?.toString();
     return AppUser(
       id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
       name: json['name']?.toString() ?? 'راكب',
@@ -24,6 +27,7 @@ class AppUser {
       role: json['role']?.toString() ?? '',
       walletBalance:
           double.tryParse(json['wallet_balance']?.toString() ?? '') ?? 0,
+      avatarPath: avatar == null || avatar.isEmpty ? null : avatar,
     );
   }
 
@@ -33,6 +37,8 @@ class AppUser {
     String? phone,
     String? role,
     double? walletBalance,
+    String? avatarPath,
+    bool clearAvatar = false,
   }) {
     return AppUser(
       id: id,
@@ -41,6 +47,7 @@ class AppUser {
       phone: phone ?? this.phone,
       role: role ?? this.role,
       walletBalance: walletBalance ?? this.walletBalance,
+      avatarPath: clearAvatar ? null : avatarPath ?? this.avatarPath,
     );
   }
 }

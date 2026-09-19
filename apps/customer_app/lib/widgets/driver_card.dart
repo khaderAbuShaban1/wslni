@@ -4,6 +4,7 @@ import '../models/driver_model.dart';
 import '../utils/constants.dart';
 import 'custom_button.dart';
 import 'premium_card.dart';
+import 'user_avatar.dart';
 
 class DriverCard extends StatelessWidget {
   const DriverCard({
@@ -27,11 +28,7 @@ class DriverCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: scheme.primary.withValues(alpha: .15),
-                child: Icon(Icons.person_rounded, color: scheme.primary),
-              ),
+              UserAvatar(name: offer.name, path: offer.avatarPath, radius: 28),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
