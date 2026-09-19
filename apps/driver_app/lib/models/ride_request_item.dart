@@ -12,6 +12,7 @@ class RideRequestItem {
     this.actualFare = '',
     this.platformFee = '',
     this.offers = const [],
+    this.expiresAt,
   });
 
   final int id;
@@ -24,8 +25,29 @@ class RideRequestItem {
   final String actualFare;
   final String platformFee;
   final List<DriverRideOffer> offers;
+  final DateTime? expiresAt;
 
   bool get isActive => RideStatuses.activeForDriver.contains(status);
+
+  bool get isExpirable =>
+      status == RideStatuses.pending ||
+      status == RideStatuses.receivingOffers ||
+      status == RideStatuses.driverSelected;
+
+  bool get hasExpired =>
+      isExpirable &&
+      expiresAt != null &&
+      !expiresAt!.isAfter(DateTime.now());
+
+  // API rows send ISO strings, Firebase sends epoch milliseconds.
+  static DateTime? parseTime(Object? value) {
+    if (value == null) return null;
+    final ms = int.tryParse(value.toString());
+    if (ms != null) {
+      return ms > 0 ? DateTime.fromMillisecondsSinceEpoch(ms) : null;
+    }
+    return DateTime.tryParse(value.toString())?.toLocal();
+  }
 
   String get statusLabel {
     return switch (status) {
@@ -69,6 +91,7 @@ class RideRequestItem {
       actualFare: json['actual_fare']?.toString() ?? '',
       platformFee: json['platform_fee']?.toString() ?? '',
       offers: DriverRideOffer.listFrom(json['offers']),
+      expiresAt: parseTime(json['expires_at']),
     );
   }
 }

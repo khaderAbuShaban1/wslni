@@ -66,6 +66,13 @@ class RideService {
     await _realtime.cancelRide(ride);
   }
 
+  /// Returns true when the server has the ride as cancelled after the call.
+  Future<bool> expireRide(int rideId) async {
+    final result = await _api.post('rides/$rideId/expire', {});
+    final ride = result['ride'];
+    return ride is Map && ride['status']?.toString() == 'cancelled';
+  }
+
   RideDraft createDraft({required String pickup, required String destination}) {
     return RideDraft(
       id: 0,

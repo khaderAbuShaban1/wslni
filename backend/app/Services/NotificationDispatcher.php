@@ -155,6 +155,25 @@ class NotificationDispatcher
         }
     }
 
+    public function rideExpired(RideRequest $ride): void
+    {
+        $this->notify(
+            $ride->customer_id,
+            'انتهت مدة الرحلة ⏰',
+            'انتهت مهلة الـ 15 دقيقة لطلبك. يمكنك إنشاء رحلة جديدة.',
+            $this->cancellationData($ride),
+        );
+
+        if ($ride->driver_id) {
+            $this->notify(
+                $ride->driver_id,
+                'انتهت مهلة الطلب ⏰',
+                'انتهت مهلة الـ 15 دقيقة لهذا الطلب وتم إلغاؤه. يمكنك استقبال طلبات جديدة الآن.',
+                $this->cancellationData($ride),
+            );
+        }
+    }
+
     /** @return array<string, string> */
     private function cancellationData(RideRequest $ride): array
     {

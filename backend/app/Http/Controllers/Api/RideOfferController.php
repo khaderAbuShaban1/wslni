@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\RideOffer;
 use App\Models\RideRequest;
 use App\Models\User;
+use App\Services\RideExpiryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +35,10 @@ class RideOfferController extends Controller
 
         $result = DB::transaction(function () use ($ride, $data, $user): array {
             $lockedRide = RideRequest::query()->lockForUpdate()->findOrFail($ride->id);
+
+            if (RideExpiryService::isDue($lockedRide)) {
+                return ['error' => 'انتهت مهلة هذا الطلب.'];
+            }
 
             if (! in_array($lockedRide->status, [RideStatus::Pending->value, RideStatus::ReceivingOffers->value], true)) {
                 return ['error' => 'لا يمكن تقديم عرض على هذا الطلب حاليًا.'];
@@ -89,6 +94,10 @@ class RideOfferController extends Controller
 
             if ($lockedOffer->ride_request_id !== $lockedRide->id) {
                 return ['error' => 'هذا العرض لا يتبع لهذه الرحلة.', 'status' => 404];
+            }
+
+            if (RideExpiryService::isDue($lockedRide)) {
+                return ['error' => 'انتهت مهلة هذا الطلب. يمكنك إنشاء رحلة جديدة.', 'status' => 422];
             }
 
             if (! in_array($lockedRide->status, [RideStatus::Pending->value, RideStatus::ReceivingOffers->value], true)) {

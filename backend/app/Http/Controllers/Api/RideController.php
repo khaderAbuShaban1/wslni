@@ -9,6 +9,7 @@ use App\Models\DriverProfile;
 use App\Models\RideOffer;
 use App\Models\RideRequest;
 use App\Services\NotificationDispatcher;
+use App\Services\RideExpiryService;
 use App\Services\RideSettlementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -99,6 +100,7 @@ class RideController extends Controller
             'dropoff_lng' => 0,
             'notes' => $data['notes'] ?? null,
             'requested_at' => now(),
+            'expires_at' => now()->addMinutes(15),
         ]);
 
         // Firebase sync is handled automatically by FirebaseRealtimeObserver.
@@ -221,8 +223,29 @@ class RideController extends Controller
         ]);
     }
 
-    public function driverConfirmation(Request $request, RideRequest $ride): JsonResponse
+    /** Called by either app when its countdown reaches zero, so expiry doesn't wait for the scheduler. */
+    public function expire(Request $request, RideRequest $ride, RideExpiryService $expiry): JsonResponse
     {
+        $user = $request->user();
+        abort_unless(
+            (int) $ride->customer_id === $user->id || (int) $ride->driver_id === $user->id,
+            403,
+            'ليس لديك صلاحية على هذه الرحلة.',
+        );
+
+        $expired = $expiry->expireIfDue($ride->id);
+
+        return response()->json([
+            'expired' => $expired,
+            'ride' => $ride->fresh(),
+        ]);
+    }
+
+    public function driverConfirmation(
+        Request $request,
+        RideRequest $ride,
+        RideExpiryService $expiry,
+    ): JsonResponse {
         $user = $request->user();
         abort_unless($user->role === 'driver', 403, 'هذا الإجراء متاح للسائقين فقط.');
 
@@ -230,8 +253,15 @@ class RideController extends Controller
             'accepted' => ['required', 'boolean'],
         ]);
 
+        if ($expiry->expireIfDue($ride->id)) {
+            return response()->json(['message' => 'انتهت مهلة هذا الطلب وتم إلغاؤه.'], 422);
+        }
+
         $result = DB::transaction(function () use ($ride, $data, $user): array {
             $lockedRide = RideRequest::query()->lockForUpdate()->findOrFail($ride->id);
+            if (RideExpiryService::isDue($lockedRide)) {
+                return ['error' => 'انتهت مهلة هذا الطلب وتم إلغاؤه.', 'status' => 422];
+            }
             if ($lockedRide->status !== RideStatus::DriverSelected->value || (int) $lockedRide->driver_id !== $user->id) {
                 return ['error' => 'لا يمكن الرد على هذا الطلب في حالته الحالية.', 'status' => 422];
             }

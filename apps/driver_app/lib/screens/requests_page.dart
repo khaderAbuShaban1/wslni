@@ -208,20 +208,33 @@ class _RequestsPageState extends State<RequestsPage> {
             message: 'تحقق من اتصال Firebase ثم أعد فتح التطبيق.',
           );
         }
-        final rides = snapshot.hasData
-            ? _mergeRealtimeRides(snapshot.data!)
-            : _initialRides;
-        return _RequestsList(rides: rides, onOffer: _openOfferSheet);
+        final rides = (snapshot.hasData
+                ? _mergeRealtimeRides(snapshot.data!)
+                : _initialRides)
+            .where((ride) => !ride.hasExpired)
+            .toList();
+        return _RequestsList(
+          rides: rides,
+          onOffer: _openOfferSheet,
+          onExpired: () {
+            if (mounted) setState(() {});
+          },
+        );
       },
     );
   }
 }
 
 class _RequestsList extends StatelessWidget {
-  const _RequestsList({required this.rides, required this.onOffer});
+  const _RequestsList({
+    required this.rides,
+    required this.onOffer,
+    required this.onExpired,
+  });
 
   final List<RideRequestItem> rides;
   final void Function(RideRequestItem ride) onOffer;
+  final VoidCallback onExpired;
 
   @override
   Widget build(BuildContext context) {
@@ -253,7 +266,11 @@ class _RequestsList extends StatelessWidget {
           );
         }
         final ride = rides[index - 1];
-        return _RideRequestCard(ride: ride, onOffer: () => onOffer(ride));
+        return _RideRequestCard(
+          ride: ride,
+          onOffer: () => onOffer(ride),
+          onExpired: onExpired,
+        );
       },
     );
   }

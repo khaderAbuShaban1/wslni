@@ -34,6 +34,12 @@ class SyncFirebaseRides extends Command
                 return self::FAILURE;
             }
 
+            if (! $firebase->clearUserRides()) {
+                $this->error('Firebase rejected clearing the per-user ride copies. Check the backend connection and credentials.');
+
+                return self::FAILURE;
+            }
+
             if (! $firebase->replaceRides($rides)) {
                 $this->error('Firebase rejected the sync. Configure backend Firebase credentials and rules first.');
 

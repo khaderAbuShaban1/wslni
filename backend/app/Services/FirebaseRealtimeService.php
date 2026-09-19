@@ -160,6 +160,7 @@ class FirebaseRealtimeService
             'rating' => $ride->rating,
             'rating_comment' => $ride->rating_comment,
             'requested_at' => optional($ride->requested_at)->getTimestampMs(),
+            'expires_at' => optional($ride->expires_at)->getTimestampMs(),
             'accepted_at' => optional($ride->accepted_at)->getTimestampMs(),
             'completed_at' => optional($ride->completed_at)->getTimestampMs(),
             'updated_at' => optional($ride->updated_at)->getTimestampMs(),
@@ -196,6 +197,32 @@ class FirebaseRealtimeService
     public function clearOpenRides(): bool
     {
         return $this->isEnabled() && $this->request('delete', 'drivers/open_rides');
+    }
+
+    /** Drops every users/{id}/rides copy so rides deleted from MySQL can't linger. */
+    public function clearUserRides(): bool
+    {
+        if (! $this->isEnabled()) return false;
+
+        $url = rtrim((string) config('services.firebase.database_url'), '/');
+        try {
+            $users = $this->authenticatedClient()
+                ->get("{$url}/users.json", ['shallow' => 'true'])
+                ->throw()
+                ->json();
+        } catch (\Throwable $exception) {
+            report($exception);
+            return false;
+        }
+
+        if (! is_array($users) || $users === []) return true;
+
+        $updates = [];
+        foreach (array_keys($users) as $userId) {
+            $updates["users/{$userId}/rides"] = null;
+        }
+
+        return $this->patch($updates);
     }
 
     /** Deploys the checked-in RTDB rules using the configured service account. */

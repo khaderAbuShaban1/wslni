@@ -40,6 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('rides/{ride}/drivers/{driver}/accept', [RideOfferController::class, 'acceptDriverOffer']);
     Route::patch('rides/{ride}/driver-confirmation', [RideController::class, 'driverConfirmation']);
     Route::post('rides/{ride}/rating', [RideController::class, 'rate']);
+    Route::post('rides/{ride}/expire', [RideController::class, 'expire']);
 
     // Drivers
     Route::get('drivers/available', [DriverController::class, 'available']);

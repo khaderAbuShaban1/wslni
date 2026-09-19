@@ -25,6 +25,7 @@ class RideRequest extends Model
         'platform_fee',
         'notes',
         'requested_at',
+        'expires_at',
         'accepted_at',
         'completed_at',
         'rating',
@@ -44,6 +45,7 @@ class RideRequest extends Model
             'commission_percent' => 'decimal:2',
             'platform_fee' => 'decimal:2',
             'requested_at' => 'datetime',
+            'expires_at' => 'datetime',
             'accepted_at' => 'datetime',
             'completed_at' => 'datetime',
         ];

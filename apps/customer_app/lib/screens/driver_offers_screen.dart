@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/driver_model.dart';
@@ -6,6 +8,7 @@ import '../services/api_client.dart';
 import '../services/driver_service.dart';
 import '../services/realtime_ride_service.dart';
 import '../services/ride_service.dart';
+import '../utils/constants.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/driver_card.dart';
 import '../widgets/empty_state_card.dart';
@@ -37,6 +40,77 @@ class DriverOffersScreen extends StatefulWidget {
 class _DriverOffersScreenState extends State<DriverOffersScreen> {
   int? _acceptingDriverId;
   bool _cancelling = false;
+  Timer? _countdownTimer;
+  Duration _remaining = Duration.zero;
+  StreamSubscription<RideDraft?>? _rideSub;
+  bool _left = false;
+  bool _expiryRequested = false;
+
+  static const _expiredMessage = 'انتهت مهلة الرحلة. يمكنك إنشاء رحلة جديدة.';
+
+  @override
+  void initState() {
+    super.initState();
+    _startCountdown();
+    _rideSub = widget.realtimeService
+        .watchRide(widget.draft.customerId, widget.draft.id)
+        .listen((update) {
+          if (update?.status == RideStatuses.cancelled && !_cancelling) {
+            _leave(_expiredMessage);
+          }
+        });
+  }
+
+  void _leave(String message) {
+    if (_left || !mounted) return;
+    _left = true;
+    _countdownTimer?.cancel();
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+    Navigator.of(context).pop();
+  }
+
+  void _startCountdown() {
+    final expiresAt = widget.draft.expiresAt;
+    if (expiresAt == null) return;
+    Duration left() {
+      final value = expiresAt.difference(DateTime.now());
+      return value.isNegative ? Duration.zero : value;
+    }
+
+    _remaining = left();
+    if (_remaining == Duration.zero) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _requestExpiry());
+      return;
+    }
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _remaining = left());
+      if (_remaining == Duration.zero) {
+        _countdownTimer?.cancel();
+        _requestExpiry();
+      }
+    });
+  }
+
+  Future<void> _requestExpiry() async {
+    if (_expiryRequested) return;
+    _expiryRequested = true;
+    try {
+      final cancelled = await widget.rideService.expireRide(widget.draft.id);
+      if (cancelled) _leave(_expiredMessage);
+    } catch (_) {
+      // The server-side scheduler still expires the ride within seconds.
+    }
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    _rideSub?.cancel();
+    super.dispose();
+  }
 
   Future<void> _acceptOffer(DriverOffer offer) async {
     setState(() => _acceptingDriverId = offer.driverId);
@@ -91,11 +165,7 @@ class _DriverOffersScreenState extends State<DriverOffersScreen> {
     setState(() => _cancelling = true);
     try {
       await widget.rideService.cancelRide(widget.draft);
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('تم إلغاء الرحلة بنجاح.')));
-      Navigator.of(context).pop();
+      _leave('تم إلغاء الرحلة بنجاح.');
     } on ApiException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -127,6 +197,10 @@ class _DriverOffersScreenState extends State<DriverOffersScreen> {
               pickup: widget.draft.pickup,
               destination: widget.draft.destination,
             ),
+            if (widget.draft.expiresAt != null) ...[
+              const SizedBox(height: 14),
+              _CountdownBanner(remaining: _remaining),
+            ],
             const SizedBox(height: 22),
             const SectionHeader(title: 'اختر أفضل عرض'),
             const SizedBox(height: 12),
@@ -186,6 +260,53 @@ class _DriverOffersScreenState extends State<DriverOffersScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CountdownBanner extends StatelessWidget {
+  const _CountdownBanner({required this.remaining});
+  final Duration remaining;
+
+  @override
+  Widget build(BuildContext context) {
+    final minutes = remaining.inMinutes;
+    final seconds = remaining.inSeconds % 60;
+    final label = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    final isUrgent = remaining.inMinutes < 3;
+    final color = isUrgent ? errorColor : warningColor;
+    final bg = color.withValues(alpha: .12);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.timer_outlined, color: color, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'المهلة المتبقية للطلب',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w900,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
       ),
     );
   }

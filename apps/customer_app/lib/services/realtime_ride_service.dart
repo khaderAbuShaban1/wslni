@@ -53,6 +53,7 @@ class RealtimeRideService {
             driverPhone: raw['driver_phone']?.toString() ?? '',
             driverCar: raw['vehicle']?.toString() ?? '',
             driverPlate: raw['vehicle_plate']?.toString() ?? '',
+            expiresAt: _parseTimestamp(raw['expires_at']),
           ),
         );
       }
@@ -93,6 +94,7 @@ class RealtimeRideService {
       driverPhone: raw['driver_phone']?.toString() ?? '',
       driverCar: raw['vehicle']?.toString() ?? '',
       driverPlate: raw['vehicle_plate']?.toString() ?? '',
+      expiresAt: _parseTimestamp(raw['expires_at']),
     );
   }
 
@@ -148,6 +150,13 @@ class RealtimeRideService {
   Future<void> markRated(int rideId, int rating, String comment) async {
     // Rating is persisted by the API and mirrored by the backend.
     return;
+  }
+
+  static DateTime? _parseTimestamp(Object? value) {
+    if (value == null) return null;
+    final ms = int.tryParse(value.toString());
+    if (ms != null && ms > 0) return DateTime.fromMillisecondsSinceEpoch(ms);
+    return null;
   }
 
   int _countOffers(Object? value) {

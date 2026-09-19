@@ -21,6 +21,7 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
   final _realtime = RealtimeDriverService();
   late RideRequestItem _ride;
   bool _updating = false;
+  bool _released = false;
   StreamSubscription<RideRequestItem?>? _rideSub;
 
   @override
@@ -42,14 +43,36 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
     ) {
       if (ride == null || !mounted) return;
       if (ride.status == RideStatuses.cancelled) {
-        // The customer or an admin may have cancelled; the push
-        // notification already says which, so this stays neutral.
-        _showMessage('تم إلغاء هذه الرحلة.');
-        widget.onReleased();
+        _releaseAfterCancellation();
       } else if (ride.status != _ride.status) {
         setState(() => _ride = ride);
       }
     });
+  }
+
+  void _releaseAfterCancellation() {
+    if (_released || !mounted) return;
+    _released = true;
+    // The customer or an admin may have cancelled; the push notification
+    // already says which, so the non-expiry case stays neutral.
+    _showMessage(
+      _ride.hasExpired
+          ? 'انتهت مهلة الطلب (15 دقيقة) وتم إلغاؤه تلقائيًا.'
+          : 'تم إلغاء هذه الرحلة.',
+    );
+    widget.onReleased();
+  }
+
+  Future<void> _requestExpiry() async {
+    try {
+      final result = await _api.post('rides/${_ride.id}/expire', {});
+      final ride = result['ride'];
+      if (ride is Map && ride['status']?.toString() == RideStatuses.cancelled) {
+        _releaseAfterCancellation();
+      }
+    } catch (_) {
+      // The server-side scheduler still expires the ride within seconds.
+    }
   }
 
   @override
@@ -235,6 +258,14 @@ class _ActiveRidePageState extends State<ActiveRidePage> {
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
             children: [
               _ActiveStatusBanner(ride: _ride),
+              if (_ride.status == RideStatuses.driverSelected &&
+                  _ride.expiresAt != null) ...[
+                const SizedBox(height: 12),
+                _ExpiryCountdown(
+                  expiresAt: _ride.expiresAt!,
+                  onExpired: _requestExpiry,
+                ),
+              ],
               const SizedBox(height: 12),
               _ActiveRideSection(
                 title: 'معلومات الزبون',

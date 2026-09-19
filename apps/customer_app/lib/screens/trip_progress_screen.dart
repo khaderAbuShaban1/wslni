@@ -27,6 +27,9 @@ class _TripProgressScreenState extends State<TripProgressScreen> {
   bool _cancelling = false;
   late RideDraft _ride = widget.draft;
   StreamSubscription<RideDraft?>? _rideSub;
+  Timer? _countdownTimer;
+  Duration _remaining = Duration.zero;
+  bool _expiryRequested = false;
 
   static const _statusOrder = [
     RideStatuses.pending,
@@ -106,18 +109,60 @@ class _TripProgressScreenState extends State<TripProgressScreen> {
   @override
   void initState() {
     super.initState();
+    _startCountdown();
     _rideSub = _realtime
         .watchRide(widget.draft.customerId, widget.draft.id)
         .listen((update) {
           if (update != null && _isProgression(update.status) && mounted) {
             setState(() => _ride = update);
+            if (!_canCancel(update.status)) {
+              _countdownTimer?.cancel();
+              _countdownTimer = null;
+            } else if (update.expiresAt != null && _countdownTimer == null) {
+              _startCountdownFrom(update.expiresAt!);
+            }
           }
         });
+  }
+
+  void _startCountdown() {
+    final expiresAt = widget.draft.expiresAt;
+    if (expiresAt == null || !_canCancel(widget.draft.status)) return;
+    _startCountdownFrom(expiresAt);
+  }
+
+  Duration _leftUntil(DateTime expiresAt) {
+    final left = expiresAt.difference(DateTime.now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  void _startCountdownFrom(DateTime expiresAt) {
+    _remaining = _leftUntil(expiresAt);
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _remaining = _leftUntil(expiresAt));
+      if (_remaining == Duration.zero) _requestExpiry();
+    });
+    if (_remaining == Duration.zero) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _requestExpiry());
+    }
+  }
+
+  // Firebase delivers the resulting cancellation to the listener above.
+  Future<void> _requestExpiry() async {
+    if (_expiryRequested) return;
+    _expiryRequested = true;
+    try {
+      await _rideService.expireRide(_ride.id);
+    } catch (_) {
+      // The server-side scheduler still expires the ride within seconds.
+    }
   }
 
   @override
   void dispose() {
     _rideSub?.cancel();
+    _countdownTimer?.cancel();
     super.dispose();
   }
 
@@ -132,6 +177,10 @@ class _TripProgressScreenState extends State<TripProgressScreen> {
         child: Column(
           children: [
             _StatusHero(status: ride.status, label: ride.statusLabel),
+            if (_canCancel(ride.status) && ride.expiresAt != null) ...[
+              const SizedBox(height: 14),
+              _CountdownBanner(remaining: _remaining),
+            ],
             const SizedBox(height: 18),
             PremiumCard(
               child: Column(
@@ -565,4 +614,51 @@ class _RouteStop extends StatelessWidget {
       ),
     ],
   );
+}
+
+class _CountdownBanner extends StatelessWidget {
+  const _CountdownBanner({required this.remaining});
+  final Duration remaining;
+
+  @override
+  Widget build(BuildContext context) {
+    final minutes = remaining.inMinutes;
+    final seconds = remaining.inSeconds % 60;
+    final label = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    final isUrgent = remaining.inMinutes < 3;
+    final color = isUrgent ? errorColor : warningColor;
+    final bg = color.withValues(alpha: .12);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.timer_outlined, color: color, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'المهلة المتبقية للطلب',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w900,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
